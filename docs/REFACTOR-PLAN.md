@@ -1,159 +1,214 @@
-# Refactor Plan: Deduplication & Missing Abstractions
+# Refactor Plan: Post-Phase 5 Consolidation
 
 ## Summary
 
-The codebase has grown through three implementation phases and accumulated several patterns of duplicated logic. The two highest-impact areas are:
+After five implementation phases, the codebase has accumulated structural duplication concentrated in three areas:
 
-1. **CLI commands** — 16 commands repeat an identical try/catch/finally boilerplate pattern (~300 lines of mechanical repetition)
-2. **Breakpoint mapping** — the same `Breakpoint -> DebugProtocol.SourceBreakpoint` transformation is written out 4 times in session-manager.ts
+1. **Adapter layer** — All three adapters (Python, Node, Go) duplicate identical `dispose()` cleanup logic and similar `checkPrerequisites()` patterns. The Node adapter hand-rolls readiness detection that Go already uses via `spawnAndWait()`.
+2. **Entry points** — Three entry points (MCP, daemon entry, daemon server) repeat identical adapter registration and session manager initialization.
+3. **MCP tools** — The viewport config snake_case→camelCase mapping is duplicated between `debug_launch` and `debug_attach`, and the breakpoint schema is defined separately in both `mcp/tools/index.ts` and `daemon/protocol.ts`.
 
-Secondary opportunities include consolidating the watch/unwatch CLI commands and extracting a reusable `withSession` guard in session-manager.ts.
+Previous refactor plan items (Steps 1–5) have all been completed: `toSourceBreakpoints`, `runCommand` wrapper, `withStoppedSession`, and `getThreadId` are in place.
 
 ## Refactor Steps
 
-### Step 1: Extract `toSourceBreakpoints` helper
+### Step 1: Extract `gracefulDispose` helper for adapters
 
 **Priority**: High
 **Risk**: Low
-**Files**: `src/core/session-manager.ts`
+**Files**: `src/adapters/helpers.ts`, `src/adapters/python.ts`, `src/adapters/node.ts`, `src/adapters/go.ts`
 
-**Current State**: The mapping `(bp) => ({ line: bp.line, condition: bp.condition, hitCondition: bp.hitCondition, logMessage: bp.logMessage })` appears at lines 155-160, 354, 368, and 383-388. Any field added to the Breakpoint type must be updated in all 4 locations.
+**Current State**: All three adapters have identical `dispose()` bodies (~19 lines each, ~57 lines total):
+```typescript
+if (this.socket) { this.socket.destroy(); this.socket = null; }
+if (this.process) {
+    const proc = this.process;
+    this.process = null;
+    proc.kill("SIGTERM");
+    await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => { proc.kill("SIGKILL"); resolve(); }, 2_000);
+        proc.once("close", () => { clearTimeout(timeout); resolve(); });
+    });
+}
+```
+The only difference is the process field name (`process`, `adapterProcess`, `dlvProcess`).
 
-**Target State**: A single `toSourceBreakpoints(bps: Breakpoint[]): DebugProtocol.SourceBreakpoint[]` function defined at the top of the file (or in `src/core/types.ts`), called from all 4 locations.
+**Target State**: A `gracefulDispose(socket, process)` function in `helpers.ts`. Each adapter's `dispose()` becomes a one-liner.
 
 **Approach**:
-1. Add the helper function near the top of `session-manager.ts`
-2. Replace all 4 inline `.map()` calls with `toSourceBreakpoints()`
+1. Add `gracefulDispose(socket: Socket | null, process: ChildProcess | null): Promise<void>` to `helpers.ts`
+2. Replace all three `dispose()` bodies with calls to it
 3. Run tests
 
 **Verification**:
 - `bun run test:unit` passes
+- `bun run test:integration` passes (these exercise real debugger cleanup)
 - `bun run lint` passes
-- Grep confirms no remaining inline breakpoint mapping patterns
 
 ---
 
-### Step 2: Extract CLI command runner wrapper
+### Step 2: Migrate Node adapter to use `spawnAndWait`
 
 **Priority**: High
 **Risk**: Low
-**Files**: `src/cli/commands/index.ts`
+**Files**: `src/adapters/node.ts`, `src/adapters/helpers.ts`
 
-**Current State**: Every CLI command (16 total) repeats this boilerplate:
-```typescript
-async run({ args }) {
-    const mode = resolveOutputMode(args);
-    const client = await getClient();
-    try {
-        const sessionId = await resolveSessionId(client, args.session);
-        // ... 3-10 lines of actual logic ...
-    } catch (err) {
-        process.stderr.write(`${formatError(err as Error, mode)}\n`);
-        process.exit(1);
-    } finally {
-        client.dispose();
-    }
-}
-```
+**Current State**: The Node adapter hand-rolls readiness detection in both `launch()` (lines 80-112) and `attach()` (lines 146-163) — manually listening for `/listening/i` on stdout/stderr with timeout logic. The Go adapter already uses the shared `spawnAndWait()` helper for the same pattern.
 
-This is ~10 lines of boilerplate per command, totaling ~160 lines of pure repetition.
-
-**Target State**: A `runCommand` helper that handles mode resolution, client lifecycle, session resolution, error formatting, and cleanup. Each command provides only its unique logic:
-
-```typescript
-async run({ args }) {
-    await runCommand(args, async (client, sessionId, mode) => {
-        const result = await client.call<ViewportPayload>("session.continue", { sessionId });
-        process.stdout.write(`${formatViewport(result.viewport, mode)}\n`);
-    });
-}
-```
-
-An optional `{ needsSession: false }` flag for commands like `launch` that don't resolve a session ID upfront.
+**Target State**: Node adapter's `launch()` and `attach()` use `spawnAndWait()` with `readyPattern: /listening/i`, matching Go's pattern. The Python adapter uses a different flow (earlyError detection + TCP polling) so it stays as-is.
 
 **Approach**:
-1. Define `runCommand(args, handler, opts?)` in `commands/index.ts` (or a new `commands/runner.ts`)
-2. Migrate 2-3 simple commands first (e.g., `status`, `continue`, `breakpoints`) to validate the pattern
-3. Migrate remaining commands
-4. Run all tests
+1. Replace Node `launch()` readiness detection with `spawnAndWait({ cmd: "node", args: [dapAdapterPath, ...], readyPattern: /listening/i, ... })`
+2. Replace Node `attach()` readiness detection similarly
+3. Run integration tests with Node adapter
 
 **Verification**:
-- `bun run test` passes (unit + integration + e2e)
+- `bun run test:integration` passes (Node-specific tests)
 - `bun run lint` passes
-- Each command's `run` body is reduced to its unique logic (3-10 lines)
-- Error handling behavior is unchanged (same stderr output, same exit code)
+- Node adapter `launch()` and `attach()` reduced by ~30 lines combined
 
 ---
 
-### Step 3: Consolidate watch/unwatch CLI commands
+### Step 3: Extract `registerAllAdapters` and `createSessionManager`
 
 **Priority**: Medium
 **Risk**: Low
-**Files**: `src/cli/commands/index.ts`
+**Files**: `src/adapters/registry.ts`, `src/core/session-manager.ts`, `src/mcp/index.ts`, `src/daemon/entry.ts`, `src/daemon/server.ts`
 
-**Current State**: `watchCommand` (lines 497-534) and `unwatchCommand` (lines 536-572) are near-identical — same arg parsing, same expression collection from `args._`, same output formatting. The only difference is the RPC method name (`session.watch` vs `session.unwatch`).
+**Current State**: Three entry points repeat identical setup:
+```typescript
+registerAdapter(new PythonAdapter());
+registerAdapter(new NodeAdapter());
+registerAdapter(new GoAdapter());
+const limits = ResourceLimitsSchema.parse({});
+const sessionManager = new SessionManager(limits);
+```
 
-**Target State**: A single factory function `createWatchCommand(action: "watch" | "unwatch")` that returns the command definition, or a shared `runWatchAction` helper called by both.
+**Target State**: `registerAllAdapters()` in `src/adapters/registry.ts` and `createSessionManager()` in `src/core/session-manager.ts`. Each entry point calls these instead.
 
 **Approach**:
-1. Extract shared logic into a helper
-2. Reduce both commands to thin wrappers
+1. Add `registerAllAdapters()` to `registry.ts` (imports the three adapters, registers them)
+2. Add static `createSessionManager()` factory to session-manager.ts
+3. Update `mcp/index.ts`, `daemon/entry.ts` to use both
+4. `daemon/server.ts:startDaemon()` if it has a copy too
+5. Update `cli/commands/doctor.ts` to use `registerAllAdapters()` if applicable
+6. Run tests
+
+**Verification**:
+- `bun run test` passes
+- `bun run lint` passes
+- Grep confirms no remaining `registerAdapter(new ...)` calls outside `registerAllAdapters()`
+
+---
+
+### Step 4: Extract `mapViewportConfig` for MCP tools
+
+**Priority**: Medium
+**Risk**: Low
+**Files**: `src/mcp/tools/index.ts`
+
+**Current State**: The snake_case→camelCase viewport config mapping appears identically in `debug_launch` (lines 59-68) and `debug_attach` (lines 518-527):
+```typescript
+const viewportConfig = viewport_config
+    ? {
+        sourceContextLines: viewport_config.source_context_lines,
+        stackDepth: viewport_config.stack_depth,
+        // ... 4 more fields
+    }
+    : undefined;
+```
+
+**Target State**: A local `mapViewportConfig(config)` function at the top of the file, called from both tools.
+
+**Approach**:
+1. Extract the mapping to a function within `mcp/tools/index.ts`
+2. Replace both inline blocks
+3. Run tests
+
+**Verification**:
+- `bun run test:e2e` passes
+- `bun run lint` passes
+
+---
+
+### Step 5: Extract shared breakpoint schema
+
+**Priority**: Medium
+**Risk**: Low
+**Files**: `src/core/types.ts`, `src/daemon/protocol.ts`, `src/mcp/tools/index.ts`
+
+**Current State**: The breakpoint schema `z.object({ line: z.number(), condition: z.string().optional(), hitCondition: z.string().optional(), logMessage: z.string().optional() })` is defined separately in:
+- `src/daemon/protocol.ts` (lines 101-107, 153-158, 188-194) — three times within different param schemas
+- `src/mcp/tools/index.ts` (lines 26-31, 492-497) — twice within tool schemas
+
+Changes to breakpoint fields require updating 5 locations.
+
+**Target State**: A single `BreakpointSchema` exported from `src/core/types.ts` (where the `Breakpoint` type already lives), used by both protocol.ts and mcp/tools/index.ts.
+
+**Approach**:
+1. Export `BreakpointSchema` from `src/core/types.ts`
+2. Export `FileBreakpointsSchema` (array of `{ file, breakpoints }`) from the same place
+3. Update `daemon/protocol.ts` to use it
+4. Update `mcp/tools/index.ts` to use it
+5. Run tests
+
+**Verification**:
+- `bun run test` passes
+- `bun run lint` passes
+- Grep confirms no remaining inline breakpoint object schemas outside `types.ts`
+
+---
+
+### Step 6: Consolidate watch/unwatch CLI output formatting
+
+**Priority**: Low
+**Risk**: Low
+**Files**: `src/cli/commands/index.ts`, `src/cli/format.ts`
+
+**Current State**: `watchCommand` (lines 455-460) and `unwatchCommand` (lines 479-484) have identical output formatting:
+```typescript
+if (mode === "json") {
+    process.stdout.write(`${JSON.stringify({ watchExpressions: result }, null, 2)}\n`);
+} else {
+    process.stdout.write(`Watch expressions (${result.length} total):\n`);
+    for (const expr of result) process.stdout.write(`  ${expr}\n`);
+}
+```
+
+**Target State**: A `formatWatchExpressions(expressions: string[], mode: OutputMode)` function in `format.ts`, called from both commands.
+
+**Approach**:
+1. Add `formatWatchExpressions` to `format.ts`
+2. Replace inline formatting in both commands
 3. Run tests
 
 **Verification**:
 - `bun run test` passes
 - `bun run lint` passes
-- Both `agent-lens watch` and `agent-lens unwatch` produce identical output as before
 
 ---
 
-### Step 4: Extract `withSession` guard in SessionManager
-
-**Priority**: Medium
-**Risk**: Low
-**Files**: `src/core/session-manager.ts`
-
-**Current State**: 6 methods repeat the same 3-line preamble:
-```typescript
-const session = this.getSession(sessionId);
-this.assertState(session, "stopped");
-this.checkAndIncrementAction(session, "tool_name");
-```
-
-Lines: 295-297, 311-312 (partially), 342-344, 418-420, 453-455, 498-500.
-
-**Target State**: A private `withStoppedSession(sessionId, toolName, fn)` method that encapsulates the guard and passes the session to the callback. Methods that need different state guards (e.g., `setBreakpoints` doesn't require "stopped") continue to use `getSession` directly.
-
-**Approach**:
-1. Add the helper method to `SessionManager`
-2. Refactor `continue`, `runTo`, `evaluate`, `getVariables`, `getStackTrace` to use it
-3. Leave `step` as-is since it has a loop structure that doesn't fit the pattern cleanly
-4. Run tests
-
-**Verification**:
-- `bun run test:unit` passes
-- `bun run lint` passes
-- No behavioral changes — same errors thrown for wrong states, same action counting
-
----
-
-### Step 5: Extract `threadId` accessor
+### Step 7: Extract `setupGracefulShutdown` utility
 
 **Priority**: Low
 **Risk**: Low
-**Files**: `src/core/session-manager.ts`
+**Files**: `src/core/shutdown.ts` (new), `src/mcp/index.ts`, `src/daemon/entry.ts`
 
-**Current State**: `session.lastStoppedThreadId ?? 1` appears at lines 299, 317, 358, 502, 648, 864. The fallback to `1` is a DAP convention (single-threaded programs) that should be documented in one place.
+**Current State**: Both entry points have identical signal handlers:
+```typescript
+process.on("SIGINT", async () => { await cleanup(); process.exit(0); });
+process.on("SIGTERM", async () => { await cleanup(); process.exit(0); });
+```
 
-**Target State**: A private `getThreadId(session)` method or a getter on the session, with a comment explaining the DAP convention.
+**Target State**: `setupGracefulShutdown(cleanup: () => Promise<void>)` called from both entry points.
 
 **Approach**:
-1. Add `private getThreadId(session: DebugSession): number` method
-2. Replace all 6 inline expressions
+1. Create `src/core/shutdown.ts` with the utility
+2. Update `mcp/index.ts` and `daemon/entry.ts`
 3. Run tests
 
 **Verification**:
-- `bun run test:unit` passes
+- `bun run test` passes
 - `bun run lint` passes
 
 ---
@@ -162,8 +217,10 @@ Lines: 295-297, 311-312 (partially), 342-344, 418-420, 453-455, 498-500.
 
 The following were considered but deferred:
 
-- **MCP tool try/catch pattern**: The 16 MCP tools all wrap with `try { ... } catch (err) { return errorResponse(err); }`. This is mechanical but each tool's happy path is unique enough that extracting a wrapper adds indirection without much line savings. The `errorResponse` helper already centralizes the error formatting. Revisit if tool count grows significantly.
+- **MCP tool try/catch pattern**: The 18 MCP tools all wrap with `try { ... } catch (err) { return errorResponse(err); }`. Each tool's happy path is unique, and the `errorResponse` helper already centralizes error formatting. A wrapper function would add indirection for modest line savings. Revisit if tool count doubles.
 
-- **Socket connection utilities**: The Python adapter and daemon server have similar TCP connection patterns, but they differ enough in error handling and retry logic that a shared abstraction would be forced. Better to leave as-is until a second adapter (Node.js) is implemented and the pattern stabilizes.
+- **Daemon dispatch switch statement**: The 143-line switch in `daemon/server.ts::dispatch()` is mechanical but each case is 2-4 lines. A handler map would trade readability for marginally less code. The RPC types in `protocol.ts` already serve as the canonical method registry. Not worth the churn.
 
-- **Text column formatting**: `Math.max(...items.map(v => v.name.length), minWidth)` + `padEnd()` appears ~5 times across viewport.ts and session-manager.ts. This is idiomatic and extracting it into a utility adds more code than it saves.
+- **Session-manager splitting**: At 1322 lines, session-manager.ts is the largest file. However, it's a cohesive unit — the `DebugSession` state and its operations are tightly coupled. Splitting by concern (lifecycle, execution, inspection) would require passing the session map and shared state between modules, adding complexity without measurable benefit. The `withStoppedSession` and `getThreadId` extractions already reduced internal duplication. Revisit only if the file exceeds ~1500 lines.
+
+- **Doctor command version fetching**: The three `get*Version()` functions in `doctor.ts` use the same spawn-collect-output pattern as `checkPrerequisites()`. However, they also do version-specific parsing unique to each tool. A generic wrapper would be marginally shorter but less readable. Low ROI.
