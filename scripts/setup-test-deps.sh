@@ -68,5 +68,69 @@ else
     warn "go not found (needed for go adapter tests — skipping dlv)"
 fi
 
+
+# --- Rust + CodeLLDB ---
+echo "Rust:"
+if command -v cargo &>/dev/null; then
+    ok "cargo $(cargo --version | awk '{print $2}')"
+
+    CODELLDB_CACHE="$HOME/.agent-lens/adapters/codelldb/adapter/codelldb"
+    if [ -f "$CODELLDB_CACHE" ]; then
+        ok "CodeLLDB DAP adapter cached"
+    else
+        warn "CodeLLDB DAP adapter not cached — downloading..."
+        bun -e "import { downloadAndCacheCodeLLDB } from './src/adapters/rust.js'; await downloadAndCacheCodeLLDB();"
+        ok "CodeLLDB DAP adapter cached"
+    fi
+else
+    warn "cargo not found (needed for rust adapter tests) — install from https://rustup.rs"
+fi
+
+echo ""
+
+# --- Java + java-debug-adapter ---
+echo "Java:"
+if command -v javac &>/dev/null; then
+    JAVAC_VERSION=$(javac -version 2>&1 | awk '{print $2}')
+    JAVAC_MAJOR=$(echo "$JAVAC_VERSION" | cut -d. -f1)
+    if [ "$JAVAC_MAJOR" -ge 17 ] 2>/dev/null; then
+        ok "javac $JAVAC_VERSION"
+
+        JAVA_DEBUG_JAR="$HOME/.agent-lens/adapters/java-debug"
+        if ls "$JAVA_DEBUG_JAR"/com.microsoft.java.debug.plugin-*.jar &>/dev/null 2>&1; then
+            ok "java-debug-adapter JAR cached"
+        else
+            warn "java-debug-adapter JAR not cached — downloading..."
+            bun -e "import { downloadAndCacheJavaDebugAdapter } from './src/adapters/java.js'; await downloadAndCacheJavaDebugAdapter();"
+            ok "java-debug-adapter JAR cached"
+        fi
+    else
+        warn "javac $JAVAC_VERSION found but JDK 17+ required (needed for java adapter tests)"
+    fi
+else
+    warn "javac not found (needed for java adapter tests) — install JDK 17+ from https://adoptium.net"
+fi
+
+echo ""
+
+# --- C/C++ + GDB ---
+echo "C/C++:"
+if command -v gdb &>/dev/null; then
+    GDB_VERSION=$(gdb --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    GDB_MAJOR=$(echo "$GDB_VERSION" | cut -d. -f1)
+    if [ "$GDB_MAJOR" -ge 14 ] 2>/dev/null; then
+        ok "gdb $GDB_VERSION (DAP support)"
+    else
+        warn "gdb $GDB_VERSION found but 14+ required for DAP support (needed for cpp adapter tests)"
+    fi
+else
+    warn "gdb not found (needed for cpp adapter tests)"
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        warn "  Install with: sudo apt-get install gdb"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        warn "  Install with: brew install gdb  or  xcode-select --install (for lldb-dap)"
+    fi
+fi
+
 echo ""
 echo "Done. Missing tools will cause their adapter tests to be skipped."
