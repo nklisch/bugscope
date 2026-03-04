@@ -108,7 +108,20 @@ if command -v javac &>/dev/null; then
         warn "javac $JAVAC_VERSION found but JDK 17+ required (needed for java adapter tests)"
     fi
 else
-    warn "javac not found (needed for java adapter tests) — install JDK 17+ from https://adoptium.net"
+    warn "javac not found (needed for java adapter tests) — install JDK 17+:"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        warn "  brew install openjdk@21"
+    elif command -v dnf &>/dev/null; then
+        warn "  sudo dnf install java-21-openjdk-devel"
+    elif command -v apt-get &>/dev/null; then
+        warn "  sudo apt-get install openjdk-21-jdk"
+    elif command -v pacman &>/dev/null; then
+        warn "  sudo pacman -S jdk21-openjdk"
+    elif command -v zypper &>/dev/null; then
+        warn "  sudo zypper install java-21-openjdk-devel"
+    else
+        warn "  See: https://adoptium.net"
+    fi
 fi
 
 echo ""
@@ -122,13 +135,26 @@ if command -v gdb &>/dev/null; then
         ok "gdb $GDB_VERSION (DAP support)"
     else
         warn "gdb $GDB_VERSION found but 14+ required for DAP support (needed for cpp adapter tests)"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            warn "  brew install gdb  (or use lldb-dap via xcode-select --install)"
+        elif command -v dnf &>/dev/null; then
+            warn "  sudo dnf install gdb"
+        elif command -v apt-get &>/dev/null; then
+            warn "  sudo apt-get install gdb"
+        fi
     fi
 else
     warn "gdb not found (needed for cpp adapter tests)"
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        warn "  Install with: sudo apt-get install gdb"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        warn "  Install with: brew install gdb  or  xcode-select --install (for lldb-dap)"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        warn "  brew install gdb  (or use lldb-dap via xcode-select --install)"
+    elif command -v dnf &>/dev/null; then
+        warn "  sudo dnf install gdb"
+    elif command -v apt-get &>/dev/null; then
+        warn "  sudo apt-get install gdb"
+    elif command -v pacman &>/dev/null; then
+        warn "  sudo pacman -S gdb"
+    elif command -v zypper &>/dev/null; then
+        warn "  sudo zypper install gdb"
     fi
 fi
 

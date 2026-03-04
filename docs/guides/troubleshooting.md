@@ -54,8 +54,20 @@ Also ensure `cargo` is installed: `curl --proto '=https' --tlsv1.2 -sSf https://
 **Symptom**: `AdapterPrerequisiteError: java: missing javac 17+`
 
 **Fix**:
-- Install JDK 17+: [adoptium.net](https://adoptium.net/)
-- Verify: `javac -version` should output `javac 17.x.x` or higher
+```bash
+# Fedora/RHEL
+sudo dnf install java-21-openjdk-devel
+
+# Ubuntu/Debian
+sudo apt-get install openjdk-21-jdk
+
+# Arch
+sudo pacman -S jdk21-openjdk
+
+# macOS
+brew install openjdk@21
+```
+Verify: `javac -version` should output `javac 17.x.x` or higher
 
 ### C/C++: GDB version < 14
 
@@ -63,14 +75,20 @@ Also ensure `cargo` is installed: `curl --proto '=https' --tlsv1.2 -sSf https://
 
 **Fix**:
 ```bash
+# Fedora/RHEL
+sudo dnf install gdb
+
 # Ubuntu/Debian
 sudo apt-get install gdb
+
+# Arch
+sudo pacman -S gdb
 
 # macOS (via Homebrew)
 brew install gdb
 
-# Alternative: install lldb-dap
-# macOS: xcode-select --install
+# Alternative: install lldb-dap (macOS)
+xcode-select --install
 ```
 
 GDB must be version 14+ for DAP support. Check with: `gdb --version`
