@@ -50,3 +50,4 @@ bun run lint:fix         # Biome auto-fix
 - Validate all external inputs with Zod schemas at boundaries
 - Adapters implement the `DebugAdapter` interface in `src/adapters/base.ts`
 - Viewport output is the contract — if the format changes, e2e tests should break
+- Do not include "Co-Authored-By" or any AI signature lines in commit messages
