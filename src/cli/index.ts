@@ -16,6 +16,7 @@ import {
 	statusCommand,
 	stepCommand,
 	stopCommand,
+	unwatchCommand,
 	varsCommand,
 	watchCommand,
 } from "./commands/index.js";
@@ -40,6 +41,7 @@ const main = defineCommand({
 		stack: stackCommand,
 		source: sourceCommand,
 		watch: watchCommand,
+		unwatch: unwatchCommand,
 		log: logCommand,
 		output: outputCommand,
 		doctor: doctorCommand,

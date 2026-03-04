@@ -3,13 +3,15 @@ import { resolve } from "node:path";
 import type { DebugProtocol } from "@vscode/debugprotocol";
 import type { DAPConnection, DebugAdapter } from "../adapters/base.js";
 import { getAdapter, getAdapterForFile } from "../adapters/registry.js";
+import { compressionNote, computeEffectiveConfig, estimateTokens, resolveCompressionTier, shouldUseDiffMode } from "./compression.js";
 import type { StopResult } from "./dap-client.js";
 import { DAPClient } from "./dap-client.js";
 import { AdapterNotFoundError, AdapterPrerequisiteError, SessionLimitError, SessionNotFoundError, SessionStateError } from "./errors.js";
-import type { Breakpoint, ResourceLimits, SessionStatus, StopReason, Variable, ViewportConfig, ViewportSnapshot } from "./types.js";
+import { extractObservations, formatSessionLogDetailed, formatSessionLogSummary } from "./session-logger.js";
+import type { Breakpoint, EnrichedActionLogEntry, ResourceLimits, SessionStatus, StopReason, TokenStats, Variable, ViewportConfig, ViewportSnapshot } from "./types.js";
 import { ViewportConfigSchema } from "./types.js";
 import { convertDAPVariables, renderDAPVariable } from "./value-renderer.js";
-import { renderViewport } from "./viewport.js";
+import { computeViewportDiff, isDiffEligible, renderViewport, renderViewportDiff } from "./viewport.js";
 
 // --- Launch Options ---
 
@@ -27,7 +29,7 @@ export interface LaunchOptions {
 
 export type SessionState = "launching" | "running" | "stopped" | "terminated" | "error";
 
-// --- Action Log Entry ---
+// --- Action Log Entry (kept for backward compat; EnrichedActionLogEntry is now used internally) ---
 
 export interface ActionLogEntry {
 	actionNumber: number;
@@ -65,12 +67,20 @@ export interface DebugSession {
 	watchExpressions: string[];
 	/** Captured stdout/stderr output */
 	outputBuffer: OutputBuffer;
-	/** Action log */
-	actionLog: ActionLogEntry[];
+	/** Enriched action log */
+	actionLog: EnrichedActionLogEntry[];
 	/** Source file cache: path -> lines */
 	sourceCache: Map<string, string[]>;
 	/** Session timeout timer */
 	timeoutTimer: ReturnType<typeof setTimeout>;
+	/** Previous viewport snapshot for diff computation */
+	previousSnapshot: ViewportSnapshot | null;
+	/** Whether diff mode is enabled for this session */
+	diffMode: boolean;
+	/** Cumulative token stats */
+	tokenStats: TokenStats;
+	/** Fields explicitly set by user in viewportConfig (not auto-compressed) */
+	explicitViewportFields: Set<string>;
 }
 
 // --- Launch Result ---
@@ -135,6 +145,8 @@ export class SessionManager {
 
 		// 5. Set initial breakpoints
 		const viewportConfig = ViewportConfigSchema.parse(options.viewportConfig ?? {});
+		// Track which fields were explicitly set by the user (not defaulted)
+		const explicitViewportFields = new Set<string>(Object.keys(options.viewportConfig ?? {}));
 		const breakpointMap = new Map<string, Breakpoint[]>();
 
 		if (options.breakpoints) {
@@ -185,6 +197,10 @@ export class SessionManager {
 			actionLog: [],
 			sourceCache: new Map(),
 			timeoutTimer: setTimeout(() => {}, 0), // placeholder
+			previousSnapshot: null,
+			diffMode: false,
+			tokenStats: { viewportTokensConsumed: 0, viewportCount: 0 },
+			explicitViewportFields,
 		};
 
 		// 9. Start session timeout
@@ -530,7 +546,7 @@ export class SessionManager {
 	/**
 	 * Get current session status with viewport if stopped.
 	 */
-	async getStatus(sessionId: string): Promise<{ status: SessionStatus; viewport?: string }> {
+	async getStatus(sessionId: string): Promise<{ status: SessionStatus; viewport?: string; tokenStats?: TokenStats; actionCount?: number; elapsedMs?: number }> {
 		const session = this.getSession(sessionId);
 		let viewport: string | undefined;
 
@@ -539,7 +555,13 @@ export class SessionManager {
 			viewport = renderViewport(snapshot, session.viewportConfig);
 		}
 
-		return { status: session.state as SessionStatus, viewport };
+		return {
+			status: session.state as SessionStatus,
+			viewport,
+			tokenStats: { ...session.tokenStats },
+			actionCount: session.actionCount,
+			elapsedMs: Date.now() - session.startedAt,
+		};
 	}
 
 	/**
@@ -569,17 +591,28 @@ export class SessionManager {
 	}
 
 	/**
-	 * Get the action log.
+	 * Remove watch expressions from the session.
+	 * Accepts expressions to remove. Returns remaining watch list.
+	 */
+	removeWatchExpressions(sessionId: string, expressions: string[]): string[] {
+		const session = this.getSession(sessionId);
+		session.watchExpressions = session.watchExpressions.filter((e) => !expressions.includes(e));
+		this.logAction(session, "debug_unwatch", `Removed ${expressions.length} watch expression(s)`);
+		return [...session.watchExpressions];
+	}
+
+	/**
+	 * Get the enriched session log with observations, compression, and token stats.
 	 */
 	getSessionLog(sessionId: string, format: "summary" | "detailed" = "summary"): string {
 		const session = this.getSession(sessionId);
-		const log = session.actionLog;
+		const elapsedMs = Date.now() - session.startedAt;
 
-		if (format === "summary") {
-			return log.map((e) => `#${e.actionNumber} [${e.tool}] ${e.summary}`).join("\n");
+		if (format === "detailed") {
+			return formatSessionLogDetailed(session.actionLog, elapsedMs, session.tokenStats);
 		}
 
-		return log.map((e) => `#${e.actionNumber} ${new Date(e.timestamp).toISOString()} [${e.tool}] ${e.summary}`).join("\n");
+		return formatSessionLogSummary(session.actionLog, 10, elapsedMs, session.tokenStats);
 	}
 
 	/**
@@ -747,12 +780,23 @@ export class SessionManager {
 	/**
 	 * Log an action to the session log.
 	 */
-	private logAction(session: DebugSession, tool: string, summary: string): void {
+	private logAction(
+		session: DebugSession,
+		tool: string,
+		summary: string,
+		keyParams?: Record<string, unknown>,
+		snapshot?: ViewportSnapshot | null,
+		observations?: import("./types.js").ActionObservation[],
+	): void {
+		const location = snapshot ? `${snapshot.file}:${snapshot.line} ${snapshot.function}` : undefined;
 		session.actionLog.push({
 			actionNumber: session.actionCount,
 			tool,
 			summary,
 			timestamp: Date.now(),
+			keyParams: keyParams ?? {},
+			observations: observations ?? [],
+			location,
 		});
 	}
 
@@ -826,18 +870,66 @@ export class SessionManager {
 
 	/**
 	 * Handle a stop result and return the rendered viewport.
+	 * Applies compression tier, diff mode, observation extraction, and token tracking.
 	 */
 	private async handleStopResult(session: DebugSession, stopResult: StopResult): Promise<string> {
 		if (stopResult.type === "stopped") {
 			session.state = "stopped";
 			session.lastStoppedThreadId = stopResult.event.body.threadId ?? null;
 			const reason = this.mapStopReason(stopResult.event.body.reason);
+
+			// 1. Resolve compression tier from action count
+			const tier = resolveCompressionTier(session.actionCount);
+
+			// 2. Compute effective viewport config (base + compression overrides)
+			const effectiveConfig = computeEffectiveConfig(session.viewportConfig, tier, session.explicitViewportFields);
+
+			// 3. Build viewport snapshot using effective config (temporarily swap for buildViewport)
+			const savedConfig = session.viewportConfig;
+			session.viewportConfig = effectiveConfig;
 			const snapshot = await this.buildViewport(session);
+			session.viewportConfig = savedConfig;
+
 			// Update reason from the actual stop event
 			snapshot.reason = reason;
-			return renderViewport(snapshot, session.viewportConfig);
+
+			// 4. Determine compression note
+			const note = compressionNote(session.actionCount, session.limits.maxActionsPerSession, tier);
+
+			// 5. Render viewport: diff mode if eligible, otherwise full
+			let renderedViewport: string;
+			const useDiff = shouldUseDiffMode(tier, session.diffMode);
+
+			if (useDiff && session.previousSnapshot && isDiffEligible(snapshot, session.previousSnapshot)) {
+				const diff = computeViewportDiff(snapshot, session.previousSnapshot, note);
+				renderedViewport = renderViewportDiff(diff, effectiveConfig);
+			} else {
+				if (note) snapshot.compressionNote = note;
+				renderedViewport = renderViewport(snapshot, effectiveConfig);
+			}
+
+			// 6. Extract observations and log enriched action entry
+			const observations = extractObservations(snapshot, session.previousSnapshot);
+			this.logAction(session, "debug_stop", `Stopped at ${snapshot.file}:${snapshot.line} (${reason})`, { reason }, snapshot, observations);
+
+			// 7. Track token consumption
+			const tokens = estimateTokens(renderedViewport);
+			session.tokenStats.viewportTokensConsumed += tokens;
+			session.tokenStats.viewportCount += 1;
+
+			// 8. Store snapshot as previousSnapshot for next diff
+			session.previousSnapshot = snapshot;
+
+			// Auto-activate diff mode when tier requires it
+			if (tier.diffMode) {
+				session.diffMode = true;
+			}
+
+			return renderedViewport;
 		}
 
+		// Log termination
+		this.logAction(session, "debug_stop", "Session terminated", {}, null, [{ kind: "terminated", description: "Session terminated" }]);
 		session.state = "terminated";
 		return "Session terminated.";
 	}

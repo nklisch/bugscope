@@ -82,4 +82,88 @@ export interface ViewportSnapshot {
 	source: SourceLine[];
 	locals: Variable[];
 	watches?: Variable[];
+	/** Compression note appended to viewport when active */
+	compressionNote?: string;
+}
+
+// --- Compression Tiers ---
+
+export interface CompressionTier {
+	/** Action count threshold to activate this tier */
+	minActions: number;
+	/** Override viewport config for this tier */
+	overrides: Partial<ViewportConfig>;
+	/** Enable diff mode automatically at this tier */
+	diffMode: boolean;
+}
+
+export const DEFAULT_COMPRESSION_TIERS: CompressionTier[] = [
+	// Tier 0: actions 1–20 — full viewport (defaults)
+	{ minActions: 0, overrides: {}, diffMode: false },
+	// Tier 1: actions 21–50 — moderate compression
+	{ minActions: 21, overrides: { stackDepth: 3, stringTruncateLength: 80, collectionPreviewItems: 3 }, diffMode: false },
+	// Tier 2: actions 51–100 — heavy compression + auto diff
+	{ minActions: 51, overrides: { stackDepth: 2, stringTruncateLength: 60, collectionPreviewItems: 2, localsMaxItems: 10 }, diffMode: true },
+	// Tier 3: actions 100+ — minimal viewport
+	{ minActions: 100, overrides: { stackDepth: 1, stringTruncateLength: 40, collectionPreviewItems: 1, localsMaxItems: 5, sourceContextLines: 7 }, diffMode: true },
+];
+
+// --- Enriched Action Log ---
+
+export interface ActionObservation {
+	/** Type of observation */
+	kind: "unexpected_value" | "variable_changed" | "new_frame" | "exception" | "bp_hit" | "terminated";
+	/** Human-readable description */
+	description: string;
+}
+
+export interface EnrichedActionLogEntry {
+	actionNumber: number;
+	tool: string;
+	/** Key parameters (e.g., expression for evaluate, direction for step) */
+	keyParams: Record<string, unknown>;
+	summary: string;
+	timestamp: number;
+	/** Extracted observations from viewport at this action */
+	observations: ActionObservation[];
+	/** Location at this action (file:line function) */
+	location?: string;
+}
+
+// --- Viewport Diff ---
+
+export interface VariableChange {
+	name: string;
+	oldValue: string;
+	newValue: string;
+}
+
+export interface ViewportDiff {
+	/** True if this is a diff (same file + function as previous) */
+	isDiff: true;
+	file: string;
+	line: number;
+	function: string;
+	reason: StopReason;
+	/** Only variables whose values changed */
+	changedVariables: VariableChange[];
+	/** Count of unchanged variables */
+	unchangedCount: number;
+	/** New or removed stack frames relative to previous */
+	stackChanges?: { added: StackFrame[]; removed: StackFrame[] };
+	/** Source context only if current line moved out of previous window */
+	source?: SourceLine[];
+	/** Watch expression results (always included) */
+	watches?: Variable[];
+	/** Compression note if active */
+	compressionNote?: string;
+}
+
+// --- Token Tracking ---
+
+export interface TokenStats {
+	/** Estimated tokens consumed by viewport output across session */
+	viewportTokensConsumed: number;
+	/** Number of viewports rendered */
+	viewportCount: number;
 }

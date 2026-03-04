@@ -533,6 +533,44 @@ export const watchCommand = defineCommand({
 	},
 });
 
+export const unwatchCommand = defineCommand({
+	meta: { name: "unwatch", description: "Remove watch expressions" },
+	args: {
+		expressions: {
+			type: "positional",
+			description: "Expression(s) to stop watching",
+			required: true,
+		},
+		...globalArgs,
+	},
+	async run({ args }) {
+		const mode = resolveOutputMode(args);
+		const client = await getClient();
+		try {
+			const sessionId = await resolveSessionId(client, args.session);
+			const extraArgs = (args as Record<string, unknown>)._ as string[] | undefined;
+			const expressions = [args.expressions, ...(extraArgs ?? [])];
+			const result = await client.call<string[]>("session.unwatch", {
+				sessionId,
+				expressions,
+			});
+			if (mode === "json") {
+				process.stdout.write(`${JSON.stringify({ watchExpressions: result }, null, 2)}\n`);
+			} else {
+				process.stdout.write(`Watch expressions (${result.length} total):\n`);
+				for (const expr of result) {
+					process.stdout.write(`  ${expr}\n`);
+				}
+			}
+		} catch (err) {
+			process.stderr.write(`${formatError(err as Error, mode)}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
 export const logCommand = defineCommand({
 	meta: { name: "log", description: "View session investigation log" },
 	args: {

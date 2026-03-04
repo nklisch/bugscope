@@ -113,14 +113,16 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 3: debug_status
 	server.tool(
 		"debug_status",
-		"Get the current status of a debug session. Returns viewport if stopped.",
+		"Get the current status of a debug session. Returns viewport if stopped. Includes token stats and action count.",
 		{
 			session_id: z.string().describe("The session to query"),
 		},
 		async ({ session_id }) => {
 			try {
 				const result = await sessionManager.getStatus(session_id);
-				const text = result.viewport ? `Status: ${result.status}\n\n${result.viewport}` : `Status: ${result.status}`;
+				const text = result.viewport
+					? `Status: ${result.status}\nActions: ${result.actionCount ?? 0}, Elapsed: ${result.elapsedMs ?? 0}ms, Viewport tokens: ${result.tokenStats?.viewportTokensConsumed ?? 0}\n\n${result.viewport}`
+					: `Status: ${result.status}\nActions: ${result.actionCount ?? 0}, Elapsed: ${result.elapsedMs ?? 0}ms, Viewport tokens: ${result.tokenStats?.viewportTokensConsumed ?? 0}`;
 				return { content: [{ type: "text" as const, text }] };
 			} catch (err) {
 				return errorResponse(err);
@@ -357,19 +359,19 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		},
 	);
 
-	// Tool 14: debug_watch (stub — stores expressions for Phase 3)
+	// Tool 14: debug_watch — add or remove watch expressions
 	server.tool(
 		"debug_watch",
-		"Add expressions to the watch list. Watched expressions are evaluated and shown in every viewport.",
+		"Manage watch expressions. Watched expressions are automatically evaluated and shown in every viewport snapshot.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			expressions: z
-				.array(z.string())
-				.describe("Expressions to add to the watch list. " + "Watched expressions are evaluated and shown in every viewport. " + "E.g., ['len(cart.items)', 'user.tier', 'total > 0']"),
+			action: z.enum(["add", "remove"]).optional().describe("Whether to add or remove expressions. Default: 'add'"),
+			expressions: z.array(z.string()).describe("Expressions to add or remove from the watch list. " + "E.g., ['len(cart.items)', 'user.tier', 'total > 0']"),
 		},
-		async ({ session_id, expressions }) => {
+		async ({ session_id, action, expressions }) => {
 			try {
-				const confirmed = sessionManager.addWatchExpressions(session_id, expressions);
+				const op = action ?? "add";
+				const confirmed = op === "remove" ? sessionManager.removeWatchExpressions(session_id, expressions) : sessionManager.addWatchExpressions(session_id, expressions);
 				return {
 					content: [
 						{
@@ -384,13 +386,17 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		},
 	);
 
-	// Tool 15: debug_session_log (stub for Phase 3)
+	// Tool 15: debug_session_log — enriched session log with observations and token stats
 	server.tool(
 		"debug_session_log",
-		"Get the action history for a debug session.",
+		"Get the investigation log for the current session. " +
+			"Shows actions taken, key observations (unexpected values, variable changes), " +
+			"and cumulative viewport token consumption. Older entries are automatically " +
+			"compressed into summaries. Use this to reconstruct your reasoning chain " +
+			"without re-reading old viewports.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			format: z.enum(["summary", "detailed"]).optional().describe("Level of detail. Default: 'summary'"),
+			format: z.enum(["summary", "detailed"]).optional().describe("Level of detail. 'summary' compresses older entries. 'detailed' includes timestamps and full observations. Default: 'summary'"),
 		},
 		async ({ session_id, format }) => {
 			try {

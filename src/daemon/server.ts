@@ -26,6 +26,7 @@ import {
 	SourceParamsSchema,
 	StackTraceParamsSchema,
 	StepParamsSchema,
+	UnwatchParamsSchema,
 	VariablesParamsSchema,
 	WatchParamsSchema,
 } from "./protocol.js";
@@ -310,6 +311,11 @@ export class DaemonServer {
 			case "session.watch": {
 				const p = WatchParamsSchema.parse(params);
 				return this.sessionManager.addWatchExpressions(p.sessionId, p.expressions);
+			}
+
+			case "session.unwatch": {
+				const p = UnwatchParamsSchema.parse(params);
+				return this.sessionManager.removeWatchExpressions(p.sessionId, p.expressions);
 			}
 
 			case "session.sessionLog": {

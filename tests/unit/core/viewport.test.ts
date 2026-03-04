@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { renderViewport } from "../../../src/core/viewport.js";
 import type { ViewportConfig, ViewportSnapshot } from "../../../src/core/types.js";
+import { computeViewportDiff, isDiffEligible, renderViewport, renderViewportDiff } from "../../../src/core/viewport.js";
 
 const defaultConfig: ViewportConfig = {
 	sourceContextLines: 15,
@@ -64,9 +64,7 @@ describe("renderViewport", () => {
 			function: "main",
 			reason: "step",
 			totalFrames: 1,
-			stack: [
-				{ file: "test.py", shortFile: "test.py", line: 10, function: "main", arguments: "" },
-			],
+			stack: [{ file: "test.py", shortFile: "test.py", line: 10, function: "main", arguments: "" }],
 			source: [{ line: 10, text: "  x = 42" }],
 			locals: [{ name: "x", value: "42" }],
 			watches: [
@@ -80,5 +78,242 @@ describe("renderViewport", () => {
 		expect(output).toContain("Watch:");
 		expect(output).toContain("x > 0");
 		expect(output).toContain("True");
+	});
+
+	it("appends compression note at end of viewport", () => {
+		const snapshot: ViewportSnapshot = {
+			file: "test.py",
+			line: 10,
+			function: "main",
+			reason: "step",
+			totalFrames: 1,
+			stack: [{ file: "test.py", shortFile: "test.py", line: 10, function: "main", arguments: "" }],
+			source: [{ line: 10, text: "  x = 42" }],
+			locals: [{ name: "x", value: "42" }],
+			compressionNote: "(compressed: action 25/200, use debug_variables for full locals)",
+		};
+
+		const output = renderViewport(snapshot, defaultConfig);
+
+		expect(output).toContain("(compressed: action 25/200");
+	});
+});
+
+describe("isDiffEligible", () => {
+	const makeSnapshot = (file: string, fn: string, stackLen: number): ViewportSnapshot => ({
+		file,
+		line: 10,
+		function: fn,
+		reason: "step",
+		totalFrames: stackLen,
+		stack: Array.from({ length: stackLen }, (_, i) => ({ file, shortFile: file, line: 10 + i, function: fn, arguments: "" })),
+		source: [{ line: 10, text: "x = 1" }],
+		locals: [],
+	});
+
+	it("returns true for same file, function, and stack depth", () => {
+		const a = makeSnapshot("test.py", "main", 2);
+		const b = makeSnapshot("test.py", "main", 2);
+		expect(isDiffEligible(a, b)).toBe(true);
+	});
+
+	it("returns false when file differs", () => {
+		const a = makeSnapshot("test.py", "main", 2);
+		const b = makeSnapshot("other.py", "main", 2);
+		expect(isDiffEligible(a, b)).toBe(false);
+	});
+
+	it("returns false when function differs", () => {
+		const a = makeSnapshot("test.py", "main", 2);
+		const b = makeSnapshot("test.py", "other", 2);
+		expect(isDiffEligible(a, b)).toBe(false);
+	});
+
+	it("returns false when stack depth differs", () => {
+		const a = makeSnapshot("test.py", "main", 2);
+		const b = makeSnapshot("test.py", "main", 3);
+		expect(isDiffEligible(a, b)).toBe(false);
+	});
+});
+
+describe("computeViewportDiff", () => {
+	const makeSnapshot = (line: number, locals: Array<{ name: string; value: string }>, source?: Array<{ line: number; text: string }>): ViewportSnapshot => ({
+		file: "order.py",
+		line,
+		function: "process_order",
+		reason: "step",
+		totalFrames: 1,
+		stack: [{ file: "order.py", shortFile: "order.py", line, function: "process_order", arguments: "" }],
+		source: source ?? [{ line, text: `  line ${line}` }],
+		locals,
+	});
+
+	it("identifies changed variables", () => {
+		const prev = makeSnapshot(10, [{ name: "x", value: "1" }]);
+		const curr = makeSnapshot(11, [{ name: "x", value: "2" }]);
+		const diff = computeViewportDiff(curr, prev);
+		expect(diff.changedVariables).toHaveLength(1);
+		expect(diff.changedVariables[0]).toMatchObject({ name: "x", oldValue: "1", newValue: "2" });
+	});
+
+	it("identifies added variables as changes", () => {
+		const prev = makeSnapshot(10, []);
+		const curr = makeSnapshot(11, [{ name: "y", value: "5" }]);
+		const diff = computeViewportDiff(curr, prev);
+		expect(diff.changedVariables).toHaveLength(1);
+		expect(diff.changedVariables[0].name).toBe("y");
+	});
+
+	it("counts unchanged variables", () => {
+		const prev = makeSnapshot(10, [
+			{ name: "x", value: "1" },
+			{ name: "y", value: "2" },
+		]);
+		const curr = makeSnapshot(11, [
+			{ name: "x", value: "1" },
+			{ name: "y", value: "9" },
+		]);
+		const diff = computeViewportDiff(curr, prev);
+		expect(diff.unchangedCount).toBe(1);
+		expect(diff.changedVariables).toHaveLength(1);
+	});
+
+	it("omits source when line is within previous source window", () => {
+		const prevSource = [
+			{ line: 8, text: "a" },
+			{ line: 9, text: "b" },
+			{ line: 10, text: "c" },
+			{ line: 11, text: "d" },
+			{ line: 12, text: "e" },
+		];
+		const prev = makeSnapshot(10, [], prevSource);
+		const curr = makeSnapshot(11, [], [{ line: 11, text: "d" }]);
+		const diff = computeViewportDiff(curr, prev);
+		expect(diff.source).toBeUndefined();
+	});
+
+	it("includes source when line moved outside previous window", () => {
+		const prevSource = [
+			{ line: 5, text: "a" },
+			{ line: 6, text: "b" },
+		];
+		const newSource = [{ line: 50, text: "x" }];
+		const prev = makeSnapshot(5, [], prevSource);
+		const curr = makeSnapshot(50, [], newSource);
+		const diff = computeViewportDiff(curr, prev);
+		expect(diff.source).toBeDefined();
+	});
+
+	it("includes watches in full", () => {
+		const prev = makeSnapshot(10, []);
+		const curr = { ...makeSnapshot(11, []), watches: [{ name: "x > 0", value: "True" }] };
+		const diff = computeViewportDiff(curr, prev);
+		expect(diff.watches).toBeDefined();
+		expect(diff.watches?.[0].name).toBe("x > 0");
+	});
+
+	it("includes compression note when provided", () => {
+		const prev = makeSnapshot(10, []);
+		const curr = makeSnapshot(11, []);
+		const diff = computeViewportDiff(curr, prev, "(compressed)");
+		expect(diff.compressionNote).toBe("(compressed)");
+	});
+});
+
+describe("renderViewportDiff", () => {
+	it("shows (same frame) in header", () => {
+		const diff = {
+			isDiff: true as const,
+			file: "order.py",
+			line: 11,
+			function: "process_order",
+			reason: "step" as const,
+			changedVariables: [{ name: "x", oldValue: "1", newValue: "2" }],
+			unchangedCount: 3,
+		};
+		const output = renderViewportDiff(diff, defaultConfig);
+		expect(output).toContain("same frame");
+	});
+
+	it("shows unchanged count", () => {
+		const diff = {
+			isDiff: true as const,
+			file: "order.py",
+			line: 11,
+			function: "process_order",
+			reason: "step" as const,
+			changedVariables: [],
+			unchangedCount: 5,
+		};
+		const output = renderViewportDiff(diff, defaultConfig);
+		expect(output).toContain("5 locals unchanged");
+	});
+
+	it("renders watch expressions", () => {
+		const diff = {
+			isDiff: true as const,
+			file: "order.py",
+			line: 11,
+			function: "process_order",
+			reason: "step" as const,
+			changedVariables: [],
+			unchangedCount: 0,
+			watches: [{ name: "total > 0", value: "True" }],
+		};
+		const output = renderViewportDiff(diff, defaultConfig);
+		expect(output).toContain("Watch:");
+		expect(output).toContain("total > 0");
+	});
+
+	it("shows compression note", () => {
+		const diff = {
+			isDiff: true as const,
+			file: "order.py",
+			line: 11,
+			function: "process_order",
+			reason: "step" as const,
+			changedVariables: [],
+			unchangedCount: 0,
+			compressionNote: "(compressed: action 55/200)",
+		};
+		const output = renderViewportDiff(diff, defaultConfig);
+		expect(output).toContain("(compressed: action 55/200)");
+	});
+
+	it("produces fewer tokens than full viewport for same-frame step", () => {
+		const snapshot: ViewportSnapshot = {
+			file: "order.py",
+			line: 11,
+			function: "process_order",
+			reason: "step",
+			totalFrames: 2,
+			stack: [
+				{ file: "order.py", shortFile: "order.py", line: 11, function: "process_order", arguments: "" },
+				{ file: "router.py", shortFile: "router.py", line: 83, function: "handle_request", arguments: "" },
+			],
+			source: [
+				{ line: 9, text: "  a = 1" },
+				{ line: 10, text: "  b = 2" },
+				{ line: 11, text: "  c = 3" },
+			],
+			locals: [
+				{ name: "x", value: "42" },
+				{ name: "y", value: "100" },
+				{ name: "z", value: "200" },
+			],
+		};
+		const prev = {
+			...snapshot,
+			line: 10,
+			locals: [
+				{ name: "x", value: "41" },
+				{ name: "y", value: "100" },
+				{ name: "z", value: "200" },
+			],
+		};
+		const diff = computeViewportDiff(snapshot, prev);
+		const fullOutput = renderViewport(snapshot, defaultConfig);
+		const diffOutput = renderViewportDiff(diff, defaultConfig);
+		expect(diffOutput.length).toBeLessThan(fullOutput.length);
 	});
 });

@@ -69,6 +69,7 @@ export type RpcMethods = {
 
 	// Session intelligence
 	"session.watch": { params: WatchParams; result: string[] };
+	"session.unwatch": { params: UnwatchParams; result: string[] };
 	"session.sessionLog": { params: SessionLogParams; result: string };
 	"session.output": { params: OutputParams; result: string };
 
@@ -201,6 +202,12 @@ export const WatchParamsSchema = z.object({
 });
 export type WatchParams = z.infer<typeof WatchParamsSchema>;
 
+export const UnwatchParamsSchema = z.object({
+	sessionId: z.string(),
+	expressions: z.array(z.string()),
+});
+export type UnwatchParams = z.infer<typeof UnwatchParamsSchema>;
+
 export const SessionLogParamsSchema = z.object({
 	sessionId: z.string(),
 	format: z.enum(["summary", "detailed"]).optional(),
@@ -230,6 +237,9 @@ export interface StopResultPayload {
 export interface StatusResultPayload {
 	status: string;
 	viewport?: string;
+	tokenStats?: { viewportTokensConsumed: number; viewportCount: number };
+	actionCount?: number;
+	elapsedMs?: number;
 }
 
 export interface ViewportPayload {
