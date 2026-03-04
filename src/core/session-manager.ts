@@ -8,7 +8,7 @@ import type { StopResult } from "./dap-client.js";
 import { DAPClient } from "./dap-client.js";
 import { AdapterNotFoundError, AdapterPrerequisiteError, SessionLimitError, SessionNotFoundError, SessionStateError } from "./errors.js";
 import { extractObservations, formatSessionLogDetailed, formatSessionLogSummary } from "./session-logger.js";
-import type { Breakpoint, EnrichedActionLogEntry, ResourceLimits, SessionStatus, StopReason, TokenStats, Variable, ViewportConfig, ViewportSnapshot } from "./types.js";
+import type { Breakpoint, EnrichedActionLogEntry, ExceptionInfo, ResourceLimits, SessionStatus, StopReason, ThreadInfo, TokenStats, Variable, ViewportConfig, ViewportSnapshot } from "./types.js";
 import { ViewportConfigSchema } from "./types.js";
 import { convertDAPVariables, renderDAPVariable } from "./value-renderer.js";
 import { computeViewportDiff, isDiffEligible, renderViewport, renderViewportDiff } from "./viewport.js";
@@ -34,6 +34,59 @@ export interface LaunchOptions {
 	env?: Record<string, string>;
 	viewportConfig?: Partial<ViewportConfig>;
 	stopOnEntry?: boolean;
+}
+
+// --- Attach Options ---
+
+export interface AttachOptions {
+	/** Attach by process ID */
+	pid?: number;
+	/** Attach by port (connect to debug server) */
+	port?: number;
+	/** Host for port-based attach. Default: "127.0.0.1" */
+	host?: string;
+	/** Override language detection */
+	language: string;
+	/** Working directory */
+	cwd?: string;
+	/** Initial breakpoints */
+	breakpoints?: Array<{ file: string; breakpoints: Breakpoint[] }>;
+	/** Viewport configuration */
+	viewportConfig?: Partial<ViewportConfig>;
+}
+
+// --- Verified Breakpoint ---
+
+export interface VerifiedBreakpoint {
+	/** Requested line */
+	requestedLine: number;
+	/** Actual line the debugger set the breakpoint on (may differ) */
+	verifiedLine: number | null;
+	/** Whether the debugger accepted the breakpoint */
+	verified: boolean;
+	/** Debugger message (e.g., "adjusted to nearest executable line") */
+	message?: string;
+	/** Whether the condition was accepted (null if no condition) */
+	conditionAccepted?: boolean;
+}
+
+// --- Session Capabilities ---
+
+export interface SessionCapabilities {
+	/** Whether conditional breakpoints are supported */
+	supportsConditionalBreakpoints: boolean;
+	/** Whether hit count breakpoints are supported */
+	supportsHitConditionalBreakpoints: boolean;
+	/** Whether logpoints are supported */
+	supportsLogPoints: boolean;
+	/** Whether exception info can be queried */
+	supportsExceptionInfo: boolean;
+	/** Available exception breakpoint filters */
+	exceptionFilters: Array<{ filter: string; label: string }>;
+	/** Whether the debugger supports restart */
+	supportsRestart: boolean;
+	/** Whether set-variable is supported */
+	supportsSetVariable: boolean;
 }
 
 // --- Session State Machine ---
@@ -97,6 +150,10 @@ export interface DebugSession {
 	 * Used by continue() to avoid the race where stopped fires before waitForStop is registered.
 	 */
 	pendingStopPromise: Promise<StopResult> | null;
+	/** Last exception info (populated when stopped on exception) */
+	lastExceptionInfo: ExceptionInfo | null;
+	/** Whether this session was created via attach (vs launch) */
+	isAttached: boolean;
 }
 
 // --- Launch Result ---
@@ -251,6 +308,8 @@ export class SessionManager {
 			tokenStats: { viewportTokensConsumed: 0, viewportCount: 0 },
 			explicitViewportFields,
 			pendingStopPromise,
+			lastExceptionInfo: null,
+			isAttached: false,
 		};
 
 		// 9. Start session timeout
@@ -325,7 +384,8 @@ export class SessionManager {
 		clearTimeout(session.timeoutTimer);
 
 		try {
-			await session.dapClient.sendDisconnect(true);
+			// Don't terminate the debuggee if we attached to it
+			await session.dapClient.sendDisconnect(!session.isAttached);
 		} catch {
 			// Ignore errors during disconnect
 		}
@@ -341,6 +401,154 @@ export class SessionManager {
 	}
 
 	/**
+	 * Attach to an already-running process for debugging.
+	 */
+	async attach(options: AttachOptions): Promise<LaunchResult> {
+		// 1. Check concurrent session limit
+		if (this.sessions.size >= this.limits.maxConcurrentSessions) {
+			throw new SessionLimitError("maxConcurrentSessions", this.sessions.size, this.limits.maxConcurrentSessions, "Stop an existing session before attaching a new one.");
+		}
+
+		// 2. Resolve adapter — language is required for attach (no command to infer from)
+		const adapter = getAdapter(options.language);
+		if (!adapter) throw new AdapterNotFoundError(options.language);
+
+		const prereqs = await adapter.checkPrerequisites();
+		if (!prereqs.satisfied) {
+			throw new AdapterPrerequisiteError(adapter.id, prereqs.missing ?? [], prereqs.installHint);
+		}
+
+		// 3. Call adapter.attach()
+		const connection = await adapter.attach({
+			pid: options.pid,
+			port: options.port,
+			host: options.host,
+		});
+
+		// 4. Create DAPClient, attach streams
+		const dapClient = new DAPClient({ requestTimeoutMs: 10_000, stopTimeoutMs: this.limits.stepTimeoutMs });
+		dapClient.attachStreams(connection.reader, connection.writer);
+
+		// Build DAP attach arguments from adapter's launchArgs
+		const dapFlow = (connection.launchArgs?._dapFlow as string | undefined) ?? "standard";
+		const { _dapFlow: _ignored, ...adapterAttachArgs } = connection.launchArgs ?? {};
+		const dapAttachArgs: Record<string, unknown> = { ...adapterAttachArgs };
+
+		// Register `initialized` listener before initialize
+		const initializedPromise = new Promise<void>((resolve) => {
+			const handler = () => {
+				dapClient.off("initialized", handler);
+				resolve();
+			};
+			dapClient.on("initialized", handler);
+		});
+
+		// 5. Initialize
+		await dapClient.initialize();
+
+		const viewportConfig = ViewportConfigSchema.parse(options.viewportConfig ?? {});
+		const explicitViewportFields = new Set<string>(Object.keys(options.viewportConfig ?? {}));
+		const breakpointMap = new Map<string, Breakpoint[]>();
+
+		if (dapFlow === "launch-first") {
+			// Send attach first, wait for initialized
+			const attachPromise = dapClient.send("attach", dapAttachArgs);
+			await initializedPromise;
+
+			if (options.breakpoints) {
+				for (const { file, breakpoints } of options.breakpoints) {
+					const absFile = resolve(options.cwd ?? process.cwd(), file);
+					await dapClient.setBreakpoints({ path: absFile, name: file }, toSourceBreakpoints(breakpoints));
+					breakpointMap.set(absFile, breakpoints);
+				}
+			}
+
+			await dapClient.configurationDone();
+			await attachPromise;
+		} else {
+			await initializedPromise;
+
+			if (options.breakpoints) {
+				for (const { file, breakpoints } of options.breakpoints) {
+					const absFile = resolve(options.cwd ?? process.cwd(), file);
+					await dapClient.setBreakpoints({ path: absFile, name: file }, toSourceBreakpoints(breakpoints));
+					breakpointMap.set(absFile, breakpoints);
+				}
+			}
+
+			await dapClient.configurationDone();
+			await dapClient.send("attach", dapAttachArgs);
+		}
+
+		// 6. Create session
+		const sessionId = this.generateSessionId();
+		const now = Date.now();
+
+		const session: DebugSession = {
+			id: sessionId,
+			state: "running",
+			language: adapter.id,
+			adapter,
+			dapClient,
+			connection,
+			viewportConfig,
+			limits: this.limits,
+			startedAt: now,
+			actionCount: 0,
+			lastStoppedThreadId: null,
+			lastStoppedFrameId: null,
+			breakpointMap,
+			watchExpressions: [],
+			outputBuffer: { stdout: [], stderr: [], totalBytes: 0 },
+			actionLog: [],
+			sourceCache: new Map(),
+			timeoutTimer: setTimeout(() => {}, 0),
+			previousSnapshot: null,
+			diffMode: false,
+			tokenStats: { viewportTokensConsumed: 0, viewportCount: 0 },
+			explicitViewportFields,
+			pendingStopPromise: null,
+			lastExceptionInfo: null,
+			isAttached: true,
+		};
+
+		// Session timeout
+		session.timeoutTimer = setTimeout(async () => {
+			try {
+				session.state = "error";
+				await this.stop(sessionId);
+			} catch {
+				// ignore
+			}
+		}, this.limits.sessionTimeoutMs);
+
+		// Register output event handler
+		dapClient.on("output", (event) => {
+			const body = (event as DebugProtocol.OutputEvent).body;
+			const category = body.category ?? "console";
+			const text = body.output;
+			const entry = { text, actionNumber: session.actionCount };
+			if (category === "stdout") session.outputBuffer.stdout.push(entry);
+			else if (category === "stderr") session.outputBuffer.stderr.push(entry);
+			session.outputBuffer.totalBytes += Buffer.byteLength(text);
+			while (session.outputBuffer.totalBytes > session.limits.maxOutputBytes) {
+				const target = session.outputBuffer.stdout.length >= session.outputBuffer.stderr.length ? session.outputBuffer.stdout : session.outputBuffer.stderr;
+				if (target.length === 0) break;
+				const removed = target.shift();
+				if (removed) session.outputBuffer.totalBytes -= Buffer.byteLength(removed.text);
+			}
+		});
+
+		this.sessions.set(sessionId, session);
+		this.logAction(session, "debug_attach", `Attached to ${options.language} process`);
+
+		return {
+			sessionId,
+			status: session.state as SessionStatus,
+		};
+	}
+
+	/**
 	 * Continue execution until next stop.
 	 * Accepts both `stopped` and `running` states:
 	 * - `stopped`: sends DAP continue, then waits for next stop event.
@@ -348,7 +556,7 @@ export class SessionManager {
 	 *   so just waits for the next stop event without resending continue.
 	 *   Uses pendingStopPromise if available to avoid race conditions.
 	 */
-	async continue(sessionId: string, timeoutMs?: number): Promise<string> {
+	async continue(sessionId: string, timeoutMs?: number, threadId?: number): Promise<string> {
 		const session = this.getSession(sessionId);
 		this.assertState(session, "stopped", "running");
 		this.checkAndIncrementAction(session, "debug_continue");
@@ -356,8 +564,8 @@ export class SessionManager {
 		let stopResultPromise: Promise<StopResult>;
 
 		if (session.state === "stopped") {
-			const threadId = this.getThreadId(session);
-			await session.dapClient.continue(threadId);
+			const tid = threadId ?? this.getThreadId(session);
+			await session.dapClient.continue(tid);
 			session.state = "running";
 			stopResultPromise = session.dapClient.waitForStop(timeoutMs ?? this.limits.stepTimeoutMs);
 		} else {
@@ -374,21 +582,21 @@ export class SessionManager {
 	/**
 	 * Step in the given direction.
 	 */
-	async step(sessionId: string, direction: "over" | "into" | "out", count = 1): Promise<string> {
+	async step(sessionId: string, direction: "over" | "into" | "out", count = 1, threadId?: number): Promise<string> {
 		const session = this.getSession(sessionId);
 		this.assertState(session, "stopped");
 
 		let viewport = "";
 		for (let i = 0; i < count; i++) {
 			this.checkAndIncrementAction(session, "debug_step");
-			const threadId = this.getThreadId(session);
+			const tid = threadId ?? this.getThreadId(session);
 
 			if (direction === "over") {
-				await session.dapClient.next(threadId);
+				await session.dapClient.next(tid);
 			} else if (direction === "into") {
-				await session.dapClient.stepIn(threadId);
+				await session.dapClient.stepIn(tid);
 			} else {
-				await session.dapClient.stepOut(threadId);
+				await session.dapClient.stepOut(tid);
 			}
 
 			session.state = "running";
@@ -431,8 +639,9 @@ export class SessionManager {
 
 	/**
 	 * Set breakpoints in a file (DAP semantics: replaces all in that file).
+	 * Returns VerifiedBreakpoint[] with verification info from the debugger.
 	 */
-	async setBreakpoints(sessionId: string, file: string, breakpoints: Breakpoint[]): Promise<DebugProtocol.Breakpoint[]> {
+	async setBreakpoints(sessionId: string, file: string, breakpoints: Breakpoint[]): Promise<VerifiedBreakpoint[]> {
 		const session = this.getSession(sessionId);
 		const absFile = resolve(process.cwd(), file);
 
@@ -441,7 +650,17 @@ export class SessionManager {
 		session.breakpointMap.set(absFile, breakpoints);
 		this.logAction(session, "debug_set_breakpoints", `Set ${breakpoints.length} breakpoints in ${file}`);
 
-		return response.body?.breakpoints ?? [];
+		const verified = response.body?.breakpoints ?? [];
+		return breakpoints.map((bp, i) => {
+			const v = verified[i];
+			return {
+				requestedLine: bp.line,
+				verifiedLine: v?.line ?? null,
+				verified: v?.verified ?? false,
+				message: v?.message,
+				conditionAccepted: bp.condition ? (v?.verified ?? false) : undefined,
+			};
+		});
 	}
 
 	/**
@@ -451,6 +670,57 @@ export class SessionManager {
 		const session = this.getSession(sessionId);
 		await session.dapClient.setExceptionBreakpoints(filters);
 		this.logAction(session, "debug_set_exception_breakpoints", `Set exception filters: ${filters.join(", ")}`);
+	}
+
+	/**
+	 * Get the available exception breakpoint filters for a session.
+	 * Reads from DAP capabilities negotiated during initialize.
+	 */
+	getExceptionBreakpointFilters(sessionId: string): Array<{ filter: string; label: string; default?: boolean }> {
+		const session = this.getSession(sessionId);
+		const filters = session.dapClient.capabilities.exceptionBreakpointFilters ?? [];
+		return filters.map((f) => ({
+			filter: f.filter,
+			label: f.label,
+			default: f.default,
+		}));
+	}
+
+	/**
+	 * Get structured capability info from DAP for this session.
+	 */
+	getCapabilities(sessionId: string): SessionCapabilities {
+		const session = this.getSession(sessionId);
+		const caps = session.dapClient.capabilities;
+		return {
+			supportsConditionalBreakpoints: caps.supportsConditionalBreakpoints ?? false,
+			supportsHitConditionalBreakpoints: caps.supportsHitConditionalBreakpoints ?? false,
+			supportsLogPoints: caps.supportsLogPoints ?? false,
+			supportsExceptionInfo: caps.supportsExceptionInfoRequest ?? false,
+			exceptionFilters: (caps.exceptionBreakpointFilters ?? []).map((f) => ({
+				filter: f.filter,
+				label: f.label,
+			})),
+			supportsRestart: caps.supportsRestartRequest ?? false,
+			supportsSetVariable: caps.supportsSetVariable ?? false,
+		};
+	}
+
+	/**
+	 * List all threads in the debug session.
+	 */
+	async getThreads(sessionId: string): Promise<ThreadInfo[]> {
+		const session = this.getSession(sessionId);
+		this.assertState(session, "stopped");
+
+		const response = await session.dapClient.threads();
+		const threads = response.body?.threads ?? [];
+
+		return threads.map((t) => ({
+			id: t.id,
+			name: t.name,
+			stopped: t.id === session.lastStoppedThreadId,
+		}));
 	}
 
 	/**
@@ -764,7 +1034,7 @@ export class SessionManager {
 
 		const shortFile = sourceFile.split("/").pop() ?? sourceFile;
 
-		return {
+		const snapshot: ViewportSnapshot = {
 			file: shortFile,
 			line: currentLine,
 			function: topFrame.name,
@@ -775,6 +1045,29 @@ export class SessionManager {
 			locals,
 			watches,
 		};
+
+		// Add exception info if available (only set when stopped on exception)
+		if (session.lastExceptionInfo) {
+			snapshot.exception = session.lastExceptionInfo;
+		}
+
+		// Add thread indicator when multiple threads exist
+		try {
+			const threadsResponse = await session.dapClient.threads();
+			const threads = threadsResponse.body?.threads ?? [];
+			if (threads.length > 1) {
+				const currentThread = threads.find((t) => t.id === (session.lastStoppedThreadId ?? 1));
+				snapshot.thread = {
+					id: currentThread?.id ?? 1,
+					name: currentThread?.name ?? "Thread 1",
+					totalThreads: threads.length,
+				};
+			}
+		} catch {
+			// Thread listing not supported or failed — skip
+		}
+
+		return snapshot;
 	}
 
 	/**
@@ -940,6 +1233,28 @@ export class SessionManager {
 			session.state = "stopped";
 			session.lastStoppedThreadId = stopResult.event.body.threadId ?? null;
 			const reason = this.mapStopReason(stopResult.event.body.reason);
+
+			// Query exception info when stopped on exception
+			if (reason === "exception") {
+				try {
+					const caps = session.dapClient.capabilities;
+					if (caps.supportsExceptionInfoRequest) {
+						const threadId = this.getThreadId(session);
+						const exInfo = await session.dapClient.exceptionInfo(threadId);
+						session.lastExceptionInfo = {
+							type: exInfo.body.exceptionId ?? "Unknown",
+							message: exInfo.body.description ?? exInfo.body.exceptionId ?? "",
+							exceptionId: exInfo.body.exceptionId,
+						};
+					} else {
+						session.lastExceptionInfo = null;
+					}
+				} catch {
+					session.lastExceptionInfo = null;
+				}
+			} else {
+				session.lastExceptionInfo = null;
+			}
 
 			// 1. Resolve compression tier from action count
 			const tier = resolveCompressionTier(session.actionCount);

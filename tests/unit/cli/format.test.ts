@@ -189,8 +189,8 @@ describe("formatStackTrace", () => {
 describe("formatBreakpointsSet", () => {
 	const result: BreakpointsResultPayload = {
 		breakpoints: [
-			{ line: 10, verified: true },
-			{ line: 20, verified: false, message: "file not found" },
+			{ requestedLine: 10, verifiedLine: 10, verified: true },
+			{ requestedLine: 20, verifiedLine: null, verified: false, message: "file not found" },
 		],
 	};
 

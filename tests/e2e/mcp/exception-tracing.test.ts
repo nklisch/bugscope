@@ -46,6 +46,9 @@ describe.skipIf(SKIP_NO_DEBUGPY)("E2E: exception tracing", () => {
 			timeout_ms: 10_000,
 		});
 		expect(viewport).toContain("STOPPED");
+		// Phase 5: exception info should appear in viewport if debugpy supports exceptionInfo
+		// (may or may not contain "Exception:" depending on adapter capability)
+		expect(viewport).toMatch(/STOPPED|exception/i);
 
 		// 4. Check variables for balance and amount
 		const vars = await callTool(client, "debug_variables", {

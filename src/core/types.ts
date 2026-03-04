@@ -72,6 +72,24 @@ export interface Variable {
 	type?: string;
 }
 
+export interface ExceptionInfo {
+	/** Exception type name, e.g. "ValueError", "TypeError" */
+	type: string;
+	/** Exception message */
+	message: string;
+	/** Exception ID from DAP (for drill-down) */
+	exceptionId?: string;
+}
+
+export interface ThreadInfo {
+	/** DAP thread ID */
+	id: number;
+	/** Thread name (e.g., "MainThread", "goroutine 1") */
+	name: string;
+	/** Whether this thread is currently stopped */
+	stopped: boolean;
+}
+
 export interface ViewportSnapshot {
 	file: string;
 	line: number;
@@ -82,6 +100,14 @@ export interface ViewportSnapshot {
 	source: SourceLine[];
 	locals: Variable[];
 	watches?: Variable[];
+	/** Exception info when stopped on exception */
+	exception?: ExceptionInfo;
+	/** Thread info when multiple threads exist */
+	thread?: {
+		id: number;
+		name: string;
+		totalThreads: number;
+	};
 	/** Compression note appended to viewport when active */
 	compressionNote?: string;
 }

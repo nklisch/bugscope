@@ -108,4 +108,29 @@ describe("SessionManager", () => {
 			expect(err.code).toBe("SESSION_INVALID_STATE");
 		});
 	});
+
+	describe("attach session limit enforcement", () => {
+		it("rejects attach when max concurrent sessions reached", async () => {
+			const fakeManager = new SessionManager({ ...testLimits, maxConcurrentSessions: 0 });
+			await expect(fakeManager.attach({ language: "python" })).rejects.toThrow(SessionLimitError);
+		});
+	});
+
+	describe("getCapabilities with unknown session", () => {
+		it("throws SessionNotFoundError", () => {
+			expect(() => manager.getCapabilities("bad-id")).toThrow(SessionNotFoundError);
+		});
+	});
+
+	describe("getThreads with unknown session", () => {
+		it("throws SessionNotFoundError", async () => {
+			await expect(manager.getThreads("bad-id")).rejects.toThrow(SessionNotFoundError);
+		});
+	});
+
+	describe("getExceptionBreakpointFilters with unknown session", () => {
+		it("throws SessionNotFoundError", () => {
+			expect(() => manager.getExceptionBreakpointFilters("bad-id")).toThrow(SessionNotFoundError);
+		});
+	});
 });

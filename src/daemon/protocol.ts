@@ -48,6 +48,7 @@ export const RPC_LAUNCH_ERROR = -32004;
 export type RpcMethods = {
 	// Lifecycle
 	"session.launch": { params: LaunchParams; result: LaunchResultPayload };
+	"session.attach": { params: AttachParams; result: LaunchResultPayload };
 	"session.stop": { params: SessionIdParams; result: StopResultPayload };
 	"session.status": { params: SessionIdParams; result: StatusResultPayload };
 
@@ -72,6 +73,7 @@ export type RpcMethods = {
 	"session.unwatch": { params: UnwatchParams; result: string[] };
 	"session.sessionLog": { params: SessionLogParams; result: string };
 	"session.output": { params: OutputParams; result: string };
+	"session.threads": { params: SessionIdParams; result: ThreadInfoPayload[] };
 
 	// Daemon control
 	"daemon.ping": { params: undefined; result: { uptime: number; sessions: number } };
@@ -126,6 +128,7 @@ export type LaunchParams = z.infer<typeof LaunchParamsSchema>;
 export const ContinueParamsSchema = z.object({
 	sessionId: z.string(),
 	timeoutMs: z.number().optional(),
+	threadId: z.number().optional(),
 });
 export type ContinueParams = z.infer<typeof ContinueParamsSchema>;
 
@@ -133,8 +136,43 @@ export const StepParamsSchema = z.object({
 	sessionId: z.string(),
 	direction: z.enum(["over", "into", "out"]),
 	count: z.number().optional(),
+	threadId: z.number().optional(),
 });
 export type StepParams = z.infer<typeof StepParamsSchema>;
+
+export const AttachParamsSchema = z.object({
+	language: z.string(),
+	pid: z.number().optional(),
+	port: z.number().optional(),
+	host: z.string().optional(),
+	cwd: z.string().optional(),
+	breakpoints: z
+		.array(
+			z.object({
+				file: z.string(),
+				breakpoints: z.array(
+					z.object({
+						line: z.number(),
+						condition: z.string().optional(),
+						hitCondition: z.string().optional(),
+						logMessage: z.string().optional(),
+					}),
+				),
+			}),
+		)
+		.optional(),
+	viewportConfig: z
+		.object({
+			sourceContextLines: z.number().optional(),
+			stackDepth: z.number().optional(),
+			localsMaxDepth: z.number().optional(),
+			localsMaxItems: z.number().optional(),
+			stringTruncateLength: z.number().optional(),
+			collectionPreviewItems: z.number().optional(),
+		})
+		.optional(),
+});
+export type AttachParams = z.infer<typeof AttachParamsSchema>;
 
 export const RunToParamsSchema = z.object({
 	sessionId: z.string(),
@@ -247,7 +285,13 @@ export interface ViewportPayload {
 }
 
 export interface BreakpointsResultPayload {
-	breakpoints: Array<{ line?: number; verified: boolean; message?: string }>;
+	breakpoints: Array<{ requestedLine: number; verifiedLine: number | null; verified: boolean; message?: string; conditionAccepted?: boolean }>;
+}
+
+export interface ThreadInfoPayload {
+	id: number;
+	name: string;
+	stopped: boolean;
 }
 
 export interface BreakpointsListPayload {

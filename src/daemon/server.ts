@@ -5,6 +5,7 @@ import { AdapterNotFoundError, AdapterPrerequisiteError, AgentLensError, LaunchE
 import type { SessionManager } from "../core/session-manager.js";
 import type { JsonRpcRequest, JsonRpcResponse } from "./protocol.js";
 import {
+	AttachParamsSchema,
 	ContinueParamsSchema,
 	EvaluateParamsSchema,
 	LaunchParamsSchema,
@@ -223,6 +224,11 @@ export class DaemonServer {
 				return this.sessionManager.launch(p);
 			}
 
+			case "session.attach": {
+				const p = AttachParamsSchema.parse(params);
+				return this.sessionManager.attach(p);
+			}
+
 			case "session.stop": {
 				const p = SessionIdParamsSchema.parse(params);
 				return this.sessionManager.stop(p.sessionId);
@@ -236,13 +242,13 @@ export class DaemonServer {
 			// --- Execution Control ---
 			case "session.continue": {
 				const p = ContinueParamsSchema.parse(params);
-				const viewport = await this.sessionManager.continue(p.sessionId, p.timeoutMs);
+				const viewport = await this.sessionManager.continue(p.sessionId, p.timeoutMs, p.threadId);
 				return { viewport };
 			}
 
 			case "session.step": {
 				const p = StepParamsSchema.parse(params);
-				const viewport = await this.sessionManager.step(p.sessionId, p.direction, p.count);
+				const viewport = await this.sessionManager.step(p.sessionId, p.direction, p.count, p.threadId);
 				return { viewport };
 			}
 
@@ -255,14 +261,8 @@ export class DaemonServer {
 			// --- Breakpoints ---
 			case "session.setBreakpoints": {
 				const p = SetBreakpointsParamsSchema.parse(params);
-				const dapBps = await this.sessionManager.setBreakpoints(p.sessionId, p.file, p.breakpoints);
-				return {
-					breakpoints: dapBps.map((bp) => ({
-						line: bp.line,
-						verified: bp.verified,
-						message: bp.message,
-					})),
-				};
+				const verifiedBps = await this.sessionManager.setBreakpoints(p.sessionId, p.file, p.breakpoints);
+				return { breakpoints: verifiedBps };
 			}
 
 			case "session.setExceptionBreakpoints": {
@@ -326,6 +326,11 @@ export class DaemonServer {
 			case "session.output": {
 				const p = OutputParamsSchema.parse(params);
 				return this.sessionManager.getOutput(p.sessionId, p.stream, p.sinceAction);
+			}
+
+			case "session.threads": {
+				const p = SessionIdParamsSchema.parse(params);
+				return this.sessionManager.getThreads(p.sessionId);
 			}
 
 			// --- Daemon Control ---

@@ -293,6 +293,16 @@ export class DAPClient {
 		return this.send("threads");
 	}
 
+	/** DAP exceptionInfo — get details about the exception that caused a stop. */
+	exceptionInfo(threadId: number): Promise<DebugProtocol.ExceptionInfoResponse> {
+		return this.send("exceptionInfo", { threadId });
+	}
+
+	/** DAP attach — attach to a running debugee. */
+	attach(args: DebugProtocol.AttachRequestArguments): Promise<DebugProtocol.AttachResponse> {
+		return this.send("attach", args as Record<string, unknown>);
+	}
+
 	/**
 	 * Dispose the client: reject all pending requests, clear handlers,
 	 * disconnect transport.

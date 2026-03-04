@@ -80,6 +80,54 @@ describe("renderViewport", () => {
 		expect(output).toContain("True");
 	});
 
+	it("renders thread indicator when thread field is present", () => {
+		const snapshot: ViewportSnapshot = {
+			file: "app.py",
+			line: 10,
+			function: "worker",
+			reason: "breakpoint",
+			totalFrames: 1,
+			stack: [{ file: "app.py", shortFile: "app.py", line: 10, function: "worker", arguments: "" }],
+			source: [{ line: 10, text: "  x = 1" }],
+			locals: [],
+			thread: { id: 2, name: "worker-1", totalThreads: 3 },
+		};
+		const output = renderViewport(snapshot, defaultConfig);
+		expect(output).toContain("[worker-1 (2/3)]");
+	});
+
+	it("renders clean header (no thread indicator) for single-threaded snapshot", () => {
+		const snapshot: ViewportSnapshot = {
+			file: "app.py",
+			line: 10,
+			function: "main",
+			reason: "breakpoint",
+			totalFrames: 1,
+			stack: [{ file: "app.py", shortFile: "app.py", line: 10, function: "main", arguments: "" }],
+			source: [{ line: 10, text: "  x = 1" }],
+			locals: [],
+		};
+		const output = renderViewport(snapshot, defaultConfig);
+		expect(output).not.toContain("[");
+		expect(output).toContain("── STOPPED at app.py:10 (main) ──");
+	});
+
+	it("renders exception info in viewport when exception field is present", () => {
+		const snapshot: ViewportSnapshot = {
+			file: "app.py",
+			line: 42,
+			function: "process",
+			reason: "exception",
+			totalFrames: 1,
+			stack: [{ file: "app.py", shortFile: "app.py", line: 42, function: "process", arguments: "" }],
+			source: [{ line: 42, text: "  raise ValueError('bad input')" }],
+			locals: [],
+			exception: { type: "ValueError", message: "bad input" },
+		};
+		const output = renderViewport(snapshot, defaultConfig);
+		expect(output).toContain("Exception: ValueError: bad input");
+	});
+
 	it("appends compression note at end of viewport", () => {
 		const snapshot: ViewportSnapshot = {
 			file: "test.py",

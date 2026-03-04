@@ -113,16 +113,34 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 3: debug_status
 	server.tool(
 		"debug_status",
-		"Get the current status of a debug session. Returns viewport if stopped. Includes token stats and action count.",
+		"Get the current status of a debug session. Returns viewport if stopped. Includes token stats, action count, and adapter capabilities.",
 		{
 			session_id: z.string().describe("The session to query"),
 		},
 		async ({ session_id }) => {
 			try {
 				const result = await sessionManager.getStatus(session_id);
-				const text = result.viewport
+				let text = result.viewport
 					? `Status: ${result.status}\nActions: ${result.actionCount ?? 0}, Elapsed: ${result.elapsedMs ?? 0}ms, Viewport tokens: ${result.tokenStats?.viewportTokensConsumed ?? 0}\n\n${result.viewport}`
 					: `Status: ${result.status}\nActions: ${result.actionCount ?? 0}, Elapsed: ${result.elapsedMs ?? 0}ms, Viewport tokens: ${result.tokenStats?.viewportTokensConsumed ?? 0}`;
+
+				// Append capabilities summary
+				try {
+					const caps = sessionManager.getCapabilities(session_id);
+					const capLines = [
+						`Conditional breakpoints: ${caps.supportsConditionalBreakpoints ? "yes" : "no"}`,
+						`Hit count breakpoints: ${caps.supportsHitConditionalBreakpoints ? "yes" : "no"}`,
+						`Logpoints: ${caps.supportsLogPoints ? "yes" : "no"}`,
+						`Exception info: ${caps.supportsExceptionInfo ? "yes" : "no"}`,
+					];
+					if (caps.exceptionFilters.length > 0) {
+						capLines.push(`Exception filters: ${caps.exceptionFilters.map((f) => f.filter).join(", ")}`);
+					}
+					text += `\n\nCapabilities:\n${capLines.map((l) => `  ${l}`).join("\n")}`;
+				} catch {
+					// Capabilities not available (e.g. not yet initialized)
+				}
+
 				return { content: [{ type: "text" as const, text }] };
 			} catch (err) {
 				return errorResponse(err);
@@ -137,10 +155,11 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		{
 			session_id: z.string().describe("The active debug session"),
 			timeout_ms: z.number().optional().describe("Max wait time for next stop in ms. Default: 30000"),
+			thread_id: z.number().optional().describe("Thread ID to continue. Default: the thread that last stopped. Use debug_threads to list available threads."),
 		},
-		async ({ session_id, timeout_ms }) => {
+		async ({ session_id, timeout_ms, thread_id }) => {
 			try {
-				const viewport = await sessionManager.continue(session_id, timeout_ms);
+				const viewport = await sessionManager.continue(session_id, timeout_ms, thread_id);
 				return { content: [{ type: "text" as const, text: viewport }] };
 			} catch (err) {
 				return errorResponse(err);
@@ -156,10 +175,11 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 			session_id: z.string().describe("The active debug session"),
 			direction: z.enum(["over", "into", "out"]).describe("Step granularity: 'over' skips function calls, 'into' enters them, 'out' runs to parent frame"),
 			count: z.number().optional().describe("Number of steps to take. Default: 1. Useful for stepping through loops without setting breakpoints."),
+			thread_id: z.number().optional().describe("Thread ID to step. Default: the thread that last stopped. Use debug_threads to list available threads."),
 		},
-		async ({ session_id, direction, count }) => {
+		async ({ session_id, direction, count, thread_id }) => {
 			try {
-				const viewport = await sessionManager.step(session_id, direction, count);
+				const viewport = await sessionManager.step(session_id, direction, count, thread_id);
 				return { content: [{ type: "text" as const, text: viewport }] };
 			} catch (err) {
 				return errorResponse(err);
@@ -190,7 +210,11 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 7: debug_set_breakpoints
 	server.tool(
 		"debug_set_breakpoints",
-		"Set breakpoints in a source file. REPLACES all existing breakpoints in that file.",
+		"Set breakpoints in a source file. REPLACES all existing breakpoints in that file. " +
+			"Supports conditions ('discount < 0'), hit counts ('>=100'), and logpoints ('discount={discount}'). " +
+			"Logpoints log a message when hit instead of breaking. Not all debuggers support logpoints — " +
+			"if unsupported, the breakpoint will be set as a regular breakpoint. " +
+			"Note: breakpoints on non-executable lines may be adjusted by the debugger.",
 		{
 			session_id: z.string().describe("The active debug session"),
 			file: z.string().describe("Source file path"),
@@ -208,7 +232,18 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		async ({ session_id, file, breakpoints }) => {
 			try {
 				const verified = await sessionManager.setBreakpoints(session_id, file, breakpoints);
-				const lines = verified.map((bp) => `  Line ${bp.line ?? "?"}: ${bp.verified ? "verified" : "unverified"} ${bp.message ?? ""}`).join("\n");
+				const lines = verified
+					.map((bp) => {
+						const parts = [`Line ${bp.requestedLine}`];
+						if (bp.verifiedLine !== null && bp.verifiedLine !== bp.requestedLine) {
+							parts.push(`→ adjusted to line ${bp.verifiedLine}`);
+						}
+						parts.push(bp.verified ? "verified" : "UNVERIFIED");
+						if (bp.message) parts.push(`(${bp.message})`);
+						if (bp.conditionAccepted === false) parts.push("WARNING: condition may not be supported");
+						return `  ${parts.join(" ")}`;
+					})
+					.join("\n");
 				return {
 					content: [
 						{
@@ -226,7 +261,11 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 8: debug_set_exception_breakpoints
 	server.tool(
 		"debug_set_exception_breakpoints",
-		"Configure exception breakpoint filters. Controls which exceptions pause execution.",
+		"Configure exception breakpoint filters. Controls which exceptions pause execution. " +
+			"Python filters: 'raised' (all exceptions), 'uncaught' (unhandled only), 'userUnhandled'. " +
+			"Node.js filters: 'all' (all exceptions), 'uncaught' (unhandled only). " +
+			"Go/Delve: 'panic' (runtime panics). " +
+			"Use debug_status after launch to see exact available filters for the current adapter.",
 		{
 			session_id: z.string().describe("The active debug session"),
 			filters: z
@@ -238,8 +277,10 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		async ({ session_id, filters }) => {
 			try {
 				await sessionManager.setExceptionBreakpoints(session_id, filters);
+				const available = sessionManager.getExceptionBreakpointFilters(session_id);
+				const filterList = available.map((f) => `  ${f.filter}: ${f.label}`).join("\n");
 				return {
-					content: [{ type: "text" as const, text: `Exception breakpoints set: ${filters.join(", ")}` }],
+					content: [{ type: "text" as const, text: `Exception breakpoints set: ${filters.join(", ")}${filterList ? `\n\nAvailable filters:\n${filterList}` : ""}` }],
 				};
 			} catch (err) {
 				return errorResponse(err);
@@ -422,6 +463,114 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 				const output = sessionManager.getOutput(session_id, stream ?? "both", since_action ?? 0);
 				return {
 					content: [{ type: "text" as const, text: output || "No output captured." }],
+				};
+			} catch (err) {
+				return errorResponse(err);
+			}
+		},
+	);
+
+	// Tool 17: debug_attach
+	server.tool(
+		"debug_attach",
+		"Attach to an already-running process for debugging. " +
+			"Use when the target is a long-running service (web server, daemon) " +
+			"or when you need to debug a process you didn't launch. " +
+			"Python: the process must be running with debugpy listening (python -m debugpy --listen 5678 app.py). " +
+			"Node.js: the process must be running with --inspect (node --inspect app.js). " +
+			"Go: Delve will attach to the process by PID.",
+		{
+			language: z.enum(["python", "javascript", "typescript", "go"]).describe("Language of the target process. Required for attach (no command to infer from)."),
+			pid: z.number().optional().describe("Process ID to attach to. Use for Go (Delve attaches by PID)."),
+			port: z.number().optional().describe("Debug server port. Python debugpy default: 5678. Node.js inspector default: 9229."),
+			host: z.string().optional().describe("Debug server host. Default: '127.0.0.1'"),
+			cwd: z.string().optional().describe("Working directory for source file resolution"),
+			breakpoints: z
+				.array(
+					z.object({
+						file: z.string().describe("Source file path"),
+						breakpoints: z.array(
+							z.object({
+								line: z.number().describe("Line number"),
+								condition: z.string().optional(),
+								hitCondition: z.string().optional(),
+								logMessage: z.string().optional(),
+							}),
+						),
+					}),
+				)
+				.optional()
+				.describe("Breakpoints to set after attaching"),
+			viewport_config: z
+				.object({
+					source_context_lines: z.number().optional(),
+					stack_depth: z.number().optional(),
+					locals_max_depth: z.number().optional(),
+					locals_max_items: z.number().optional(),
+					string_truncate_length: z.number().optional(),
+					collection_preview_items: z.number().optional(),
+				})
+				.optional()
+				.describe("Override default viewport rendering parameters"),
+		},
+		async ({ language, pid, port, host, cwd, breakpoints, viewport_config }) => {
+			try {
+				const viewportConfig = viewport_config
+					? {
+							sourceContextLines: viewport_config.source_context_lines,
+							stackDepth: viewport_config.stack_depth,
+							localsMaxDepth: viewport_config.locals_max_depth,
+							localsMaxItems: viewport_config.locals_max_items,
+							stringTruncateLength: viewport_config.string_truncate_length,
+							collectionPreviewItems: viewport_config.collection_preview_items,
+						}
+					: undefined;
+
+				const result = await sessionManager.attach({
+					language,
+					pid,
+					port,
+					host,
+					cwd,
+					breakpoints,
+					viewportConfig,
+				});
+
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Session: ${result.sessionId}\nStatus: ${result.status}\nAttached to ${language} process.`,
+						},
+					],
+				};
+			} catch (err) {
+				return errorResponse(err);
+			}
+		},
+	);
+
+	// Tool 18: debug_threads
+	server.tool(
+		"debug_threads",
+		"List all threads in the debug session. " +
+			"Useful for multi-threaded programs (Go goroutines, Python threads). " +
+			"Shows thread IDs and names. Use thread_id on step/continue/evaluate " +
+			"to operate on a specific thread.",
+		{
+			session_id: z.string().describe("The active debug session"),
+		},
+		async ({ session_id }) => {
+			try {
+				const threads = await sessionManager.getThreads(session_id);
+				const lines = threads.map((t) => `  ${t.stopped ? "→" : " "} Thread ${t.id}: ${t.name}${t.stopped ? " (stopped)" : " (running)"}`);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Threads (${threads.length}):\n${lines.join("\n")}`,
+						},
+					],
 				};
 			} catch (err) {
 				return errorResponse(err);

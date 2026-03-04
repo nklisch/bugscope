@@ -8,8 +8,16 @@ export function renderViewport(snapshot: ViewportSnapshot, config: ViewportConfi
 	const lines: string[] = [];
 
 	// Header
-	lines.push(`── STOPPED at ${snapshot.file}:${snapshot.line} (${snapshot.function}) ──`);
+	let header = `── STOPPED at ${snapshot.file}:${snapshot.line} (${snapshot.function})`;
+	if (snapshot.thread) {
+		header += ` [${snapshot.thread.name} (${snapshot.thread.id}/${snapshot.thread.totalThreads})]`;
+	}
+	header += " ──";
+	lines.push(header);
 	lines.push(`Reason: ${snapshot.reason}`);
+	if (snapshot.exception) {
+		lines.push(`Exception: ${snapshot.exception.type}: ${snapshot.exception.message}`);
+	}
 	lines.push("");
 
 	// Call stack

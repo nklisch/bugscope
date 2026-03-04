@@ -119,12 +119,13 @@ export function formatBreakpointsSet(file: string, result: BreakpointsResultPayl
 		return JSON.stringify({ file, ...result }, null, 2);
 	}
 	if (mode === "quiet") {
-		return result.breakpoints.map((bp) => `${file}:${bp.line ?? "?"} ${bp.verified ? "✓" : "✗"}`).join("\n");
+		return result.breakpoints.map((bp) => `${file}:${bp.requestedLine} ${bp.verified ? "✓" : "✗"}`).join("\n");
 	}
 	const lines: string[] = [`Breakpoints set in ${file}:`];
 	for (const bp of result.breakpoints) {
-		const status = bp.verified ? "verified" : `unverified${bp.message ? ` (${bp.message})` : ""}`;
-		lines.push(`  Line ${bp.line ?? "?"}: ${status}`);
+		const adjustedNote = bp.verifiedLine !== null && bp.verifiedLine !== bp.requestedLine ? ` → adjusted to line ${bp.verifiedLine}` : "";
+		const status = bp.verified ? `verified${adjustedNote}` : `unverified${bp.message ? ` (${bp.message})` : ""}`;
+		lines.push(`  Line ${bp.requestedLine}: ${status}`);
 	}
 	return lines.join("\n");
 }

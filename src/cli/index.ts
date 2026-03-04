@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { defineCommand, runMain } from "citty";
 import {
+	attachCommand,
 	breakCommand,
 	breakpointsCommand,
 	continueCommand,
@@ -16,6 +17,7 @@ import {
 	statusCommand,
 	stepCommand,
 	stopCommand,
+	threadsCommand,
 	unwatchCommand,
 	varsCommand,
 	watchCommand,
@@ -29,6 +31,7 @@ const main = defineCommand({
 	},
 	subCommands: {
 		launch: launchCommand,
+		attach: attachCommand,
 		stop: stopCommand,
 		status: statusCommand,
 		continue: continueCommand,
@@ -44,6 +47,7 @@ const main = defineCommand({
 		unwatch: unwatchCommand,
 		log: logCommand,
 		output: outputCommand,
+		threads: threadsCommand,
 		doctor: doctorCommand,
 		skill: skillCommand,
 		// Hidden: internal daemon entry point

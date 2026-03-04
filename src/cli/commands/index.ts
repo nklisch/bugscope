@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
-import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload, ViewportPayload } from "../../daemon/protocol.js";
+import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload, ThreadInfoPayload, ViewportPayload } from "../../daemon/protocol.js";
 import { getDaemonSocketPath } from "../../daemon/protocol.js";
 import {
 	formatBreakpointsList,
@@ -554,6 +554,81 @@ export const skillCommand = defineCommand({
 		const skillPath = new URL("../../../skill.md", import.meta.url);
 		const content = await Bun.file(skillPath).text();
 		process.stdout.write(content);
+	},
+});
+
+// --- Attach ---
+
+export const attachCommand = defineCommand({
+	meta: { name: "attach", description: "Attach to a running process" },
+	args: {
+		language: {
+			type: "string",
+			description: "Language: python, javascript, typescript, go",
+			required: true,
+		},
+		pid: {
+			type: "string",
+			description: "Process ID",
+		},
+		port: {
+			type: "string",
+			description: "Debug server port",
+		},
+		host: {
+			type: "string",
+			description: "Debug server host",
+		},
+		break: {
+			type: "string",
+			description: "Set breakpoint(s), e.g. 'app.py:10'",
+			alias: "b",
+		},
+		...globalArgs,
+	},
+	async run({ args }) {
+		await runCommand(
+			args,
+			async (client, _sessionId, mode) => {
+				const breakpoints = args.break ? [parseBreakpointString(args.break)] : undefined;
+				const result = await client.call<LaunchResultPayload>("session.attach", {
+					language: args.language,
+					pid: args.pid ? Number.parseInt(args.pid, 10) : undefined,
+					port: args.port ? Number.parseInt(args.port, 10) : undefined,
+					host: args.host,
+					breakpoints: breakpoints?.map((fb) => ({
+						file: fb.file,
+						breakpoints: fb.breakpoints,
+					})),
+				});
+				if (mode === "json") {
+					process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+				} else {
+					process.stdout.write(`Session: ${result.sessionId}\nStatus: ${result.status}\nAttached to ${args.language} process.\n`);
+				}
+			},
+			{ needsSession: false },
+		);
+	},
+});
+
+// --- Threads ---
+
+export const threadsCommand = defineCommand({
+	meta: { name: "threads", description: "List all threads in the debug session" },
+	args: { ...globalArgs },
+	async run({ args }) {
+		await runCommand(args, async (client, sessionId, mode) => {
+			const threads = await client.call<ThreadInfoPayload[]>("session.threads", { sessionId });
+			if (mode === "json") {
+				process.stdout.write(`${JSON.stringify(threads, null, 2)}\n`);
+			} else {
+				process.stdout.write(`Threads (${threads.length}):\n`);
+				for (const t of threads) {
+					process.stdout.write(`  ${t.stopped ? "→" : " "} Thread ${t.id}: ${t.name}${t.stopped ? " (stopped)" : " (running)"}\n`);
+				}
+			}
+		});
 	},
 });
 
