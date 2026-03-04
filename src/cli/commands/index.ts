@@ -110,7 +110,7 @@ export const launchCommand = defineCommand({
 	args: {
 		command: {
 			type: "positional",
-			description: "Command to debug, e.g. 'python app.py'",
+			description: "Command to debug, e.g. 'python app.py' or 'pytest tests/'",
 			required: true,
 		},
 		break: {
@@ -121,6 +121,10 @@ export const launchCommand = defineCommand({
 		language: {
 			type: "string",
 			description: "Override language detection",
+		},
+		framework: {
+			type: "string",
+			description: "Override framework auto-detection (e.g., 'pytest', 'jest', 'none')",
 		},
 		"stop-on-entry": {
 			type: "boolean",
@@ -137,6 +141,7 @@ export const launchCommand = defineCommand({
 				const result = await client.call<LaunchResultPayload>("session.launch", {
 					command: args.command,
 					language: args.language,
+					framework: args.framework,
 					breakpoints: breakpoints?.map((fb) => ({
 						file: fb.file,
 						breakpoints: fb.breakpoints,

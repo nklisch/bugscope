@@ -3,9 +3,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerAllAdapters } from "../adapters/registry.js";
 import { createSessionManager } from "../core/session-manager.js";
 import { setupGracefulShutdown } from "../core/shutdown.js";
+import { registerAllDetectors } from "../frameworks/index.js";
 import { registerTools } from "./tools/index.js";
 
 registerAllAdapters();
+registerAllDetectors();
 const sessionManager = createSessionManager();
 
 const server = new McpServer({

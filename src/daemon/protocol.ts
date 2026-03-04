@@ -95,6 +95,7 @@ export type SessionIdParams = z.infer<typeof SessionIdParamsSchema>;
 export const LaunchParamsSchema = z.object({
 	command: z.string(),
 	language: z.string().optional(),
+	framework: z.string().optional(),
 	breakpoints: z.array(FileBreakpointsSchema).optional(),
 	cwd: z.string().optional(),
 	env: z.record(z.string(), z.string()).optional(),
@@ -231,6 +232,10 @@ export interface LaunchResultPayload {
 	sessionId: string;
 	viewport?: string;
 	status: string;
+	/** Detected framework identifier (e.g., "pytest", "jest") */
+	framework?: string;
+	/** Warnings explaining framework-specific modifications */
+	frameworkWarnings?: string[];
 }
 
 export interface StopResultPayload {

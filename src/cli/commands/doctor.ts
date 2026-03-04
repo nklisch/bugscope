@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { listAdapters, registerAllAdapters } from "../../adapters/registry.js";
+import { listDetectors, registerAllDetectors } from "../../frameworks/index.js";
 import type { OutputMode } from "../format.js";
 import { resolveOutputMode } from "../format.js";
 
@@ -13,6 +14,11 @@ export interface DoctorResult {
 		status: "available" | "missing";
 		version?: string;
 		installHint?: string;
+	}>;
+	frameworks: Array<{
+		id: string;
+		displayName: string;
+		adapterId: string;
 	}>;
 }
 
@@ -58,7 +64,14 @@ export async function runDoctorChecks(): Promise<DoctorResult> {
 		}
 	}
 
-	return { platform, runtime, runtimeVersion, adapters: adapterResults };
+	registerAllDetectors();
+	const frameworkResults: DoctorResult["frameworks"] = listDetectors().map((d) => ({
+		id: d.id,
+		displayName: d.displayName,
+		adapterId: d.adapterId,
+	}));
+
+	return { platform, runtime, runtimeVersion, adapters: adapterResults, frameworks: frameworkResults };
 }
 
 async function getPythonDebugpyVersion(): Promise<string | undefined> {
@@ -155,6 +168,11 @@ export function formatDoctor(result: DoctorResult, mode: OutputMode): string {
 		}
 	}
 
+	lines.push("", "Framework Detectors:");
+	for (const fw of result.frameworks) {
+		lines.push(`  ${fw.displayName.padEnd(24)}(${fw.adapterId})`);
+	}
+
 	return lines.join("\n");
 }
 
@@ -178,7 +196,7 @@ export const doctorCommand = defineCommand({
 	async run({ args }) {
 		const mode = resolveOutputMode(args);
 
-		// Register adapters directly (doctor doesn't need the daemon)
+		// Register adapters and detectors directly (doctor doesn't need the daemon)
 		registerAllAdapters();
 
 		const result = await runDoctorChecks();

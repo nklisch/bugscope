@@ -9,10 +9,12 @@
 import { registerAllAdapters } from "../adapters/registry.js";
 import { createSessionManager } from "../core/session-manager.js";
 import { setupGracefulShutdown } from "../core/shutdown.js";
+import { registerAllDetectors } from "../frameworks/index.js";
 import { getDaemonPidPath, getDaemonSocketPath } from "./protocol.js";
 import { DaemonServer } from "./server.js";
 
 registerAllAdapters();
+registerAllDetectors();
 const sessionManager = createSessionManager();
 
 const server = new DaemonServer(sessionManager, {

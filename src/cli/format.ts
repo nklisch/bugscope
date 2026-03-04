@@ -26,6 +26,8 @@ export function formatLaunch(result: LaunchResultPayload, mode: OutputMode): str
 	}
 	// text mode
 	const lines: string[] = [`Session started: ${result.sessionId}`];
+	if (result.framework) lines.push(`Framework: ${result.framework}`);
+	if (result.frameworkWarnings?.length) for (const w of result.frameworkWarnings) lines.push(`Warning: ${w}`);
 	if (result.viewport) {
 		lines.push(result.viewport);
 	} else {

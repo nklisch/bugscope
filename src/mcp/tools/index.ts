@@ -57,10 +57,15 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 1: debug_launch
 	server.tool(
 		"debug_launch",
-		"Launch a debug target process. Sets initial breakpoints and returns a session handle. The viewport shows source, locals, and call stack at each stop.",
+		"Launch a debug target process. Sets initial breakpoints and returns a session handle. The viewport shows source, locals, and call stack at each stop. " +
+			"Automatically detects test frameworks (pytest, jest, go test) and web frameworks (Django, Flask) to configure the debugger appropriately.",
 		{
-			command: z.string().describe("Command to execute, e.g. 'python app.py' or 'python -m pytest tests/'. " + "The debugger will launch this command and pause at breakpoints."),
+			command: z.string().describe("Command to execute, e.g. 'python app.py' or 'pytest tests/' or 'flask run'. " + "Test and web frameworks are auto-detected and configured for debugging."),
 			language: z.enum(["python", "javascript", "typescript", "go", "rust", "java", "cpp"]).optional().describe("Override automatic language detection based on file extension"),
+			framework: z
+				.string()
+				.optional()
+				.describe("Override framework auto-detection. Use a framework name (e.g., 'pytest', 'jest', 'django', 'flask', 'mocha', 'gotest') to force detection, or 'none' to disable it."),
 			breakpoints: z
 				.array(FileBreakpointsMcpSchema)
 				.optional()
@@ -84,11 +89,12 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 				.describe("Override default viewport rendering parameters"),
 			stop_on_entry: z.boolean().optional().describe("Pause on the first executable line. Default: false"),
 		},
-		async ({ command, language, breakpoints, cwd, env, viewport_config, stop_on_entry }) => {
+		async ({ command, language, framework, breakpoints, cwd, env, viewport_config, stop_on_entry }) => {
 			try {
 				const result = await sessionManager.launch({
 					command,
 					language,
+					framework,
 					breakpoints,
 					cwd,
 					env,
@@ -96,7 +102,22 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 					stopOnEntry: stop_on_entry,
 				});
 
-				const text = result.viewport ? `Session: ${result.sessionId}\n\n${result.viewport}` : `Session: ${result.sessionId}\nStatus: ${result.status}`;
+				const parts: string[] = [`Session: ${result.sessionId}`];
+				if (result.framework) {
+					parts.push(`Framework: ${result.framework}`);
+				}
+				if (result.frameworkWarnings?.length) {
+					for (const w of result.frameworkWarnings) {
+						parts.push(`Warning: ${w}`);
+					}
+				}
+				if (result.viewport) {
+					parts.push("");
+					parts.push(result.viewport);
+				} else {
+					parts.push(`Status: ${result.status}`);
+				}
+				const text = parts.join("\n");
 
 				return { content: [{ type: "text" as const, text }] };
 			} catch (err) {

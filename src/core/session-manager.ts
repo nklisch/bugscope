@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import type { DebugProtocol } from "@vscode/debugprotocol";
 import type { DAPConnection, DebugAdapter } from "../adapters/base.js";
 import { getAdapter, getAdapterForFile } from "../adapters/registry.js";
+import { detectFramework } from "../frameworks/index.js";
 import { compressionNote, computeEffectiveConfig, estimateTokens, resolveCompressionTier, shouldUseDiffMode } from "./compression.js";
 import type { StopResult } from "./dap-client.js";
 import { DAPClient } from "./dap-client.js";
@@ -29,6 +30,8 @@ function toSourceBreakpoints(bps: Breakpoint[]): DebugProtocol.SourceBreakpoint[
 export interface LaunchOptions {
 	command: string;
 	language?: string;
+	/** Explicit framework override. "none" disables auto-detection. */
+	framework?: string;
 	breakpoints?: Array<{ file: string; breakpoints: Breakpoint[] }>;
 	cwd?: string;
 	env?: Record<string, string>;
@@ -154,6 +157,10 @@ export interface DebugSession {
 	lastExceptionInfo: ExceptionInfo | null;
 	/** Whether this session was created via attach (vs launch) */
 	isAttached: boolean;
+	/** Detected framework identifier, or null */
+	framework: string | null;
+	/** Framework-related warnings surfaced at launch */
+	frameworkWarnings: string[];
 }
 
 // --- Launch Result ---
@@ -162,6 +169,10 @@ export interface LaunchResult {
 	sessionId: string;
 	viewport?: string;
 	status: SessionStatus;
+	/** Detected framework identifier (e.g., "pytest", "jest") */
+	framework?: string;
+	/** Warnings explaining framework-specific modifications */
+	frameworkWarnings?: string[];
 }
 
 // --- Stop Result ---
@@ -199,11 +210,19 @@ export class SessionManager {
 			throw new AdapterPrerequisiteError(adapter.id, prereqs.missing ?? [], prereqs.installHint);
 		}
 
+		// 2.5. Framework detection — may modify command and env
+		const cwd = options.cwd ?? process.cwd();
+		const frameworkOverrides = detectFramework(options.command, adapter.id, cwd, options.framework);
+
+		// Apply framework overrides (framework env goes under user env so user wins)
+		const effectiveCommand = frameworkOverrides?.command ?? options.command;
+		const effectiveEnv = frameworkOverrides?.env ? { ...frameworkOverrides.env, ...options.env } : options.env;
+
 		// 3. Launch adapter to get DAPConnection
 		const connection = await adapter.launch({
-			command: options.command,
-			cwd: options.cwd,
-			env: options.env,
+			command: effectiveCommand,
+			cwd,
+			env: effectiveEnv,
 		});
 
 		// 4. Create DAPClient, attach streams
@@ -212,15 +231,17 @@ export class SessionManager {
 
 		// Build DAP launch arguments — merge adapter-specific launchArgs over defaults.
 		// Strip internal protocol flags (prefixed with _) before sending to the adapter.
+		// Framework launchArgs go last so they take precedence over adapter defaults.
 		const dapFlow = (connection.launchArgs?._dapFlow as string | undefined) ?? "standard";
 		const { _dapFlow: _ignored, ...adapterLaunchArgs } = connection.launchArgs ?? {};
 		const dapLaunchArgs: Record<string, unknown> = {
 			noDebug: false,
-			program: options.command,
+			program: effectiveCommand,
 			stopOnEntry: options.stopOnEntry ?? false,
-			cwd: options.cwd ?? process.cwd(),
-			env: options.env ?? {},
+			cwd,
+			env: effectiveEnv ?? {},
 			...adapterLaunchArgs,
+			...(frameworkOverrides?.launchArgs ?? {}),
 		};
 
 		// Register `initialized` event listener before initialize() so we never miss it.
@@ -256,7 +277,7 @@ export class SessionManager {
 			// Set breakpoints now that the server is ready.
 			if (options.breakpoints) {
 				for (const { file, breakpoints } of options.breakpoints) {
-					const absFile = resolve(options.cwd ?? process.cwd(), file);
+					const absFile = resolve(cwd, file);
 					await dapClient.setBreakpoints({ path: absFile, name: file }, toSourceBreakpoints(breakpoints));
 					breakpointMap.set(absFile, breakpoints);
 				}
@@ -270,7 +291,7 @@ export class SessionManager {
 
 			if (options.breakpoints) {
 				for (const { file, breakpoints } of options.breakpoints) {
-					const absFile = resolve(options.cwd ?? process.cwd(), file);
+					const absFile = resolve(cwd, file);
 					await dapClient.setBreakpoints({ path: absFile, name: file }, toSourceBreakpoints(breakpoints));
 					breakpointMap.set(absFile, breakpoints);
 				}
@@ -310,6 +331,8 @@ export class SessionManager {
 			pendingStopPromise,
 			lastExceptionInfo: null,
 			isAttached: false,
+			framework: frameworkOverrides?.framework ?? null,
+			frameworkWarnings: frameworkOverrides?.warnings ?? [],
 		};
 
 		// 9. Start session timeout
@@ -367,12 +390,14 @@ export class SessionManager {
 			}
 		}
 
-		this.logAction(session, "debug_launch", `Launched ${options.command}`);
+		this.logAction(session, "debug_launch", `Launched ${effectiveCommand}`);
 
 		return {
 			sessionId,
 			viewport,
 			status: session.state as SessionStatus,
+			framework: frameworkOverrides?.framework,
+			frameworkWarnings: frameworkOverrides?.warnings?.length ? frameworkOverrides.warnings : undefined,
 		};
 	}
 
