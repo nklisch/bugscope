@@ -10,21 +10,9 @@
  *   --quiet                     — suppress interactive UI
  */
 
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { registerDriver } from "../lib/agents.js";
 import type { AgentDriver, AgentMetrics, AgentRunOptions, AgentRunResult } from "../lib/config.js";
 import { spawnCapture } from "../lib/spawn.js";
-
-const SKILL_PATH = resolve(import.meta.dirname, "../../../skill.md");
-
-async function readSkillFile(): Promise<string> {
-	try {
-		return await readFile(SKILL_PATH, "utf-8");
-	} catch {
-		return "";
-	}
-}
 
 const codex: AgentDriver = {
 	name: "codex",
@@ -49,8 +37,7 @@ const codex: AgentDriver = {
 
 	async run(options: AgentRunOptions): Promise<AgentRunResult> {
 		const start = Date.now();
-		const skill = await readSkillFile();
-		const fullPrompt = skill ? `${skill}\n\n---\n\n${options.prompt}` : options.prompt;
+		const fullPrompt = options.skillContent ? `${options.skillContent}\n\n---\n\n${options.prompt}` : options.prompt;
 
 		const args: string[] = ["--approval-mode", "full-auto", "--quiet", fullPrompt];
 

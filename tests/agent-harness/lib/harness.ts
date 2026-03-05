@@ -5,6 +5,7 @@ import type { AgentDriver, RunResult, Scenario, ValidationResult, Workspace } fr
 import { spawnCapture } from "./spawn.js";
 
 const MCP_SERVER_PATH = resolve(import.meta.dirname, "../../../src/mcp/index.ts");
+const SKILL_PATH = resolve(import.meta.dirname, "../../../skill/SKILL.md");
 
 // Read agent-lens version once at module load
 async function readAgentLensVersion(): Promise<string> {
@@ -143,8 +144,14 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		const preFail = await runCommand(scenario.visibleTestCommand, workspace.workDir);
 		visibleTestBefore = preFail.passed;
 
-		// Read prompt
+		// Read prompt and skill
 		const prompt = await readFile(scenario.promptPath, "utf-8");
+		let skillContent = "";
+		try {
+			skillContent = await readFile(SKILL_PATH, "utf-8");
+		} catch {
+			// Skill file missing — continue without it
+		}
 		console.error(`[harness] ${agent.name} × ${scenario.name} → ${workspace.workDir}`);
 
 		// Run agent
@@ -154,6 +161,7 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 			prompt,
 			timeoutMs: scenario.timeoutSeconds * 1000,
 			maxBudgetUsd: scenario.maxBudgetUsd,
+			skillContent,
 		});
 
 		// Check visible test after

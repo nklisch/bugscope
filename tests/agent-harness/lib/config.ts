@@ -72,6 +72,8 @@ export interface AgentRunOptions {
 	timeoutMs: number;
 	maxBudgetUsd?: number;
 	env?: Record<string, string>;
+	/** Agent-lens skill file content to inject into the agent's context */
+	skillContent?: string;
 }
 
 export interface AgentRunResult {

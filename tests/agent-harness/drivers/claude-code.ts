@@ -98,6 +98,10 @@ const claudeCode: AgentDriver = {
 		const start = Date.now();
 		const args: string[] = ["-p", options.prompt, "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"];
 
+		if (options.skillContent) {
+			args.push("--append-system-prompt", options.skillContent);
+		}
+
 		if (options.maxBudgetUsd !== undefined) {
 			args.push("--max-budget-usd", String(options.maxBudgetUsd));
 		}
