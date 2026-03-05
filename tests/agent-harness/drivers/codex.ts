@@ -66,10 +66,8 @@ const codex: AgentDriver = {
 		}
 
 		return {
-			costUsd: null,
 			numTurns: null,
-			tokensInput: null,
-			tokensOutput: null,
+			tokens: null,
 			model: null,
 			agentVersion: null,
 			toolCalls,

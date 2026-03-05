@@ -81,22 +81,15 @@ export async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
 	const workDir = await (async () => {
 		const base = join(tmpdir(), `agent-lens-harness-`);
 		await mkdir(base, { recursive: true });
-		// Use a unique temp dir per scenario run
 		const dir = `${base}${scenario.name}-${Date.now()}`;
 		await mkdir(dir, { recursive: true });
 		return dir;
 	})();
 
-	// Copy scenario src/ into workspace
 	await cp(scenario.srcDir, workDir, { recursive: true });
-
-	// Add .gitignore to avoid noise from bytecode files
 	await writeFile(join(workDir, ".gitignore"), "__pycache__/\n*.pyc\nnode_modules/\n");
-
-	// Initialize git repo so we can diff agent changes
 	await initGitRepo(workDir);
 
-	// Run setup commands
 	for (const cmd of scenario.setupCommands) {
 		const result = await exec(cmd, workDir);
 		if (result.exitCode !== 0) {
@@ -104,7 +97,6 @@ export async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
 		}
 	}
 
-	// Write MCP config
 	const mcpConfigPath = join(workDir, ".mcp-config.json");
 	await writeFile(mcpConfigPath, JSON.stringify(generateMcpConfig(workDir), null, 2));
 
@@ -114,10 +106,25 @@ export async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
 // --- Validation ---
 
 async function validate(workspace: Workspace, scenario: Scenario): Promise<ValidationResult> {
-	// Copy hidden test files into workspace
 	await cp(scenario.hiddenDir, workspace.workDir, { recursive: true });
-
 	return runCommand(scenario.validationCommand, workspace.workDir);
+}
+
+// --- Extract result summary from agent stdout (driver-specific) ---
+
+function extractResultSummary(stdout: string): string | null {
+	const lines = stdout.split("\n").filter((l) => l.trim().startsWith("{"));
+	for (const line of lines) {
+		try {
+			const data = JSON.parse(line) as Record<string, unknown>;
+			if (data.type === "result" && typeof data.result === "string") {
+				return data.result;
+			}
+		} catch {
+			// skip
+		}
+	}
+	return null;
 }
 
 // --- Full scenario run ---
@@ -140,11 +147,9 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 	let filesChanged: string[] = [];
 
 	try {
-		// Sanity check: visible test should fail before agent runs
 		const preFail = await runCommand(scenario.visibleTestCommand, workspace.workDir);
 		visibleTestBefore = preFail.passed;
 
-		// Read prompt and skill
 		const prompt = await readFile(scenario.promptPath, "utf-8");
 		let skillContent = "";
 		try {
@@ -154,7 +159,6 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		}
 		console.error(`[harness] ${agent.name} × ${scenario.name} → ${workspace.workDir}`);
 
-		// Run agent
 		agentRunResult = await agent.run({
 			workDir: workspace.workDir,
 			mcpConfigPath: workspace.mcpConfigPath,
@@ -164,16 +168,13 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 			skillContent,
 		});
 
-		// Check visible test after
 		const postCheck = await runCommand(scenario.visibleTestCommand, workspace.workDir);
 		visibleTestAfter = postCheck.passed;
 
-		// Capture diff
 		const gitResult = await captureGitDiff(workspace.workDir);
 		diff = gitResult.diff;
 		filesChanged = gitResult.filesChanged;
 
-		// Run hidden validation
 		validationResult = await validate(workspace, scenario);
 	} finally {
 		// Don't delete workspace — trace capture happens after this function
@@ -184,13 +185,16 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 
 	const result: RunResult = {
 		scenario: scenario.name,
+		scenarioMeta: {
+			description: scenario.description,
+			language: scenario.language,
+		},
 		agent: agent.name,
 		timestamp,
 		passed: validationResult.passed,
 		durationMs: agentRunResult.durationMs,
 		timedOut: agentRunResult.timedOut,
 		agentExitCode: agentRunResult.exitCode,
-		agentStderr: agentRunResult.stderr,
 		metrics,
 		agentLensVersion: AGENT_LENS_VERSION,
 		visibleTestBefore,
@@ -198,24 +202,24 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		validation: validationResult,
 		filesChanged,
 		diff,
+		sessionLog: agentRunResult.sessionLog ?? [],
+		resultSummary: extractResultSummary(agentRunResult.stdout),
 	};
 
-	// Save trace
-	await saveRunTrace(traceDir, agent.name, scenario.name, result, agentRunResult, workspace.workDir);
+	await saveRunTrace(traceDir, agent.name, scenario.name, result, agentRunResult);
 
 	return result;
 }
 
-// --- Trace saving (inline to avoid circular dep with trace.ts) ---
+// --- Trace saving ---
 
-async function saveRunTrace(suiteDir: string, agentName: string, scenarioName: string, result: RunResult, agentRun: { stdout: string; stderr: string; sessionLog?: string[] }, workDir: string): Promise<void> {
+async function saveRunTrace(suiteDir: string, agentName: string, scenarioName: string, result: RunResult, agentRun: { stdout: string; stderr: string }): Promise<void> {
 	const traceDir = join(suiteDir, agentName, scenarioName);
 	await mkdir(traceDir, { recursive: true });
 
 	await writeFile(join(traceDir, "result.json"), JSON.stringify(result, null, 2));
 	await writeFile(join(traceDir, "agent-stdout.txt"), agentRun.stdout);
 	await writeFile(join(traceDir, "agent-stderr.txt"), agentRun.stderr);
-	await writeFile(join(traceDir, "session.log"), (agentRun.sessionLog ?? []).join("\n"));
+	await writeFile(join(traceDir, "session.log"), result.sessionLog.join("\n"));
 	await writeFile(join(traceDir, "workspace-diff.patch"), result.diff);
-	await writeFile(join(traceDir, "validation-stdout.txt"), result.validation.stdout);
 }

@@ -1,15 +1,17 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-const TRACES_DIR = resolve(import.meta.dirname, "../.traces");
+/** Trace output directory. Override with TRACE_DIR env var. */
+export function getTracesDir(): string {
+	return process.env.TRACE_DIR ? resolve(process.env.TRACE_DIR) : resolve(import.meta.dirname, "../.traces");
+}
 
 /**
  * Create a suite-level trace directory for this test run.
- * The directory name is a sanitized ISO timestamp.
  */
 export async function initSuiteDir(): Promise<string> {
 	const ts = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "T").slice(0, 23);
-	const suiteDir = join(TRACES_DIR, ts);
+	const suiteDir = join(getTracesDir(), ts);
 	await mkdir(suiteDir, { recursive: true });
 	return suiteDir;
 }

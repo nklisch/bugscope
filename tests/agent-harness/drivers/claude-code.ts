@@ -1,5 +1,5 @@
 import { registerDriver } from "../lib/agents.js";
-import type { AgentDriver, AgentMetrics, AgentRunOptions, AgentRunResult } from "../lib/config.js";
+import type { AgentDriver, AgentMetrics, AgentRunOptions, AgentRunResult, TokenUsage } from "../lib/config.js";
 import { spawnCapture } from "../lib/spawn.js";
 
 /**
@@ -22,7 +22,7 @@ function formatEvent(data: Record<string, unknown>): string | null {
 			return null;
 		}
 		case "result":
-			return `[done] turns=${data.num_turns} cost=$${data.cost_usd ?? "?"}`;
+			return `[done] turns=${data.num_turns} tokens_out=${(data.usage as Record<string, number>)?.output_tokens ?? "?"}`;
 		default:
 			return null;
 	}
@@ -31,9 +31,10 @@ function formatEvent(data: Record<string, unknown>): string | null {
 /**
  * Parse metrics from Claude Code stream-json output.
  */
-function parseClaudeMetrics(stdout: string): Partial<AgentMetrics> {
+function parseClaudeMetrics(stdout: string): { metrics: Partial<AgentMetrics>; resultSummary: string | null } {
 	const lines = stdout.split("\n").filter((l) => l.trim().startsWith("{"));
 	let model: string | null = null;
+	let resultSummary: string | null = null;
 	const toolCalls: Record<string, number> = {};
 
 	for (const line of lines) {
@@ -55,14 +56,29 @@ function parseClaudeMetrics(stdout: string): Partial<AgentMetrics> {
 
 			if (data.type === "result") {
 				const usage = data.usage as Record<string, number> | undefined;
-				const cost = typeof data.total_cost_usd === "number" ? data.total_cost_usd : typeof data.cost_usd === "number" ? data.cost_usd : null;
+
+				// Token usage — include cache tokens for accurate totals
+				let tokens: TokenUsage | null = null;
+				if (usage) {
+					const input = usage.input_tokens ?? 0;
+					const cacheRead = usage.cache_read_input_tokens ?? 0;
+					const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+					const output = usage.output_tokens ?? 0;
+					tokens = { input, cacheRead, cacheWrite, output, total: input + cacheRead + cacheWrite + output };
+				}
+
+				if (typeof data.result === "string") {
+					resultSummary = data.result;
+				}
+
 				return {
-					costUsd: cost,
-					numTurns: typeof data.num_turns === "number" ? data.num_turns : null,
-					tokensInput: usage?.input_tokens ?? null,
-					tokensOutput: usage?.output_tokens ?? null,
-					model,
-					toolCalls,
+					metrics: {
+						numTurns: typeof data.num_turns === "number" ? data.num_turns : null,
+						tokens,
+						model,
+						toolCalls,
+					},
+					resultSummary,
 				};
 			}
 		} catch {
@@ -70,7 +86,7 @@ function parseClaudeMetrics(stdout: string): Partial<AgentMetrics> {
 		}
 	}
 
-	return { model, toolCalls };
+	return { metrics: { model, toolCalls }, resultSummary: null };
 }
 
 const claudeCode: AgentDriver = {
@@ -138,17 +154,20 @@ const claudeCode: AgentDriver = {
 	},
 
 	parseMetrics(result: AgentRunResult): AgentMetrics {
-		const parsed = parseClaudeMetrics(result.stdout);
+		const { metrics: parsed } = parseClaudeMetrics(result.stdout);
 		return {
-			costUsd: parsed.costUsd ?? null,
 			numTurns: parsed.numTurns ?? null,
-			tokensInput: parsed.tokensInput ?? null,
-			tokensOutput: parsed.tokensOutput ?? null,
+			tokens: parsed.tokens ?? null,
 			model: parsed.model ?? null,
 			agentVersion: null,
 			toolCalls: parsed.toolCalls ?? {},
 		};
 	},
 };
+
+// Export for use by harness (extracting resultSummary)
+export function extractResultSummary(stdout: string): string | null {
+	return parseClaudeMetrics(stdout).resultSummary;
+}
 
 registerDriver(() => claudeCode);

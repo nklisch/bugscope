@@ -88,15 +88,24 @@ export interface AgentRunResult {
 
 // --- Metrics extracted from agent output ---
 
+export interface TokenUsage {
+	/** Direct (non-cached) input tokens */
+	input: number;
+	/** Tokens read from cache */
+	cacheRead: number;
+	/** Tokens written to cache */
+	cacheWrite: number;
+	/** Output tokens */
+	output: number;
+	/** Total input tokens (input + cacheRead + cacheWrite) */
+	total: number;
+}
+
 export interface AgentMetrics {
-	/** Cost in USD (agent-reported if available) */
-	costUsd: number | null;
-	/** Number of agent turns */
+	/** Number of agent turns / steps */
 	numTurns: number | null;
-	/** Input token count */
-	tokensInput: number | null;
-	/** Output token count */
-	tokensOutput: number | null;
+	/** Token usage breakdown */
+	tokens: TokenUsage | null;
 	/** Model used */
 	model: string | null;
 	/** Agent binary version */
@@ -116,21 +125,43 @@ export interface ValidationResult {
 // --- Full Run Result ---
 
 export interface RunResult {
+	/** Scenario name */
 	scenario: string;
+	/** Scenario metadata for self-contained reports */
+	scenarioMeta: {
+		description: string;
+		language: string;
+	};
+	/** Agent name */
 	agent: string;
+	/** ISO timestamp */
 	timestamp: string;
+	/** Whether the hidden oracle test passed */
 	passed: boolean;
+	/** Agent run duration in ms */
 	durationMs: number;
+	/** Whether the agent was killed by timeout */
 	timedOut: boolean;
+	/** Agent process exit code */
 	agentExitCode: number | null;
-	agentStderr: string;
+	/** Extracted metrics */
 	metrics: AgentMetrics;
+	/** Agent-lens version used */
 	agentLensVersion: string;
+	/** Visible test pass/fail before agent ran */
 	visibleTestBefore: boolean;
+	/** Visible test pass/fail after agent ran */
 	visibleTestAfter: boolean;
+	/** Hidden oracle test result */
 	validation: ValidationResult;
+	/** Files the agent modified */
 	filesChanged: string[];
+	/** Git diff of agent's changes */
 	diff: string;
+	/** Human-readable session log */
+	sessionLog: string[];
+	/** Agent's final summary (from result event, if available) */
+	resultSummary: string | null;
 }
 
 // --- Agent Driver Interface ---
