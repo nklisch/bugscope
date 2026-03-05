@@ -157,7 +157,7 @@ scenarios/<name>/
 {
   "scenario": {
     "name": "<name>",
-    "language": "<python|node|go|rust|cpp|java>",
+    "language": "<python|node|typescript|go|rust|cpp|java>",
     "description": "<one-line description of the bug>",
     "timeout_seconds": 120,
     "max_budget_usd": 0.50
@@ -203,3 +203,25 @@ scenarios/<name>/
 - Include enough surrounding code that the bug isn't the only interesting thing in the file
 - Variable names, function names, and structure should look like real production code
 - For Level 3+, include some correct-but-suspicious code to create false leads
+
+---
+
+## Supported Languages
+
+| Language | `language` value | Runtime | Notes |
+|----------|-----------------|---------|-------|
+| Python | `python` | CPython 3.10+ | debugpy adapter |
+| JavaScript (Node) | `node` | Node.js 20+ | js-debug adapter, plain `.js` with ES modules |
+| TypeScript | `typescript` | Node.js 20+ / tsx | Separate suite from `node` — see below |
+| Go | `go` | Go 1.21+ | Delve adapter |
+
+### JavaScript vs TypeScript
+
+JavaScript (`node`) and TypeScript (`typescript`) are **separate language suites** with independent scenario sets. They share a runtime but the debugging experience differs significantly:
+
+- **Type annotations** give agents additional signals about expected shapes, narrowing the search space. A bug that requires runtime inspection in JS might be diagnosable from type mismatches in TS.
+- **Compile-time contracts** (interfaces, generics, strict null checks) change which bugs are even *possible*. Many JS footguns (`this` binding on untyped callbacks, implicit coercion) are caught or surfaced differently in strict TS.
+- **TS-specific bugs** include incorrect type assertions (`as`), unsound generics, `any` escape hatches hiding real types, and declaration files that don't match runtime behavior.
+- **Debugging TS** involves source maps, which adds a layer of indirection the agent must navigate.
+
+The `node` suite (plain JS) comes first. A future `typescript` suite should have its own shared-concept scenarios and TS-specific scenarios (e.g., wrong `as` cast, `any` masking a type error, generic constraint mismatch).
