@@ -101,6 +101,44 @@ Cross-language guidelines for creating agent test harness scenarios. Each langua
 
 ---
 
+## Cross-Language Scenario Strategy
+
+Each language suite should contain **two categories** of scenarios at every difficulty level:
+
+### Shared-concept scenarios
+
+Same bug *pattern* across languages, idiomatic to each runtime. These enable direct cross-language comparison: "Does the agent debug this class of bug better in Python or Node?"
+
+- The conceptual bug is identical (e.g., variable not reset between loops, mutation before read, float precision).
+- The code is **not** a literal port — it uses that language's idioms, standard library, and naming conventions.
+- Naming convention: use the same suffix across languages. If Python has `python-shadow-variable`, Node has `node-shadow-variable`.
+
+**Target: 1 shared-concept scenario per difficulty level (5 total per language).**
+
+### Language-specific scenarios
+
+Bugs that exploit footguns unique to that language or runtime. These are the scenarios that demonstrate *why* runtime debugging matters for that specific ecosystem.
+
+- The bug cannot exist (or would manifest completely differently) in other languages.
+- Examples: Python's mutable default args, JS `var` closure capture, Go goroutine variable capture, Rust use-after-move.
+- Naming convention: use a descriptive name specific to the bug pattern (`node-this-binding`, `python-default-mutable`).
+
+**Target: at least 1 language-specific scenario per difficulty level (5+ per language).**
+
+### Suite composition
+
+| Level | Shared | Language-specific | Total per level |
+|-------|--------|-------------------|-----------------|
+| 1 | 1 | 1+ | 2+ |
+| 2 | 1 | 1+ | 2+ |
+| 3 | 1 | 1+ | 2+ |
+| 4 | 1 | 1+ | 2+ |
+| 5 | 1 | 1+ (plus showcase/contrived) | 2+ |
+
+Minimum **10 scenarios per language** (5 shared + 5 specific). Showcase and contrived Level 5 variants are language-specific — they should exercise that runtime's debugging tools on problems unique to its ecosystem.
+
+---
+
 ## Scenario Anatomy Checklist
 
 Every scenario, regardless of language, must have:
