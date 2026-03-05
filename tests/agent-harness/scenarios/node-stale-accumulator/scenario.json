@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "node-stale-accumulator",
+		"language": "node",
+		"description": "A module-level ledger array is never cleared between days, so each day's report includes all previous days' sales",
+		"timeout_seconds": 180,
+		"max_budget_usd": 0.75
+	},
+	"setup": {
+		"commands": []
+	},
+	"visible_test": {
+		"command": "node --test test-ledger.js 2>&1"
+	},
+	"validation": {
+		"command": "node --test test_validation.js 2>&1"
+	}
+}

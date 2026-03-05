@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "node-wrong-constant",
+		"language": "node",
+		"description": "The gold tier discount is 1.0 (100%) instead of 0.1 (10%), giving gold customers a free order",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": []
+	},
+	"visible_test": {
+		"command": "node --test test-pricing.js 2>&1"
+	},
+	"validation": {
+		"command": "node --test test_validation.js 2>&1"
+	}
+}

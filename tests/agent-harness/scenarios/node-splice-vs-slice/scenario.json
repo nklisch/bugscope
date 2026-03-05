@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "node-splice-vs-slice",
+		"language": "node",
+		"description": "paginate() calls splice() instead of slice(), mutating the source array and causing wrong totalItems and missing pages on subsequent calls",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": []
+	},
+	"visible_test": {
+		"command": "node --test test-pagination.js 2>&1"
+	},
+	"validation": {
+		"command": "node --test test_validation.js 2>&1"
+	}
+}

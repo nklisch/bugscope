@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "node-shadow-variable",
+		"language": "node",
+		"description": "The accumulator variable is not reset to zero before the second loop, so the grand total includes the last validation value as a starting offset",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": []
+	},
+	"visible_test": {
+		"command": "node --test test-orders.js 2>&1"
+	},
+	"validation": {
+		"command": "node --test test_validation.js 2>&1"
+	}
+}

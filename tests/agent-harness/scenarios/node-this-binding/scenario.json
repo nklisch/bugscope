@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "node-this-binding",
+		"language": "node",
+		"description": "A method is extracted from a class instance into a local variable, losing its this binding and producing NaN tax values",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": []
+	},
+	"visible_test": {
+		"command": "node --test test-calculator.js 2>&1"
+	},
+	"validation": {
+		"command": "node --test test_validation.js 2>&1"
+	}
+}
