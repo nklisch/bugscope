@@ -84,6 +84,20 @@ export interface AgentRunResult {
 	durationMs: number;
 	/** Human-readable session log lines (optional, driver-provided) */
 	sessionLog?: string[];
+	/** Structured tool call/result timeline (optional, driver-provided) */
+	toolTimeline?: ToolEvent[];
+}
+
+/** A single tool call + result pair in the agent's investigation. */
+export interface ToolEvent {
+	/** Tool name */
+	tool: string;
+	/** Input passed to the tool */
+	input: unknown;
+	/** Tool result content (text output the agent saw) */
+	output: string | null;
+	/** Tool use ID for correlating call/result */
+	toolUseId: string;
 }
 
 // --- Metrics extracted from agent output ---
@@ -160,6 +174,8 @@ export interface RunResult {
 	diff: string;
 	/** Human-readable session log */
 	sessionLog: string[];
+	/** Structured tool call timeline with inputs and outputs */
+	toolTimeline: ToolEvent[];
 	/** Agent's final summary (from result event, if available) */
 	resultSummary: string | null;
 }

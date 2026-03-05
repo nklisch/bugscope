@@ -16,7 +16,7 @@
 
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import type { RunResult, TokenUsage } from "./lib/config.js";
+import type { RunResult, TokenUsage, ToolEvent } from "./lib/config.js";
 import { getTracesDir } from "./lib/trace.js";
 
 // ============================================
@@ -40,6 +40,7 @@ interface ReportResult {
 	filesChanged: string[];
 	diff: string;
 	sessionLog: string[];
+	toolTimeline: ToolEvent[];
 	resultSummary: string | null;
 }
 
@@ -176,6 +177,7 @@ function slimResult(r: RunResult): ReportResult {
 		filesChanged: r.filesChanged,
 		diff: r.diff,
 		sessionLog: r.sessionLog,
+		toolTimeline: r.toolTimeline,
 		resultSummary: r.resultSummary,
 	};
 }

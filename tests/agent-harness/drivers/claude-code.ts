@@ -1,5 +1,5 @@
 import { registerDriver } from "../lib/agents.js";
-import type { AgentDriver, AgentMetrics, AgentRunOptions, AgentRunResult, TokenUsage } from "../lib/config.js";
+import type { AgentDriver, AgentMetrics, AgentRunOptions, AgentRunResult, TokenUsage, ToolEvent } from "../lib/config.js";
 import { spawnCapture } from "../lib/spawn.js";
 
 /**
@@ -29,13 +29,21 @@ function formatEvent(data: Record<string, unknown>): string | null {
 }
 
 /**
- * Parse metrics from Claude Code stream-json output.
+ * Parse the full stream-json stdout into metrics, result summary, and tool timeline.
  */
-function parseClaudeMetrics(stdout: string): { metrics: Partial<AgentMetrics>; resultSummary: string | null } {
+function parseClaudeStream(stdout: string): {
+	metrics: Partial<AgentMetrics>;
+	resultSummary: string | null;
+	toolTimeline: ToolEvent[];
+} {
 	const lines = stdout.split("\n").filter((l) => l.trim().startsWith("{"));
 	let model: string | null = null;
 	let resultSummary: string | null = null;
 	const toolCalls: Record<string, number> = {};
+
+	// Pending tool calls by ID (waiting for their result)
+	const pending = new Map<string, { tool: string; input: unknown }>();
+	const toolTimeline: ToolEvent[] = [];
 
 	for (const line of lines) {
 		try {
@@ -45,11 +53,45 @@ function parseClaudeMetrics(stdout: string): { metrics: Partial<AgentMetrics>; r
 				model = data.model;
 			}
 
+			// Tool call from assistant
 			if (data.type === "assistant" && data.message) {
-				const msg = data.message as { content?: Array<{ type: string; name?: string }> };
+				const msg = data.message as { content?: Array<{ type: string; name?: string; id?: string; input?: unknown }> };
 				for (const block of msg.content ?? []) {
 					if (block.type === "tool_use" && block.name) {
 						toolCalls[block.name] = (toolCalls[block.name] ?? 0) + 1;
+						if (block.id) {
+							pending.set(block.id, { tool: block.name, input: block.input });
+						}
+					}
+				}
+			}
+
+			// Tool result from user message
+			if (data.type === "user" && data.message) {
+				const msg = data.message as { content?: Array<{ type: string; tool_use_id?: string; content?: unknown }> };
+				for (const block of msg.content ?? []) {
+					if (block.type === "tool_result" && block.tool_use_id) {
+						const call = pending.get(block.tool_use_id);
+						if (call) {
+							pending.delete(block.tool_use_id);
+							// Extract text from content
+							let output: string | null = null;
+							if (typeof block.content === "string") {
+								output = block.content;
+							} else if (Array.isArray(block.content)) {
+								const texts = (block.content as Array<{ type: string; text?: string }>)
+									.filter((c) => c.type === "text" && c.text)
+									.map((c) => c.text!);
+								if (texts.length > 0) output = texts.join("\n");
+							}
+
+							toolTimeline.push({
+								tool: call.tool,
+								input: call.input,
+								output,
+								toolUseId: block.tool_use_id,
+							});
+						}
 					}
 				}
 			}
@@ -57,7 +99,6 @@ function parseClaudeMetrics(stdout: string): { metrics: Partial<AgentMetrics>; r
 			if (data.type === "result") {
 				const usage = data.usage as Record<string, number> | undefined;
 
-				// Token usage — include cache tokens for accurate totals
 				let tokens: TokenUsage | null = null;
 				if (usage) {
 					const input = usage.input_tokens ?? 0;
@@ -72,13 +113,9 @@ function parseClaudeMetrics(stdout: string): { metrics: Partial<AgentMetrics>; r
 				}
 
 				return {
-					metrics: {
-						numTurns: typeof data.num_turns === "number" ? data.num_turns : null,
-						tokens,
-						model,
-						toolCalls,
-					},
+					metrics: { numTurns: typeof data.num_turns === "number" ? data.num_turns : null, tokens, model, toolCalls },
 					resultSummary,
+					toolTimeline,
 				};
 			}
 		} catch {
@@ -86,7 +123,7 @@ function parseClaudeMetrics(stdout: string): { metrics: Partial<AgentMetrics>; r
 		}
 	}
 
-	return { metrics: { model, toolCalls }, resultSummary: null };
+	return { metrics: { model, toolCalls }, resultSummary: null, toolTimeline };
 }
 
 const claudeCode: AgentDriver = {
@@ -143,6 +180,9 @@ const claudeCode: AgentDriver = {
 			},
 		});
 
+		// Parse the tool timeline from collected stdout
+		const { toolTimeline } = parseClaudeStream(result.stdout);
+
 		return {
 			exitCode: result.exitCode,
 			stdout: result.stdout,
@@ -150,11 +190,12 @@ const claudeCode: AgentDriver = {
 			timedOut: result.timedOut,
 			durationMs: Date.now() - start,
 			sessionLog,
+			toolTimeline,
 		};
 	},
 
 	parseMetrics(result: AgentRunResult): AgentMetrics {
-		const { metrics: parsed } = parseClaudeMetrics(result.stdout);
+		const { metrics: parsed } = parseClaudeStream(result.stdout);
 		return {
 			numTurns: parsed.numTurns ?? null,
 			tokens: parsed.tokens ?? null,
@@ -164,10 +205,5 @@ const claudeCode: AgentDriver = {
 		};
 	},
 };
-
-// Export for use by harness (extracting resultSummary)
-export function extractResultSummary(stdout: string): string | null {
-	return parseClaudeMetrics(stdout).resultSummary;
-}
 
 registerDriver(() => claudeCode);

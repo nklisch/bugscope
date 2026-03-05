@@ -203,6 +203,7 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		filesChanged,
 		diff,
 		sessionLog: agentRunResult.sessionLog ?? [],
+		toolTimeline: agentRunResult.toolTimeline ?? [],
 		resultSummary: extractResultSummary(agentRunResult.stdout),
 	};
 
