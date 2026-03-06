@@ -47,9 +47,6 @@ def get_seasonal_rate(booking_date: date) -> float:
     Returns:
         A float multiplier (e.g. 1.3 means 30% premium over base rate).
     """
-    # BUG: booking_date.month returns 1 for January.
-    # SEASONAL_RATES[1] is 1.2 (February's rate).
-    # January bookings are charged at February's premium rate.
     return SEASONAL_RATES.get(booking_date.month, 1.0)
 
 

@@ -1,11 +1,8 @@
 """TTL cache for the order processing system.
 
 Short-lived in-process cache to reduce redundant lookups.
-The default TTL of 100ms is intentionally short — it's designed
-for high-throughput scenarios where prices change infrequently.
-
-IMPORTANT: Always call invalidate() when underlying data changes.
-A stale cache entry will cause incorrect pricing until the TTL expires.
+The default TTL of 100ms is designed for high-throughput scenarios
+where prices change infrequently.
 """
 
 import time

@@ -36,8 +36,6 @@ hotel_config = HotelConfig(
 # ---------------------------------------------------------------------------
 # Guest: Alice Chen
 # Loyal returning guest — has stayed 15 total nights across 3 reservations.
-# With correct logic: 15 total_nights >= 10 → Gold tier (15% off).
-# With the bug: 3 reservation_count < 5 → Bronze tier (5% off only).
 # ---------------------------------------------------------------------------
 
 alice = Guest(
@@ -63,11 +61,7 @@ alice_booking_request = BookingRequest(
 
 # ---------------------------------------------------------------------------
 # Guest: Bob Martinez
-# New guest — no loyalty tier, books in April (rate 1.0 regardless of bug).
-# Bob is unaffected by all three bugs:
-#   Bug 1 (month off-by-one): April → key 3 or key 4, both map to 1.0
-#   Bug 2 (night count +1): test does not check Bob's total
-#   Bug 3 (reservation vs nights): Bob has 0 stays / 0 nights → Standard either way
+# New guest — no loyalty tier, books in April.
 # ---------------------------------------------------------------------------
 
 bob = Guest(

@@ -33,10 +33,6 @@ def filter_by_dimensions(events: list[Event], predicates: dict[str, Any]) -> lis
         for dim_name, expected_value in predicates.items():
             actual_value = event.dimensions.get(dim_name)
             if actual_value != expected_value:
-                # BUG: strict equality check fails for int vs string comparisons.
-                # Event dimensions contain {"priority": 1} (int from event ingestion),
-                # but query predicates contain {"priority": "1"} (string from JSON config).
-                # Python: 1 != "1" is True → event is excluded. No error, just wrong counts.
                 match = False
                 break
         if match:

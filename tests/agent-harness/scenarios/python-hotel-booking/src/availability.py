@@ -72,8 +72,6 @@ def count_nights(check_in: date, check_out: date) -> int:
     Returns:
         Integer number of nights.
     """
-    # BUG: + 1 makes the count inclusive of checkout day.
-    # Jan 15 → Jan 18 = 3 days difference, but this returns 4.
     return (check_out - check_in).days + 1
 
 

@@ -52,9 +52,6 @@ def get_loyalty_tier(guest: Guest) -> str:
       Bronze:    2+ stays
       Standard:  fewer than 2 stays
     """
-    # BUG: uses reservation_count (number of bookings) instead of total_nights.
-    # The Guest model has both fields; the business rule is based on total
-    # cumulative nights stayed, not the number of individual reservations.
     engagement = guest.reservation_count
     if engagement >= 10:
         return "gold"

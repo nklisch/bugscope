@@ -38,9 +38,6 @@ _METRIC_DEFINITIONS_B64 = base64.b64encode(json.dumps({
          "description": "Total revenue across all events", "unit": "EUR"},
         {"name": "avg_revenue_per_unit", "aggregation": "weighted_averge", "field": "revenue_per_unit",
          "description": "Revenue per unit, weighted by unit count", "unit": "EUR"},
-        # ^^^ BUG: "weighted_averge" is a typo — missing 'a'. The registry key
-        # is "weighted_average". The lookup returns agg_sum as fallback, so
-        # this metric silently computes a sum instead of a weighted average.
         {"name": "event_count", "aggregation": "count", "field": "*",
          "description": "Total number of events", "unit": "count"},
         {"name": "p95_revenue", "aggregation": "percentile_95", "field": "revenue",

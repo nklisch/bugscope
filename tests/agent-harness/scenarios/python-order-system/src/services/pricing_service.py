@@ -118,8 +118,6 @@ class PricingService:
         """Apply loyalty discount rules from config to the subtotal.
 
         Iterates all discount_rules from config and applies matching ones.
-        If deep_merge concatenates lists (Bug 2), both the old and new rate
-        entries exist in the rules, and the discount is applied twice.
         """
         customer = self.customer_dao.get(customer_id)
         if customer is None:

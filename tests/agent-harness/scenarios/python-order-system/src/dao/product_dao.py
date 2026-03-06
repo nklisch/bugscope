@@ -39,11 +39,7 @@ class ProductDAO:
         return product.price
 
     def update_price(self, sku: str, new_price: float) -> None:
-        """Update the price of a product in the catalog.
-
-        Note: callers that cache prices externally are responsible for
-        invalidating their own caches after calling this method.
-        """
+        """Update the price of a product in the catalog."""
         product = self.get(sku)
         if product is None:
             raise KeyError(f"Product not found: {sku!r}")

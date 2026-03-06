@@ -25,9 +25,7 @@ AGGREGATION_FUNCTIONS: dict[str, Callable] = {
 def get_aggregation_fn(name: str) -> Callable:
     """Look up an aggregation function by name.
 
-    Falls back to agg_sum for unknown aggregation names.
-    This silent fallback means a typo in a metric definition will
-    produce a sum instead of the intended aggregation.
+    Falls back to agg_sum for unrecognized aggregation names.
 
     Args:
         name: The aggregation function name from the metric definition.

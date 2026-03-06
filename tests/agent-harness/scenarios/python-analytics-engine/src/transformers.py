@@ -9,17 +9,8 @@ from models import Event
 from config import get_conversion_rate
 from typing import Optional
 
-# ---------------------------------------------------------------------------
-# Module-level initialization
-#
-# _RATE is read from config at import time. If this module is imported
-# before load_config() is called, _RATE will be 1.0 (the default).
-# Python evaluates default argument values at function definition time,
-# so the default=_RATE binding in normalize_revenue() captures whatever
-# _RATE is at the moment the def statement executes — which is import time.
-# ---------------------------------------------------------------------------
-
-_RATE = get_conversion_rate()   # BUG: captures 1.0 at import time, before load_config()
+# Module-level conversion rate used as default for normalize_revenue().
+_RATE = get_conversion_rate()
 
 
 def normalize_revenue(event: Event, rate: float = _RATE) -> Event:
@@ -31,14 +22,10 @@ def normalize_revenue(event: Event, rate: float = _RATE) -> Event:
     Args:
         event: The event to normalize.
         rate: The USD-to-target-currency conversion rate.
-              Defaults to the module-level rate captured at import time.
 
     Returns:
         The modified event (mutated in place and returned for chaining).
     """
-    # BUG: rate defaults to _RATE which was set at import time (before load_config()).
-    # Even after load_config() sets the rate to 0.85, this function still uses 1.0
-    # as the default because Python bound it at function definition time.
     if event.revenue is not None:
         event.revenue = round(event.revenue * rate, 2)
     return event
@@ -63,9 +50,6 @@ def enrich_revenue_per_unit(event: Event) -> Event:
     try:
         event.revenue_per_unit = event.revenue / event.units
     except ZeroDivisionError:
-        # BUG: Should set to None to exclude this event from the weighted average.
-        # The aggregator's weighted_average explicitly skips None values, but
-        # 0 passes through as a valid data point, pulling the average down.
         event.revenue_per_unit = 0
 
     return event

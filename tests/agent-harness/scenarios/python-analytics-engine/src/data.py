@@ -1,10 +1,9 @@
 """Sample event data for the analytics engine test suite.
 
 10 events representing business transactions across two regions.
-Designed so the four bugs produce a clearly wrong metric value.
 
 Event structure:
-  - dimensions: {"region": str, "priority": int}  ← note: priority is int, not str
+  - dimensions: {"region": str, "priority": int}
   - metrics: {"revenue": float (USD), "units": int}
 """
 
@@ -100,22 +99,16 @@ SAMPLE_EVENTS = [extract_from_dict(r) for r in _RAW_EVENTS]
 
 # ---------------------------------------------------------------------------
 # Query: avg_revenue_per_unit for east region, priority=1
-#
-# The filter uses priority="1" (string), but events have priority=1 (int).
-# With Bug 3 active: int 1 != str "1" → all east events excluded → empty result
-# With Bug 3 fixed: str("1") == str(1) → east+priority=1 events included
 # ---------------------------------------------------------------------------
 
 from models import Query
 
 METRIC_QUERY = Query(
     metric_name="avg_revenue_per_unit",
-    filters={"region": "east", "priority": "1"},  # priority is str "1"; events have int 1 (Bug 3)
+    filters={"region": "east", "priority": "1"},
 )
 
-# Priority-filtered query for testing Bug 3 (type mismatch).
-# Events have priority=1 (int), this query specifies priority="1" (str).
-# Bug 3 fix: str(actual) == str(expected) makes int 1 match str "1".
+# Priority-filtered query for event counting.
 PRIORITY_QUERY = Query(
     metric_name="event_count",
     filters={"region": "east", "priority": "1"},
