@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-any-escape",
+		"language": "typescript",
+		"description": "An `any`-typed input parameter masks that some records have `amount` as a string instead of a number, causing JS string concatenation instead of numeric addition in the total",
+		"timeout_seconds": 180,
+		"max_budget_usd": 0.75
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-processor.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}

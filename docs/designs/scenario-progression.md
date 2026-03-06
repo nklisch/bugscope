@@ -4,7 +4,7 @@ Escalating debugging scenarios for the agent test harness. Each level requires d
 
 Focus: **Python first**, then replicate shared patterns for other languages.
 
-See [scenario-guidelines.md](scenario-guidelines.md) for the cross-language strategy (shared-concept vs language-specific scenarios) and [node-scenario-progression.md](node-scenario-progression.md) for the Node.js suite.
+See [scenario-guidelines.md](scenario-guidelines.md) for the cross-language strategy (shared-concept vs language-specific scenarios), [node-scenario-progression.md](node-scenario-progression.md) for the Node.js suite, and [typescript-scenario-progression.md](typescript-scenario-progression.md) for the TypeScript suite.
 
 ## Difficulty Levels
 

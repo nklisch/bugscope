@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-shadow-variable",
+		"language": "typescript",
+		"description": "The `total` variable is not reset between two loops, so the second loop accumulates onto the last order's value instead of starting from zero",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-orders.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}

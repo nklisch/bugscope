@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-as-cast",
+		"language": "typescript",
+		"description": "A type assertion (`as UserProfile`) silences the compiler but the API response is missing the `preferences` field, causing a runtime TypeError",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-user-loader.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-non-null-assertion",
+		"language": "typescript",
+		"description": "A non-null assertion (`!`) on `Map.get()` crashes at runtime when a SKU in the check list is not present in the inventory map",
+		"timeout_seconds": 120,
+		"max_budget_usd": 0.50
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-inventory.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}

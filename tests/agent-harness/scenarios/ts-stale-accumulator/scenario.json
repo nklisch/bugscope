@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-stale-accumulator",
+		"language": "typescript",
+		"description": "A module-level typed array is never cleared between processing runs, so each day's report includes all previous days' sales",
+		"timeout_seconds": 180,
+		"max_budget_usd": 0.75
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-ledger.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}

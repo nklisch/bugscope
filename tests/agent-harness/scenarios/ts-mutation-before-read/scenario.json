@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-mutation-before-read",
+		"language": "typescript",
+		"description": "A typed catalog object is mutated with promotional prices before the function reads it to compute the average original price, producing a wrong result",
+		"timeout_seconds": 240,
+		"max_budget_usd": 1.00
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-promotions.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}

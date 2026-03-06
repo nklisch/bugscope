@@ -1,0 +1,18 @@
+{
+	"scenario": {
+		"name": "ts-type-guard-lie",
+		"language": "typescript",
+		"description": "A custom type guard (`is SmsNotification`) checks duck-typed properties instead of the `kind` discriminant, causing enriched push notifications to be misidentified and routed to the wrong recipient field",
+		"timeout_seconds": 240,
+		"max_budget_usd": 1.00
+	},
+	"setup": {
+		"commands": ["npm install"]
+	},
+	"visible_test": {
+		"command": "node --import tsx --test test-router.ts 2>&1"
+	},
+	"validation": {
+		"command": "node --import tsx --test test_validation.ts 2>&1"
+	}
+}
