@@ -39,6 +39,12 @@ describe("parseSwiftCommand", () => {
 		expect(result.type).toBe("binary");
 		expect(result.path).toBe("/abs/path/binary");
 	});
+
+	it("parses 'swiftc main.swift --arg' — args after source are ignored for type detection", () => {
+		const result = parseSwiftCommand("swiftc main.swift --arg");
+		expect(result.type).toBe("source");
+		expect(result.path).toBe("main.swift");
+	});
 });
 
 describe("SwiftAdapter", () => {

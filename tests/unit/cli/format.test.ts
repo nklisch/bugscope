@@ -12,6 +12,8 @@ import {
 	formatViewport,
 	resolveOutputMode,
 } from "../../../src/cli/format.js";
+import { formatDoctor } from "../../../src/cli/commands/doctor.js";
+import type { DoctorResult } from "../../../src/cli/commands/doctor.js";
 import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload } from "../../../src/daemon/protocol.js";
 
 describe("resolveOutputMode", () => {
@@ -235,6 +237,61 @@ describe("formatBreakpointsList", () => {
 		const out = formatBreakpointsList(result, "json");
 		const parsed = JSON.parse(out);
 		expect(parsed.files["app.py"]).toHaveLength(2);
+	});
+});
+
+describe("formatDoctor", () => {
+	const baseResult: DoctorResult = {
+		platform: "linux x64",
+		runtime: "Bun",
+		runtimeVersion: "1.1.0",
+		adapters: [
+			{ id: "ruby", displayName: "Ruby (rdbg)", status: "available", version: "1.9.0" },
+			{ id: "csharp", displayName: "C# (netcoredbg)", status: "available", version: "3.1.2" },
+			{ id: "swift", displayName: "Swift (lldb-dap)", status: "missing", installHint: "xcode-select --install" },
+			{ id: "kotlin", displayName: "Kotlin (java-debug-adapter)", status: "available", version: "2.0.0" },
+		],
+		frameworks: [],
+	};
+
+	it("text mode lists all 4 new adapters", () => {
+		const out = formatDoctor(baseResult, "text");
+		expect(out).toContain("Ruby (rdbg)");
+		expect(out).toContain("C# (netcoredbg)");
+		expect(out).toContain("Swift (lldb-dap)");
+		expect(out).toContain("Kotlin (java-debug-adapter)");
+	});
+
+	it("text mode shows [OK] for available adapters with version", () => {
+		const out = formatDoctor(baseResult, "text");
+		expect(out).toContain("[OK]");
+		expect(out).toContain("v1.9.0");
+		expect(out).toContain("v3.1.2");
+		expect(out).toContain("v2.0.0");
+	});
+
+	it("text mode shows [--] and install hint for missing adapters", () => {
+		const out = formatDoctor(baseResult, "text");
+		expect(out).toContain("[--]");
+		expect(out).toContain("xcode-select --install");
+	});
+
+	it("json mode includes all 4 new adapters", () => {
+		const out = formatDoctor(baseResult, "json");
+		const parsed = JSON.parse(out) as DoctorResult;
+		const ids = parsed.adapters.map((a) => a.id);
+		expect(ids).toContain("ruby");
+		expect(ids).toContain("csharp");
+		expect(ids).toContain("swift");
+		expect(ids).toContain("kotlin");
+	});
+
+	it("json mode preserves adapter status", () => {
+		const out = formatDoctor(baseResult, "json");
+		const parsed = JSON.parse(out) as DoctorResult;
+		const swift = parsed.adapters.find((a) => a.id === "swift");
+		expect(swift?.status).toBe("missing");
+		expect(swift?.installHint).toBe("xcode-select --install");
 	});
 });
 

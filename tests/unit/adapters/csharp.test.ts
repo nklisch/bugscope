@@ -39,6 +39,19 @@ describe("parseCSharpCommand", () => {
 		expect(result.path).toBe("App.dll");
 		expect(result.args).toEqual(["arg1"]);
 	});
+
+	it("parses 'App.cs arg1' as source with args", () => {
+		const result = parseCSharpCommand("App.cs arg1");
+		expect(result.type).toBe("source");
+		expect(result.path).toBe("App.cs");
+		expect(result.args).toEqual(["arg1"]);
+	});
+
+	it("parses 'dotnet run -- arg1' passing args through", () => {
+		const result = parseCSharpCommand("dotnet run -- arg1");
+		expect(result.type).toBe("project");
+		expect(result.path).toBe(".");
+	});
 });
 
 describe("CSharpAdapter", () => {

@@ -44,6 +44,19 @@ describe("parseKotlinCommand", () => {
 		expect(result.type).toBe("source");
 		expect(result.args).toEqual(["arg1"]);
 	});
+
+	it("parses 'kotlin MainKt arg1' as class with args", () => {
+		const result = parseKotlinCommand("kotlin MainKt arg1");
+		expect(result.type).toBe("class");
+		expect(result.path).toBe("MainKt");
+		expect(result.args).toEqual(["arg1"]);
+	});
+
+	it("parses 'java -cp classes MainKt' as class", () => {
+		const result = parseKotlinCommand("java -cp classes MainKt");
+		expect(result.type).toBe("class");
+		expect(result.path).toBe("MainKt");
+	});
 });
 
 describe("deriveMainClass", () => {
@@ -61,6 +74,14 @@ describe("deriveMainClass", () => {
 
 	it("handles filename without extension", () => {
 		expect(deriveMainClass("Main")).toBe("MainKt");
+	});
+
+	it("derives 'My_fileKt' from 'my_file.kt'", () => {
+		expect(deriveMainClass("my_file.kt")).toBe("My_fileKt");
+	});
+
+	it("handles multiple hyphens 'a-b-c.kt' => 'A_b_cKt'", () => {
+		expect(deriveMainClass("a-b-c.kt")).toBe("A_b_cKt");
 	});
 });
 
