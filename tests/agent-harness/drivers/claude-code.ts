@@ -35,10 +35,12 @@ function parseClaudeStream(stdout: string): {
 	metrics: Partial<AgentMetrics>;
 	resultSummary: string | null;
 	toolTimeline: ToolEvent[];
+	sessionId: string | null;
 } {
 	const lines = stdout.split("\n").filter((l) => l.trim().startsWith("{"));
 	let model: string | null = null;
 	let resultSummary: string | null = null;
+	let sessionId: string | null = null;
 	const toolCalls: Record<string, number> = {};
 
 	// Pending tool calls by ID (waiting for their result)
@@ -49,8 +51,9 @@ function parseClaudeStream(stdout: string): {
 		try {
 			const data = JSON.parse(line) as Record<string, unknown>;
 
-			if (data.type === "system" && data.subtype === "init" && typeof data.model === "string") {
-				model = data.model;
+			if (data.type === "system" && data.subtype === "init") {
+				if (typeof data.model === "string") model = data.model;
+				if (typeof data.session_id === "string") sessionId = data.session_id;
 			}
 
 			// Tool call from assistant
@@ -96,6 +99,7 @@ function parseClaudeStream(stdout: string): {
 
 			if (data.type === "result") {
 				const usage = data.usage as Record<string, number> | undefined;
+				if (typeof data.session_id === "string") sessionId = data.session_id;
 
 				let tokens: TokenUsage | null = null;
 				if (usage) {
@@ -114,6 +118,7 @@ function parseClaudeStream(stdout: string): {
 					metrics: { numTurns: typeof data.num_turns === "number" ? data.num_turns : null, tokens, model, toolCalls },
 					resultSummary,
 					toolTimeline,
+					sessionId,
 				};
 			}
 		} catch {
@@ -121,7 +126,7 @@ function parseClaudeStream(stdout: string): {
 		}
 	}
 
-	return { metrics: { model, toolCalls }, resultSummary: null, toolTimeline };
+	return { metrics: { model, toolCalls }, resultSummary: null, toolTimeline, sessionId };
 }
 
 const claudeCode: AgentDriver = {
@@ -147,14 +152,16 @@ const claudeCode: AgentDriver = {
 
 	async run(options: AgentRunOptions): Promise<AgentRunResult> {
 		const start = Date.now();
-		const args: string[] = ["-p", options.prompt, "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"];
+		const args: string[] = ["--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"];
+
+		if (options.resumeSessionId) {
+			args.push("--resume", options.resumeSessionId, "-p", options.prompt);
+		} else {
+			args.push("-p", options.prompt);
+		}
 
 		if (options.mode === "mcp") {
 			args.push("--mcp-config", options.mcpConfigPath);
-		}
-
-		if (options.skillContent) {
-			args.push("--append-system-prompt", options.skillContent);
 		}
 
 		const sessionLog: string[] = [];
@@ -178,8 +185,7 @@ const claudeCode: AgentDriver = {
 			},
 		});
 
-		// Parse the tool timeline from collected stdout
-		const { toolTimeline } = parseClaudeStream(result.stdout);
+		const { toolTimeline, sessionId } = parseClaudeStream(result.stdout);
 
 		return {
 			exitCode: result.exitCode,
@@ -189,6 +195,7 @@ const claudeCode: AgentDriver = {
 			durationMs: Date.now() - start,
 			sessionLog,
 			toolTimeline,
+			sessionId: sessionId ?? undefined,
 		};
 	},
 

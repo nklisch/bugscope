@@ -1,3 +1,1 @@
-Orders containing qualifying product bundles should receive a discount, but the discount is never applied regardless of what items are in the order.
-
-The test in `test_pipeline.py` demonstrates the failure. Debug this issue and fix the bug so that `test_pipeline.py` passes.
+We have a bundle promotion called the Starter Kit — if an order contains widget-a, cable-1m, and power-supply together, those items get 15% off. That discount should show up on the invoice and reduce the total by about $12.00. Right now bundle discounts never appear on any order, no matter what's in the cart. A Starter Kit order that should total around $75.96 is coming out at $87.96 — the full price with no discount applied.

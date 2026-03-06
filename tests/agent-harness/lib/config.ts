@@ -93,10 +93,10 @@ export interface AgentRunOptions {
 	prompt: string;
 	timeoutMs: number;
 	env?: Record<string, string>;
-	/** Agent-lens skill file content to inject into the agent's context */
-	skillContent?: string;
 	/** Run mode — controls whether MCP debugging tools are passed to the agent */
 	mode: RunMode;
+	/** Resume an existing session by ID instead of starting a new conversation */
+	resumeSessionId?: string;
 }
 
 export interface AgentRunResult {
@@ -109,6 +109,8 @@ export interface AgentRunResult {
 	sessionLog?: string[];
 	/** Structured tool call/result timeline (optional, driver-provided) */
 	toolTimeline?: ToolEvent[];
+	/** Session ID for resuming this conversation (driver-provided if available) */
+	sessionId?: string;
 }
 
 /** A single tool call + result pair in the agent's investigation. */
@@ -204,6 +206,8 @@ export interface RunResult {
 	toolTimeline: ToolEvent[];
 	/** Agent's final summary (from result event, if available) */
 	resultSummary: string | null;
+	/** Number of retry attempts after the initial run (0 if passed first time or no retries) */
+	retries: number;
 }
 
 // --- Agent Driver Interface ---

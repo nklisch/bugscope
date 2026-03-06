@@ -39,7 +39,7 @@ const codex: AgentDriver = {
 
 	async run(options: AgentRunOptions): Promise<AgentRunResult> {
 		const start = Date.now();
-		const fullPrompt = options.skillContent ? `${options.skillContent}\n\n---\n\n${options.prompt}` : options.prompt;
+		const fullPrompt = options.prompt;
 
 		const args: string[] = ["--approval-mode", "full-auto", "--quiet", fullPrompt];
 

@@ -1,4 +1,4 @@
-import { chmod, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, chmod, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { AgentDriver, AgentRunResult, RunMode, RunResult, Scenario, ValidationResult, Workspace } from "./config.js";
@@ -6,7 +6,7 @@ import { spawnCapture } from "./spawn.js";
 
 const MCP_SERVER_PATH = resolve(import.meta.dirname, "../../../src/mcp/index.ts");
 const CLI_ENTRY_PATH = resolve(import.meta.dirname, "../../../src/cli/index.ts");
-const SKILL_PATH = resolve(import.meta.dirname, "../../../skill/SKILL.md");
+const SKILL_DIR = resolve(import.meta.dirname, "../../../skill");
 
 // Read agent-lens version once at module load
 async function readAgentLensVersion(): Promise<string> {
@@ -94,7 +94,7 @@ async function runCommand(command: string, workDir: string): Promise<{ passed: b
 
 // --- Workspace preparation ---
 
-export async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
+export async function prepareWorkspace(scenario: Scenario, mode: RunMode = "mcp"): Promise<Workspace> {
 	const workDir = await (async () => {
 		const base = join(tmpdir(), `agent-lens-harness-`);
 		await mkdir(base, { recursive: true });
@@ -105,6 +105,21 @@ export async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
 
 	await cp(scenario.srcDir, workDir, { recursive: true });
 	await writeFile(join(workDir, ".gitignore"), "__pycache__/\n*.pyc\nnode_modules/\n.bin/\n");
+
+	// Install skill and add debugger hint for mcp/cli modes only — baseline has no agent-lens access
+	if (mode !== "baseline") {
+		const skillInstallDir = join(workDir, ".claude", "skills", "agent-lens");
+		await mkdir(skillInstallDir, { recursive: true });
+		await cp(SKILL_DIR, skillInstallDir, { recursive: true });
+
+		const claudeMdPath = join(workDir, "CLAUDE.md");
+		try {
+			await appendFile(claudeMdPath, "\nUse agent-lens debugger tools for hard to solve or non-obvious bugs.\n");
+		} catch {
+			// No CLAUDE.md in this scenario — skip
+		}
+	}
+
 	await initGitRepo(workDir);
 
 	for (const cmd of scenario.setupCommands) {
@@ -148,7 +163,7 @@ function extractResultSummary(stdout: string): string | null {
 
 export async function runScenario(agent: AgentDriver, scenario: Scenario, traceDir: string, mode: RunMode = "mcp"): Promise<RunResult> {
 	const timestamp = new Date().toISOString();
-	const workspace = await prepareWorkspace(scenario);
+	const workspace = await prepareWorkspace(scenario, mode);
 
 	let visibleTestBefore = false;
 	let visibleTestAfter = false;
@@ -163,20 +178,15 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 	let diff = "";
 	let filesChanged: string[] = [];
 
+	const MAX_RETRIES = 3;
+	let retries = 0;
+
 	try {
 		const preFail = await runCommand(scenario.visibleTestCommand, workspace.workDir);
 		visibleTestBefore = preFail.passed;
 
 		const prompt = await readFile(scenario.promptPath, "utf-8");
-		// Skill file teaches debugging strategy — only relevant when tools are available
-		let skillContent = "";
-		if (mode !== "baseline") {
-			try {
-				skillContent = await readFile(SKILL_PATH, "utf-8");
-			} catch {
-				// Skill file missing — continue without it
-			}
-		}
+
 		// In cli mode only, install wrapper script so `agent-lens` is callable via bash.
 		// In mcp mode, the agent uses MCP tools — no CLI wrapper is installed.
 		// In baseline mode, no agent-lens access at all.
@@ -193,10 +203,31 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 			mcpConfigPath: workspace.mcpConfigPath,
 			prompt,
 			timeoutMs: scenario.timeoutSeconds * 1000,
-			skillContent,
 			mode,
 			env,
 		});
+
+		validationResult = await validate(workspace, scenario);
+
+		// Retry loop — if validation fails, resume the session with feedback (up to MAX_RETRIES times)
+		while (!validationResult.passed && retries < MAX_RETRIES && agentRunResult.sessionId && !agentRunResult.timedOut) {
+			retries++;
+			console.error(`[harness] validation failed — retry ${retries}/${MAX_RETRIES} (session: ${agentRunResult.sessionId})`);
+
+			const followUp = `That didn't quite fix it — I'm still seeing the same issue. Can you take another look? It might help to write a small test that reproduces the specific case.`;
+
+			agentRunResult = await agent.run({
+				workDir: workspace.workDir,
+				mcpConfigPath: workspace.mcpConfigPath,
+				prompt: followUp,
+				timeoutMs: scenario.timeoutSeconds * 1000,
+				mode,
+				env,
+				resumeSessionId: agentRunResult.sessionId,
+			});
+
+			validationResult = await validate(workspace, scenario);
+		}
 
 		const postCheck = await runCommand(scenario.visibleTestCommand, workspace.workDir);
 		visibleTestAfter = postCheck.passed;
@@ -204,8 +235,6 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		const gitResult = await captureGitDiff(workspace.workDir);
 		diff = gitResult.diff;
 		filesChanged = gitResult.filesChanged;
-
-		validationResult = await validate(workspace, scenario);
 	} finally {
 		// Don't delete workspace — trace capture happens after this function
 	}
@@ -237,6 +266,7 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		sessionLog: agentRunResult.sessionLog ?? [],
 		toolTimeline: agentRunResult.toolTimeline ?? [],
 		resultSummary: extractResultSummary(agentRunResult.stdout),
+		retries,
 	};
 
 	await saveRunTrace(traceDir, agent.name, scenario.name, mode, result, agentRunResult);

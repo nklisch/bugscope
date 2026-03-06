@@ -1,5 +1,5 @@
 /**
- * Visible failing test — agent can see and run this.
+ * Visible tests for the analytics event processing pipeline.
  * Uses Node.js built-in test runner: node --import tsx --test test-pipeline.ts
  */
 
@@ -7,6 +7,23 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RawEvent } from "./pipeline.ts";
 import { runPipeline } from "./pipeline.ts";
+
+const pageviewEvents: RawEvent[] = [
+	{
+		id: "p-001",
+		type: "pageview",
+		version: 1,
+		payload: { url: "https://example.com", referrer: "", timeOnPage: 30 },
+		metadata: { source: "web", sessionId: "sess-001", timestamp: 1700000001, userId: "user-001" },
+	},
+	{
+		id: "p-002",
+		type: "pageview",
+		version: 1,
+		payload: { url: "https://example.com/about", referrer: "https://google.com", timeOnPage: 45 },
+		metadata: { source: "web", sessionId: "sess-002", timestamp: 1700000002, userId: "user-002" },
+	},
+];
 
 const purchaseEvents: RawEvent[] = [
 	{
@@ -39,9 +56,14 @@ const purchaseEvents: RawEvent[] = [
 	},
 ];
 
-test("total revenue sums all purchase amounts in dollars", () => {
-	const report = runPipeline(purchaseEvents);
-	assert.equal(report.totalRevenue, 275, `Expected total revenue $275.00, got $${report.totalRevenue}`);
+test("pageview events are counted correctly", () => {
+	const report = runPipeline(pageviewEvents);
+	assert.equal(report.eventCounts.pageview, 2, `Expected 2 pageview events, got ${report.eventCounts.pageview}`);
+});
+
+test("unique session count matches distinct sessions", () => {
+	const report = runPipeline(pageviewEvents);
+	assert.equal(report.uniqueSessionCount, 2, `Expected 2 unique sessions, got ${report.uniqueSessionCount}`);
 });
 
 test("purchase event count is correct", () => {

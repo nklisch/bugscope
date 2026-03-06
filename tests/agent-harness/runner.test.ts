@@ -17,7 +17,9 @@
  *   bun run test:agent                                                  # all agents × all scenarios × all modes
  *   AGENT=claude-code bun run test:agent                                # one agent
  *   SCENARIO=python-discount-bug bun run test:agent                     # one scenario
- *   RUN_MODE=mcp bun run test:agent                                       # one mode only
+ *   RUN_MODE=mcp bun run test:agent                                     # one mode only
+ *   LEVEL=1 bun run test:agent                                          # one difficulty level
+ *   LEVEL=1,2 bun run test:agent                                        # multiple levels
  *   AGENT=claude-code SCENARIO=python-discount-bug RUN_MODE=mcp bun run test:agent
  *   TRACE_DIR=./results bun run test:agent                              # custom output dir
  *
@@ -35,8 +37,18 @@ import { runScenario } from "./lib/harness.js";
 import { discoverScenarios } from "./lib/scenarios.js";
 import { initSuiteDir, writeSuiteMeta } from "./lib/trace.js";
 
-const scenarios: Scenario[] = await discoverScenarios();
+const allScenarios: Scenario[] = await discoverScenarios();
 const agents: AgentDriver[] = await discoverAgents();
+
+// Level filter — LEVEL=1 or LEVEL=1,2 to scope by difficulty
+const levelFilter = process.env.LEVEL;
+const scenarios: Scenario[] = levelFilter
+	? allScenarios.filter((s) => levelFilter.split(",").map(Number).includes(s.level))
+	: allScenarios;
+
+if (levelFilter && scenarios.length === 0) {
+	throw new Error(`LEVEL="${levelFilter}" matched no scenarios. Available levels: ${[...new Set(allScenarios.map((s) => s.level))].sort().join(", ")}`);
+}
 
 // Mode selection — baseline runs first, then cli, then mcp.
 // Configurable via MODE env var (comma-separated); defaults to all three modes.
@@ -58,7 +70,8 @@ beforeAll(async () => {
 		agents: agents.map((a) => a.name),
 		modes,
 	});
-	console.log(`[agent-harness] Modes: ${modes.join(", ")}  Traces → ${suiteDir}`);
+	const levelSummary = levelFilter ? `  Levels: ${levelFilter}` : "";
+	console.log(`[agent-harness] Modes: ${modes.join(", ")}${levelSummary}  Scenarios: ${scenarios.length}  Traces → ${suiteDir}`);
 });
 
 afterAll(() => {
@@ -78,6 +91,7 @@ describe.each(agents)("Agent: $name", (agent) => {
 						`Scenario: ${scenario.name} (${scenario.language})`,
 						`Mode:     ${mode}`,
 						`Duration: ${(result.durationMs / 1000).toFixed(1)}s`,
+						`Retries:  ${result.retries}`,
 						`Turns:    ${result.metrics.numTurns ?? "n/a"}`,
 						`Tokens:   ${result.metrics.tokens ? `${result.metrics.tokens.total} (in: ${result.metrics.tokens.input + result.metrics.tokens.cacheRead + result.metrics.tokens.cacheWrite}, out: ${result.metrics.tokens.output})` : "n/a"}`,
 						`Exit code: ${result.agentExitCode ?? "killed"}`,

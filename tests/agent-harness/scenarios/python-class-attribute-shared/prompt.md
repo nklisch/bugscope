@@ -1,3 +1,1 @@
-The `process_customers` function in `cart.py` is returning wrong totals for each customer. Instead of each customer's cart containing only their own items, the totals grow with each successive customer — as if all customers are sharing a single cart.
-
-The test in `test_cart.py` demonstrates the failure. Debug this issue and fix the bug so that `test_cart.py` passes.
+We're seeing wrong item counts when we process multiple customers together. Alice has 5 items and Bob has 1 item. When we process them in a batch, Alice comes back correct at 5, but Bob comes back as 6 — it's like his cart still has Alice's stuff in it. Every customer after the first picks up the previous customers' items.

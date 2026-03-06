@@ -167,8 +167,8 @@ Every scenario must have:
 ```
 scenarios/<name>/
   scenario.json       # name, language, timeout, test commands, level
-  prompt.md           # natural language bug description
-  src/                # buggy source + visible failing test
+  prompt.md           # natural-language bug report — the agent's only evidence
+  src/                # buggy source, CLAUDE.md, and a visible test that passes
   hidden/             # oracle validation test the agent never sees
 ```
 
@@ -179,7 +179,7 @@ scenarios/<name>/
   "scenario": {
     "name": "<name>",
     "language": "<python|node|typescript|go|rust|cpp|java>",
-    "description": "<one-line description>",
+    "description": "<one-line description of the bug(s)>",
     "timeout_seconds": 300,
     "level": 1
   },
@@ -195,21 +195,69 @@ scenarios/<name>/
 }
 ```
 
+### `src/CLAUDE.md`
+
+Every scenario workspace must include a `CLAUDE.md` at `src/CLAUDE.md` (which lands at the workspace root after the harness copies `src/`). This is how the agent discovers the project — the same mechanism used in real projects.
+
+It should contain:
+- One-sentence description of what the system does
+- List of files with a brief description of each
+- How to run the tests (single command)
+
+Keep it factual and structural. Do not describe what's broken, expected behavior, or anything that belongs in `prompt.md`.
+
+**Example:**
+
+```markdown
+# Bill Splitter
+
+Utility that splits a restaurant bill evenly among diners including tip.
+
+## Files
+
+- `bill.py` — `split_bill(total, num_people, tip_pct)` implementation
+- `test_bill.py` — test suite
+
+## Running
+
+```bash
+python3 -m pytest test_bill.py -v
+```
+```
+
 ### Prompt rules
 
-- Describe the **symptom**, not the cause: *"orders for gold customers calculate wrong totals"* not *"the discount multiplier is wrong"*
-- Name the entry point files so the agent knows where to start
-- For multi-bug scenarios (L2+), describe 1-2 symptoms — not all of them
-- Keep it to 3-5 sentences — the agent has the skill file for debugging strategy
-- Never mention agent-lens, debugging tools, breakpoints, or stepping
-- For L3+, mention that "multiple things seem wrong" or "several tests fail" to hint at multi-bug nature
+The prompt is a **natural-language bug report**, written in the voice of whoever discovered the issue — a customer, an engineer, a product manager. It is the agent's only source of truth about what's wrong.
 
-### Test rules
+**Rules:**
+- Write in plain, natural language — like a Slack message or support ticket, not documentation
+- State what was expected and what actually happened, with concrete values where relevant: *"Alice's total should be $428.40 but shows $766.08"*
+- Do not name files, entry points, or suggest where to look — let the agent read `CLAUDE.md` and explore
+- Do not mention tests, test commands, or whether tests pass or fail
+- Do not mention agent-lens, debugging tools, breakpoints, or any investigation strategy
+- For multi-bug scenarios (L2+), describe the observable symptoms — not the number or nature of bugs
+- 1-4 sentences is enough; more detail can make the task easier rather than more realistic
 
-- **Visible test:** should fail before the fix, pass after. Must be runnable with a single command.
-- **Hidden test:** validates ALL bugs are fixed. For multi-bug scenarios, has separate assertions per bug.
-- Both tests must be independent — hidden test must not depend on visible test state.
-- For L2+: hidden test should have more assertions than visible test, catching bugs the visible test misses.
+**Good example (L1):**
+> Customers are complaining that their bill splits don't add up. When someone splits a $47.00 bill three ways with an 18% tip, the function gives everyone $18.49 but then reports the total as $55.46 — which is $0.01 less than the $55.47 the shares actually sum to.
+
+**Bad example (tells the agent where to look and what to do):**
+> The `split_bill` function in `bill.py` has a rounding bug. Set a breakpoint inside the function and inspect the intermediate values for a $47.00 / 3-person split. Run `python3 -m pytest test_bill.py -v` to verify your fix.
+
+### Visible test rules
+
+The visible test **must pass with the buggy code**. It cannot be used by the agent to find or confirm the bug. Its only role is to verify the agent didn't break unrelated functionality.
+
+- Test paths or inputs that are **not affected** by the bug (different inputs, different code paths, structural/shape assertions)
+- Must be runnable with a single command and pass before the agent runs (`visibleTestBefore` should always be `true`)
+- Keep it minimal — one or two assertions is enough; this is a safety net, not a test suite
+
+### Hidden test rules
+
+- Validates ALL bugs are fixed with specific, tight assertions
+- For multi-bug scenarios, has separate assertions per bug
+- Must not depend on visible test state
+- For L2+: should catch bugs the visible test's inputs would never exercise
 
 ### Source code rules
 
@@ -218,7 +266,7 @@ scenarios/<name>/
 - Variable names, function names, and structure should look like real production code
 - For L2+, include correct-but-suspicious code as false leads
 - For L4+, include realistic infrastructure: logging, config, error handling
-- For L6, include a realistic project structure with README-like comments explaining the architecture
+- For L6, include a realistic project structure with multiple subsystems
 
 ---
 

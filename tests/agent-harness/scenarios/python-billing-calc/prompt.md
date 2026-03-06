@@ -1,3 +1,1 @@
-The billing system is producing incorrect invoices. A customer on the starter plan with moderate usage across storage, API calls, bandwidth, and compute is being billed $48.00 when they should be billed $158.00. The API calls line item is completely missing from the invoice, and the storage charge looks too low.
-
-The main files are `billing.py` (invoice generation), `pricing.py` (tier lookup and charges), `usage.py` (usage aggregation), and `models.py` (data structures). Run `python3 -m pytest test_billing.py -v` to see the failing tests.
+A customer on our starter plan is getting the wrong invoice. They used 505 GB of storage, 700 read API calls + 400 write API calls, 110 GB of bandwidth, and 50 compute hours. Their invoice should be $158.00 — storage $25, API calls $100, bandwidth $8, compute $25 — but we're billing them $48.00. The API calls line item is completely missing, and the storage charge is lower than it should be.

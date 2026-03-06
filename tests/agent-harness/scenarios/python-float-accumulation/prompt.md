@@ -1,3 +1,1 @@
-The `split_bill` function in `bill.py` is producing incorrect results. When splitting a bill, the individual shares don't always sum to the expected total, and sometimes one person ends up paying a different amount than the others for no apparent reason.
-
-The test in `test_bill.py` demonstrates the failure. Debug this issue and fix the bug so that `test_bill.py` passes.
+Customers are complaining that their bill splits don't add up. When someone splits a $47.00 bill three ways with an 18% tip, the function gives everyone $18.49 but then reports the total as $55.46 — which is $0.01 less than the $55.47 the shares actually sum to. Same problem with a $53.00 bill split six ways. The shares and the reported total are inconsistent.

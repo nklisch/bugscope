@@ -1,3 +1,1 @@
-The `init_service` function in `config.py` is returning the wrong `max_rps` value. The service should use the rate limit from the config file, but it's picking up a different value instead.
-
-The test in `test_config.py` demonstrates the failure. Debug this issue and fix the bug so that `test_config.py` passes.
+Our production service is using the wrong rate limit. The config file sets it to 50 requests per minute (≈0.833 req/s), which is what should be authoritative, but the service is running at 10 req/s instead — which matches a leftover environment variable from a load test. The config file is supposed to win over environment variables, but it isn't.

@@ -1,27 +1,32 @@
 /**
- * Visible failing test — agent can see and run this.
+ * Visible tests for the service config management utilities.
  * Uses Node.js built-in test runner: node --import tsx --test test-service.ts
  */
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { CacheConfig } from "./merge-configs.ts";
 import { initService } from "./merge-configs.ts";
 
-const defaultConfig = {
+const defaultConfig: CacheConfig = {
 	version: 2,
 	enabled: true,
 	ttlSeconds: 3600,
 	maxEntries: 1000,
-	strategy: "lru" as const,
+	strategy: "lru",
 };
 
-test("configVersion is v0 when version override is 0 (legacy mode)", () => {
-	const result = initService(defaultConfig, [{ version: 0 }]);
-	assert.equal(result.configVersion, "v0", `Expected configVersion "v0" for version 0 override, got "${result.configVersion}"`);
+test("configVersion is v2 for version 2 config", () => {
+	const result = initService(defaultConfig, []);
+	assert.equal(result.configVersion, "v2", `Expected "v2", got "${result.configVersion}"`);
 });
 
-test("version 0 config evaluates feature flags against version 0", () => {
-	const result = initService(defaultConfig, [{ version: 0 }]);
-	// version 0 is not >= 2, so "advanced" should not be included
-	assert.ok(!result.features.includes("advanced"), `"advanced" should not be enabled for v0`);
+test("version 2 config enables advanced features", () => {
+	const result = initService(defaultConfig, []);
+	assert.ok(result.features.includes("advanced"), `Expected "advanced" in features for v2, got ${JSON.stringify(result.features)}`);
+});
+
+test("version 3 config enables experimental features", () => {
+	const result = initService(defaultConfig, [{ version: 3 }]);
+	assert.ok(result.features.includes("experimental"), `Expected "experimental" in features for v3, got ${JSON.stringify(result.features)}`);
 });

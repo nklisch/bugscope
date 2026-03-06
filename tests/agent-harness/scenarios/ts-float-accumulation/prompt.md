@@ -1,3 +1,1 @@
-The `splitBill` function in `bill.ts` is producing rounded share totals that don't match the total bill amount. For certain inputs, the sum of all individual shares is off by a cent from the expected total.
-
-The test in `test-bill.ts` demonstrates the failure. Debug this issue and fix the bug so that `test-bill.ts` passes.
+Customers are complaining that their bill splits don't add up. When someone splits a $47.50 bill three ways with an 18% tip, the shares and the reported total are inconsistent by a cent. Same issue with a $100 bill split seven ways. The total with tip and the sum of the individual shares should always match exactly.

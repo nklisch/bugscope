@@ -26,6 +26,12 @@ We need a harness that:
 
 **Observable but not prescriptive.** The harness captures a full trace (agent stdout/stderr, tool calls if available, timing, cost) for debugging and analysis. But none of this is part of the pass/fail gate.
 
+**The prompt is the only evidence.** The visible test passes with the buggy code — the agent cannot use test failures to locate the bug. The prompt is written as a natural-language bug report (customer complaint, engineer observation, support ticket) with concrete expected vs. actual values. This mirrors real production debugging where tests are green but behavior is wrong.
+
+**The skill is installed, not injected.** The agent-lens skill is placed at `.claude/skills/agent-lens/SKILL.md` in the workspace — exactly how a real user would have it installed. It is not passed via `--append-system-prompt` or any other out-of-band mechanism.
+
+**Every workspace has a `CLAUDE.md`.** Each scenario's `src/` includes a `CLAUDE.md` describing the project structure and test commands. The agent discovers it naturally, the same way it would in a real project.
+
 ---
 
 ## Scenario Structure
@@ -34,88 +40,94 @@ Each scenario is a self-contained directory:
 
 ```
 tests/agent-harness/scenarios/
-  python-discount-bug/
-    scenario.toml         # Scenario metadata + config
-    prompt.md             # The prompt given to the agent
+  python-float-accumulation/
+    scenario.json         # Scenario metadata + config
+    prompt.md             # Natural-language bug report given to the agent
     src/                  # Buggy source code (copied into workspace)
-      discount.py
-      test_discount.py    # Visible failing test (agent sees this)
+      CLAUDE.md           # Project description: files, how to run/test
+      bill.py
+      test_bill.py        # Visible test — passes with buggy code
     hidden/               # Hidden validation (agent never sees this)
       test_validation.py  # The real oracle test
 ```
 
-### scenario.toml
+### scenario.json
 
-```toml
-[scenario]
-name = "python-discount-bug"
-language = "python"
-description = "Gold tier discount multiplier is 1.0 instead of 0.1"
-timeout_seconds = 120
-max_budget_usd = 0.50
+```json
+{
+  "scenario": {
+    "name": "python-float-accumulation",
+    "language": "python",
+    "description": "Bill splitting rounds shares independently; their sum can differ from the total by one cent",
+    "timeout_seconds": 300,
+    "level": 1
+  },
+  "setup": { "commands": [] },
+  "visible_test": {
+    "command": "python3 -m pytest test_bill.py -x -q 2>&1"
+  },
+  "validation": {
+    "command": "python3 -m pytest test_validation.py -x -q 2>&1"
+  }
+}
+```
 
-[setup]
-# Commands to run in the workspace before the agent starts
-commands = [
-  "python3 -m venv .venv",
-  "source .venv/bin/activate && pip install -q pytest",
-]
+### src/CLAUDE.md
 
-[visible_test]
-# The test the agent can see and run — it should fail before the fix
-command = "python3 -m pytest test_discount.py -x"
+Project-level context for the agent — what each file does and how to run things. This is the mechanism the agent uses to orient itself, exactly as it would in a real repository.
 
-[validation]
-# The hidden test — copied in after the agent finishes, must pass
-command = "python3 -m pytest test_validation.py -x"
-# Glob pattern for files to copy from hidden/ into workspace before validation
-files = "hidden/*"
+```markdown
+# Bill Splitter
+
+Utility that splits a restaurant bill evenly among diners including tip.
+
+## Files
+
+- `bill.py` — `split_bill(total, num_people, tip_pct)` implementation
+- `test_bill.py` — test suite
+
+## Running
+
+```bash
+python3 -m pytest test_bill.py -v
+```
 ```
 
 ### prompt.md
 
-The prompt is the exact text given to the agent. It should describe the problem without giving away the answer, and mention that agent-lens is available:
+A natural-language bug report — the only evidence the agent has of what's wrong. Written as a customer complaint, engineer observation, or support ticket. No file names, no test commands, no instructions.
 
 ```markdown
-The discount calculation in `discount.py` is producing incorrect totals
-for gold-tier customers. The test in `test_discount.py` demonstrates the
-failure.
-
-Debug the issue using the agent-lens debugging tools available to you.
-Fix the bug so that `test_discount.py` passes.
+Customers are complaining that their bill splits don't add up. When
+someone splits a $47.00 bill three ways with an 18% tip, the function
+gives everyone $18.49 but then reports the total as $55.46 — which is
+$0.01 less than the $55.47 the shares actually sum to. Same problem with
+a $53.00 bill split six ways.
 ```
 
-### Visible test (src/test_discount.py)
+### Visible test (src/test_bill.py)
 
-The agent can see and run this test. It fails before the fix and passes after. This gives the agent a concrete signal to work toward:
+Passes with the buggy code. Tests inputs where the rounding happens to be exact, or only checks structural properties. The agent cannot use this to find the bug — it's only here to detect regressions.
 
 ```python
-from discount import process_order
-
-def test_gold_discount():
-    # Gold tier should get 10% discount, not 100%
-    total = process_order("gold", [100.0])
-    assert total == 100.0, f"Expected 100.0, got {total}"
+def test_even_split_no_tip():
+    result = split_bill(30.00, 3, tip_pct=0.0)
+    assert result["total_shares"] == 30.00  # exact division, no rounding
+    assert result["shares"] == [10.00, 10.00, 10.00]
 ```
 
 ### Hidden test (hidden/test_validation.py)
 
-The agent never sees this. It tests the fix more thoroughly — edge cases, other tiers, boundary conditions:
+The real oracle. Only passes when the bug is fixed. Tests the exact inputs from the bug report and any edge cases.
 
 ```python
-from discount import calculate_discount, process_order
+def test_split_sums_to_total_with_tip():
+    result = split_bill(47.00, 3)
+    assert result["total_shares"] == result["total_with_tip"]
 
-def test_gold_discount_rate():
-    assert calculate_discount("gold", 100.0) == 10.0
-
-def test_all_tiers_reasonable():
-    for tier in ["bronze", "silver", "gold", "platinum"]:
-        rate = calculate_discount(tier, 100.0)
-        assert 0 <= rate <= 25, f"{tier} discount {rate} is unreasonable"
-
-def test_gold_order_total():
-    total = process_order("gold", [49.99, 49.99, 49.99])
-    assert 120 < total < 160, f"Gold order total {total} is wrong"
+def test_six_person_split():
+    result = split_bill(53.00, 6)
+    assert result["total_shares"] == result["total_with_tip"]
 ```
 
 ---
@@ -252,10 +264,11 @@ This means agent-lens runs from source (not a compiled binary), making it easy t
 For each test run, the harness:
 
 1. Creates a temp directory
-2. Copies scenario `src/` files into it
-3. Runs setup commands from `scenario.toml`
-4. Generates the MCP config file
-5. Writes it to the temp directory
+2. Copies scenario `src/` files into it (including `CLAUDE.md`)
+3. Installs the agent-lens skill at `.claude/skills/agent-lens/` — same as real user installation
+4. Git-initializes the workspace (enables diff capture after the agent runs)
+5. Runs setup commands from `scenario.json`
+6. Generates the MCP config file and writes it to the workspace
 
 ```typescript
 async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
@@ -397,39 +410,25 @@ export default defineConfig({
 
 ---
 
-## Initial Scenarios
+## Scenario Library (Current)
 
-Start with three scenarios covering different languages and bug types:
+22 scenarios across Python, Node.js, and TypeScript at levels 1–4. See `tests/agent-harness/scenarios/` for the full list. Examples:
 
-### 1. python-discount-bug (warm-up)
+### python-float-accumulation (L1)
 
-The canonical example from agent-lens docs. Gold tier multiplier is `1.0` instead of `0.1`. Simple, deterministic, fast to debug.
+Splitting a bill rounds each share independently; the sum can differ from the total by one cent. The visible test uses exact-division inputs. The prompt reports the specific amounts that fail.
 
-- **Language:** Python
-- **Bug type:** Wrong constant value
-- **Expected agent strategy:** Set breakpoint in `calculate_discount`, inspect `rate`, see it's 1.0 for gold, trace to `tier_multipliers` dict
-- **Timeout:** 120s
-- **Budget:** $0.50
+### python-class-attribute-shared (L1)
 
-### 2. python-off-by-one
+`items = []` on the class body is shared across instances. Processing multiple customers in sequence accumulates prior customers' items. Visible test checks a single customer only.
 
-A loop processes items but skips the last one due to `range(len(items) - 1)`. The visible test shows one item missing from output.
+### python-billing-calc (L2)
 
-- **Language:** Python
-- **Bug type:** Off-by-one error
-- **Expected agent strategy:** Set breakpoint in loop, step through iterations, notice the last item is never processed
-- **Timeout:** 120s
-- **Budget:** $0.50
+Two interacting bugs: a tier boundary off-by-one and sub-feature usage not being aggregated. Visible test uses inputs far from any boundary. Prompt reports the wrong invoice total with the specific line items affected.
 
-### 3. node-async-race
+### node-event-ticketing (L4)
 
-An async function writes to a file but doesn't await the write before reading it back. Intermittent failure — the read sometimes returns stale data.
-
-- **Language:** Node.js
-- **Bug type:** Missing await
-- **Expected agent strategy:** Set breakpoints around the write/read, inspect timing, notice the write hasn't completed
-- **Timeout:** 180s
-- **Budget:** $0.75
+Multiple bugs across pricing, seat inventory, and discount calculation. NaN total for surge events, VIP seats incorrectly unavailable, early-bird discount nearly zero. Visible test only exercises the basic checkout control path.
 
 ---
 
@@ -517,8 +516,8 @@ Every scenario x agent run captures:
 | `agent_version` | `--version` output | Agent binary version |
 | `agent_lens_version` | package.json | Agent-lens version under test |
 | `timestamp` | System clock | ISO 8601 run timestamp |
-| `visible_test_before` | Pre-run test | Did the visible test fail before the agent ran? (sanity check) |
-| `visible_test_after` | Post-run test | Does the visible test pass after the agent ran? |
+| `visible_test_before` | Pre-run test | Did the visible test pass before the agent ran? Should always be `true` — if not, the scenario is broken |
+| `visible_test_after` | Post-run test | Does the visible test still pass after the agent ran? |
 | `validation_stdout` | Hidden test | Raw output from the hidden test |
 | `files_changed` | git diff in workspace | Which files the agent modified |
 | `diff` | git diff in workspace | The actual patch the agent produced |

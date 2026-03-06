@@ -1,3 +1,1 @@
-Alice Chen should receive an A- in CS201 but the system shows B. Her numeric score is also wrong — it should be 90.0 but comes out as 84.02. Other students like Bob Martinez seem fine and get the expected grades.
-
-The test in `test_grades.py` demonstrates the failure. Debug the grading system and fix the bug(s) so that `test_grades.py` passes.
+A student is disputing her grade. Alice Chen (STU-1001) is showing a B in CS201 with a score around 84, but based on her work she should have an A- with a score of 90.0. Her assignments are: five homework scores of 95, 85, 72, 90, 85 (with the lowest dropped), a midterm at 87, a final at 92 submitted two days early (no late penalty), and participation at 100. With the correct category weights that comes out to exactly 90.0.

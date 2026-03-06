@@ -1,3 +1,1 @@
-The analytics pipeline in `pipeline.ts` is reporting incorrect revenue totals for purchase events. The total revenue figure is wildly off from the expected sum of all purchase amounts.
-
-The pipeline processes events from multiple sources through a schema validation and enrichment stage before aggregating metrics. The visible test in `test-pipeline.ts` demonstrates the discrepancy. Debug this issue and fix the bug so that `test-pipeline.ts` passes.
+Our analytics pipeline is reporting completely wrong revenue totals. We have four purchase events whose revenue should add up to $275.00, but the pipeline is spitting out a number in the tens of thousands. The revenue values in the raw events are stored in cents and need to be converted to dollars, but something about that conversion isn't being applied consistently.

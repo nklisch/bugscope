@@ -1,3 +1,1 @@
-The service container in `services.ts` fails to resolve the `RateLimiter` service. When the container tries to instantiate `RateLimiter`, it throws an error about a dependency service not being found — the error message shows an opaque key that doesn't appear anywhere in the source code.
-
-The test in `test-services.ts` demonstrates the failure. Debug this issue and fix the bug so that `test-services.ts` passes.
+The app crashes on startup when it tries to resolve the RateLimiter service. The error says a dependency service wasn't found, and the key in the error message doesn't match anything we can find in the source. The RateLimiter depends on CacheService, but somehow the container can't find it.

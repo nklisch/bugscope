@@ -1,3 +1,1 @@
-The `validationReport` function in `parser.js` is producing inconsistent results. Some valid email addresses are being marked as invalid, and the count of valid vs invalid emails changes depending on the order and number of users processed.
-
-The test in `test-parser.js` demonstrates the failure. Debug this issue and fix the bug so that `test-parser.js` passes.
+Our email validation is giving inconsistent results depending on how many users we process at once. "alice@example.com" is a perfectly valid email. When we validate just Alice, she comes back valid. When we validate Alice, Bob, and Carol together — all with valid emails — Bob comes back invalid even though his email is fine. Run it again and the pattern shifts. The same email shouldn't flip between valid and invalid based on what else is in the list.
