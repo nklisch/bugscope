@@ -33,6 +33,10 @@ tests/agent-harness/.traces/
 **/__pycache__/
 **/*.pyc
 
+# Scenario build artifacts
+tests/agent-harness/scenarios/**/package-lock.json
+tests/agent-harness/scenarios/**/order-service
+
 # Environment
 .env
 .env.local
