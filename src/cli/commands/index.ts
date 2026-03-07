@@ -1,9 +1,26 @@
 import { resolve as resolvePath } from "node:path";
 import { defineCommand } from "citty";
+import { listAdapters, registerAllAdapters } from "../../adapters/registry.js";
 import { configToOptions, listConfigurations, parseLaunchJson } from "../../core/launch-json.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
 import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload, ThreadInfoPayload, ViewportPayload } from "../../daemon/protocol.js";
 import { getDaemonSocketPath } from "../../daemon/protocol.js";
+import { listDetectors, registerAllDetectors } from "../../frameworks/index.js";
+
+// Register adapters/detectors so we can derive descriptions from the live registry.
+// Adapter instantiation is lightweight (no side effects until launch/attach is called).
+registerAllAdapters();
+registerAllDetectors();
+
+function languageDescription(prefix = "Language"): string {
+	const parts = listAdapters().map((a) => [a.id, ...(a.aliases ?? [])].join("/"));
+	return `${prefix}. Supported: ${parts.join(", ")}`;
+}
+
+function frameworkDescription(): string {
+	const ids = listDetectors().map((d) => d.id);
+	return `Override framework auto-detection. Known: ${ids.join(", ")}. Use 'none' to disable.`;
+}
 import {
 	formatBreakpointsList,
 	formatBreakpointsSet,
@@ -122,11 +139,11 @@ export const launchCommand = defineCommand({
 		},
 		language: {
 			type: "string",
-			description: "Override language detection",
+			description: languageDescription("Override language detection"),
 		},
 		framework: {
 			type: "string",
-			description: "Override framework auto-detection (e.g., 'pytest', 'jest', 'none')",
+			description: frameworkDescription(),
 		},
 		"stop-on-entry": {
 			type: "boolean",
@@ -628,7 +645,7 @@ export const attachCommand = defineCommand({
 	args: {
 		language: {
 			type: "string",
-			description: "Language: python, javascript, typescript, go",
+			description: languageDescription(),
 			required: true,
 		},
 		pid: {
