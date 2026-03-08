@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import type { SessionSummary } from "../../browser/investigation/query-engine.js";
 import type { BrowserSessionInfo, Marker } from "../../browser/types.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
 import { getDaemonSocketPath } from "../../daemon/protocol.js";
@@ -159,6 +160,160 @@ export const browserStopCommand = defineCommand({
 	},
 });
 
+export const browserSessionsCommand = defineCommand({
+	meta: {
+		name: "sessions",
+		description: "List recorded browser sessions",
+	},
+	args: {
+		"has-markers": { type: "boolean", description: "Only sessions with markers" },
+		"has-errors": { type: "boolean", description: "Only sessions with errors" },
+		after: { type: "string", description: "Only sessions after this date (ISO timestamp)" },
+		before: { type: "string", description: "Only sessions before this date (ISO timestamp)" },
+		limit: { type: "string", description: "Max results (default: 10)" },
+		json: { type: "boolean", description: "JSON output" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const sessions = await client.call<SessionSummary[]>("browser.sessions", {
+				hasMarkers: args["has-markers"],
+				hasErrors: args["has-errors"],
+				after: args.after ? new Date(args.after).getTime() : undefined,
+				before: args.before ? new Date(args.before).getTime() : undefined,
+				limit: args.limit ? Number.parseInt(args.limit, 10) : 10,
+			});
+			if (args.json) {
+				process.stdout.write(`${JSON.stringify(sessions, null, 2)}\n`);
+			} else {
+				if (sessions.length === 0) {
+					process.stdout.write("No recorded sessions found.\n");
+					return;
+				}
+				process.stdout.write(`Sessions (${sessions.length}):\n`);
+				for (const s of sessions) {
+					const durationMs = s.duration;
+					const seconds = Math.floor(durationMs / 1000);
+					const duration = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+					const markers = s.markerCount > 0 ? `, ${s.markerCount} markers` : "";
+					const errors = s.errorCount > 0 ? `, ${s.errorCount} errors` : "";
+					const startedAt = new Date(s.startedAt).toISOString().slice(11, 23);
+					process.stdout.write(`  ${s.id}  ${startedAt}  ${duration}  ${s.url}  (${s.eventCount} events${markers}${errors})\n`);
+				}
+			}
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
+export const browserOverviewCommand = defineCommand({
+	meta: {
+		name: "overview",
+		description: "Get a structured overview of a recorded browser session",
+	},
+	args: {
+		id: { type: "positional", description: "Session ID", required: true },
+		"around-marker": { type: "string", description: "Center on marker ID" },
+		budget: { type: "string", description: "Token budget (default: 3000)" },
+		json: { type: "boolean", description: "JSON output" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const text = await client.call<string>("browser.overview", {
+				sessionId: args.id,
+				aroundMarker: args["around-marker"],
+				tokenBudget: args.budget ? Number.parseInt(args.budget, 10) : 3000,
+			});
+			process.stdout.write(`${text}\n`);
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
+export const browserSearchCommand = defineCommand({
+	meta: {
+		name: "search",
+		description: "Search recorded browser session events",
+	},
+	args: {
+		id: { type: "positional", description: "Session ID", required: true },
+		query: { type: "string", description: "Natural language search query" },
+		"status-codes": { type: "string", description: "Filter by HTTP status codes (comma-separated, e.g. 422,500)" },
+		"event-types": { type: "string", description: "Filter by event types (comma-separated)" },
+		"max-results": { type: "string", description: "Max results (default: 10)" },
+		budget: { type: "string", description: "Token budget (default: 2000)" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const text = await client.call<string>("browser.search", {
+				sessionId: args.id,
+				query: args.query,
+				statusCodes: args["status-codes"]
+					? args["status-codes"]
+							.split(",")
+							.map((s) => Number.parseInt(s.trim(), 10))
+							.filter(Number.isFinite)
+					: undefined,
+				eventTypes: args["event-types"] ? args["event-types"].split(",").map((s) => s.trim()) : undefined,
+				maxResults: args["max-results"] ? Number.parseInt(args["max-results"], 10) : 10,
+				tokenBudget: args.budget ? Number.parseInt(args.budget, 10) : 2000,
+			});
+			process.stdout.write(`${text}\n`);
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
+export const browserInspectCommand = defineCommand({
+	meta: {
+		name: "inspect",
+		description: "Deep-dive into a specific event or moment in a recorded browser session",
+	},
+	args: {
+		id: { type: "positional", description: "Session ID", required: true },
+		event: { type: "string", description: "Event ID to inspect" },
+		marker: { type: "string", description: "Marker ID to jump to" },
+		timestamp: { type: "string", description: "ISO timestamp to inspect nearest moment" },
+		include: { type: "string", description: "Comma-separated: surrounding_events,network_body,screenshot" },
+		"context-window": { type: "string", description: "Seconds of surrounding events (default: 5)" },
+		budget: { type: "string", description: "Token budget (default: 3000)" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const text = await client.call<string>("browser.inspect", {
+				sessionId: args.id,
+				eventId: args.event,
+				markerId: args.marker,
+				timestamp: args.timestamp ? new Date(args.timestamp).getTime() : undefined,
+				include: args.include ? args.include.split(",").map((s) => s.trim()) : undefined,
+				contextWindow: args["context-window"] ? Number.parseInt(args["context-window"], 10) : 5,
+				tokenBudget: args.budget ? Number.parseInt(args.budget, 10) : 3000,
+			});
+			process.stdout.write(`${text}\n`);
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
 export const browserCommand = defineCommand({
 	meta: {
 		name: "browser",
@@ -169,5 +324,9 @@ export const browserCommand = defineCommand({
 		mark: browserMarkCommand,
 		status: browserStatusCommand,
 		stop: browserStopCommand,
+		sessions: browserSessionsCommand,
+		overview: browserOverviewCommand,
+		search: browserSearchCommand,
+		inspect: browserInspectCommand,
 	},
 });

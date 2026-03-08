@@ -237,6 +237,30 @@ export class BrowserDatabase {
 			.run(ref.eventId, ref.sessionId, ref.requestBodyPath ?? null, ref.responseBodyPath ?? null, ref.responseSize ?? null, ref.contentType ?? null);
 	}
 
+	// --- Point lookups ---
+
+	getSession(sessionId: string): SessionRow {
+		const row = this.db.prepare("SELECT * FROM sessions WHERE id = ?").get(sessionId) as SessionRow | undefined;
+		if (!row) throw new Error(`Session not found: ${sessionId}`);
+		return row;
+	}
+
+	getEventById(sessionId: string, eventId: string): EventRow {
+		const row = this.db.prepare("SELECT * FROM events WHERE session_id = ? AND event_id = ?").get(sessionId, eventId) as EventRow | undefined;
+		if (!row) throw new Error(`Event not found: ${eventId} in session ${sessionId}`);
+		return row;
+	}
+
+	getMarkerById(markerId: string): MarkerRow {
+		const row = this.db.prepare("SELECT * FROM markers WHERE id = ?").get(markerId) as MarkerRow | undefined;
+		if (!row) throw new Error(`Marker not found: ${markerId}`);
+		return row;
+	}
+
+	getNetworkBody(eventId: string): NetworkBodyRow | undefined {
+		return this.db.prepare("SELECT * FROM network_bodies WHERE event_id = ?").get(eventId) as NetworkBodyRow | undefined;
+	}
+
 	// --- Queries ---
 
 	queryEvents(sessionId: string, filter: EventQueryFilter): EventRow[] {

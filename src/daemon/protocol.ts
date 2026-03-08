@@ -90,6 +90,12 @@ export type RpcMethods = {
 	"browser.mark": { params: BrowserMarkParams; result: Marker };
 	"browser.status": { params: Record<string, never>; result: BrowserSessionInfo | null };
 	"browser.stop": { params: BrowserStopParams; result: undefined };
+
+	// Browser investigation
+	"browser.sessions": { params: BrowserSessionsParams; result: unknown[] };
+	"browser.overview": { params: BrowserOverviewParams; result: string };
+	"browser.search": { params: BrowserSearchParams; result: string };
+	"browser.inspect": { params: BrowserInspectParams; result: string };
 };
 
 // --- Param Schemas (Zod) ---
@@ -253,6 +259,47 @@ export const BrowserStopParamsSchema = z.object({
 	closeBrowser: z.boolean().default(false),
 });
 export type BrowserStopParams = z.infer<typeof BrowserStopParamsSchema>;
+
+export const BrowserSessionsParamsSchema = z.object({
+	after: z.number().optional(),
+	before: z.number().optional(),
+	urlContains: z.string().optional(),
+	hasMarkers: z.boolean().optional(),
+	hasErrors: z.boolean().optional(),
+	limit: z.number().int().positive().optional(),
+});
+export type BrowserSessionsParams = z.infer<typeof BrowserSessionsParamsSchema>;
+
+export const BrowserOverviewParamsSchema = z.object({
+	sessionId: z.string(),
+	include: z.array(z.enum(["timeline", "markers", "errors", "network_summary"])).optional(),
+	aroundMarker: z.string().optional(),
+	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
+	tokenBudget: z.number().optional(),
+});
+export type BrowserOverviewParams = z.infer<typeof BrowserOverviewParamsSchema>;
+
+export const BrowserSearchParamsSchema = z.object({
+	sessionId: z.string(),
+	query: z.string().optional(),
+	eventTypes: z.array(z.string()).optional(),
+	statusCodes: z.array(z.number()).optional(),
+	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
+	maxResults: z.number().optional(),
+	tokenBudget: z.number().optional(),
+});
+export type BrowserSearchParams = z.infer<typeof BrowserSearchParamsSchema>;
+
+export const BrowserInspectParamsSchema = z.object({
+	sessionId: z.string(),
+	eventId: z.string().optional(),
+	markerId: z.string().optional(),
+	timestamp: z.number().optional(),
+	include: z.array(z.enum(["surrounding_events", "network_body", "screenshot", "form_state", "console_context"])).optional(),
+	contextWindow: z.number().optional(),
+	tokenBudget: z.number().optional(),
+});
+export type BrowserInspectParams = z.infer<typeof BrowserInspectParamsSchema>;
 
 // Re-export browser types for protocol consumers
 export type { BrowserSessionInfo, Marker } from "../browser/types.js";

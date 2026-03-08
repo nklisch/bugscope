@@ -1,13 +1,22 @@
 import { unlinkSync, writeFileSync } from "node:fs";
 import type { Server, Socket } from "node:net";
 import { createServer } from "node:net";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+import { QueryEngine } from "../browser/investigation/query-engine.js";
+import { renderInspectResult, renderSearchResults, renderSessionOverview } from "../browser/investigation/renderers.js";
 import { BrowserRecorder } from "../browser/recorder/index.js";
+import { BrowserDatabase } from "../browser/storage/database.js";
 import { AdapterNotFoundError, AdapterPrerequisiteError, AgentLensError, LaunchError, SessionLimitError, SessionNotFoundError, SessionStateError } from "../core/errors.js";
 import type { SessionManager } from "../core/session-manager.js";
 import type { JsonRpcRequest, JsonRpcResponse } from "./protocol.js";
 import {
 	AttachParamsSchema,
+	BrowserInspectParamsSchema,
 	BrowserMarkParamsSchema,
+	BrowserOverviewParamsSchema,
+	BrowserSearchParamsSchema,
+	BrowserSessionsParamsSchema,
 	BrowserStartParamsSchema,
 	BrowserStopParamsSchema,
 	ContinueParamsSchema,
@@ -63,6 +72,8 @@ export class DaemonServer {
 	private startedAt: number = Date.now();
 	private activeConnections: Set<Socket> = new Set();
 	private browserRecorder: BrowserRecorder | null = null;
+	private browserQueryEngine: QueryEngine | null = null;
+	private browserDb: BrowserDatabase | null = null;
 
 	constructor(sessionManager: SessionManager, options: DaemonOptions) {
 		this.sessionManager = sessionManager;
@@ -153,6 +164,17 @@ export class DaemonServer {
 				// Ignore errors during cleanup
 			}
 			this.browserRecorder = null;
+		}
+
+		// Close browser query engine
+		if (this.browserDb) {
+			try {
+				this.browserDb.close();
+			} catch {
+				// Ignore errors during cleanup
+			}
+			this.browserDb = null;
+			this.browserQueryEngine = null;
 		}
 
 		// Dispose all sessions
@@ -406,10 +428,61 @@ export class DaemonServer {
 				return null;
 			}
 
+			// --- Browser Investigation ---
+			case "browser.sessions": {
+				const p = BrowserSessionsParamsSchema.parse(params);
+				return this.getQueryEngine().listSessions(p);
+			}
+
+			case "browser.overview": {
+				const p = BrowserOverviewParamsSchema.parse(params);
+				const overview = this.getQueryEngine().getOverview(p.sessionId, {
+					include: p.include,
+					aroundMarker: p.aroundMarker,
+					timeRange: p.timeRange,
+				});
+				return renderSessionOverview(overview, p.tokenBudget ?? 3000);
+			}
+
+			case "browser.search": {
+				const p = BrowserSearchParamsSchema.parse(params);
+				const results = this.getQueryEngine().search(p.sessionId, {
+					query: p.query,
+					filters: {
+						eventTypes: p.eventTypes,
+						statusCodes: p.statusCodes,
+						timeRange: p.timeRange,
+					},
+					maxResults: p.maxResults,
+				});
+				return renderSearchResults(results, p.tokenBudget ?? 2000);
+			}
+
+			case "browser.inspect": {
+				const p = BrowserInspectParamsSchema.parse(params);
+				const result = this.getQueryEngine().inspect(p.sessionId, {
+					eventId: p.eventId,
+					markerId: p.markerId,
+					timestamp: p.timestamp,
+					include: p.include,
+					contextWindow: p.contextWindow,
+				});
+				return renderInspectResult(result, p.tokenBudget ?? 3000);
+			}
+
 			default: {
 				throw Object.assign(new Error(`Method not found: ${method}`), { rpcCode: RPC_METHOD_NOT_FOUND });
 			}
 		}
+	}
+
+	private getQueryEngine(): QueryEngine {
+		if (!this.browserQueryEngine) {
+			const dataDir = resolve(homedir(), ".agent-lens", "browser");
+			this.browserDb = new BrowserDatabase(resolve(dataDir, "index.db"));
+			this.browserQueryEngine = new QueryEngine(this.browserDb, dataDir);
+		}
+		return this.browserQueryEngine;
 	}
 
 	/**
