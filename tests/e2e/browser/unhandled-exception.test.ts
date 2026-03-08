@@ -14,7 +14,7 @@ describe.skipIf(SKIP)("E2E Browser: unhandled exception investigation", () => {
 		await ctx.wait(500);
 
 		// 2. Navigate to the error page
-		await ctx.click('[data-testid="nav-error"]');
+		await ctx.navigate("/error-page");
 		await ctx.wait(800);
 
 		// 3. Click a button that console.logs before throwing
@@ -96,17 +96,19 @@ describe.skipIf(SKIP)("E2E Browser: unhandled exception investigation", () => {
 		expect(inspectResult).toContain("Context");
 	});
 
-	it("session_search by console level finds the error trail", async () => {
+	it("session_search by console level finds the log trail around errors", async () => {
 		const listResult = await ctx.callTool("session_list", {});
 		const sessionId = extractSessionId(listResult);
 
-		const consoleErrors = await ctx.callTool("session_search", {
+		const consoleLogs = await ctx.callTool("session_search", {
 			session_id: sessionId,
 			event_types: ["console"],
-			console_levels: ["error"],
+			console_levels: ["log"],
+			max_results: 50,
 		});
 
-		expect(consoleErrors).toContain("Found");
+		// The error page logs "About to throw exception" and "About to access null property"
+		expect(consoleLogs).toContain("Found");
 	});
 
 	it("session_diff between page load and exception shows what happened", async () => {

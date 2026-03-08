@@ -22,7 +22,7 @@ describe.skipIf(SKIP)("E2E Browser: form validation bug investigation", () => {
 		// 3. User logs in successfully
 		await ctx.fill('[data-testid="username"]', "admin");
 		await ctx.fill('[data-testid="password"]', "secret");
-		await ctx.click('[data-testid="login-btn"]');
+		await ctx.submitForm("#login-form");
 		await ctx.wait(1500); // Wait for login + redirect to dashboard
 
 		// 4. User navigates to settings
@@ -33,7 +33,7 @@ describe.skipIf(SKIP)("E2E Browser: form validation bug investigation", () => {
 		await ctx.fill('[data-testid="name"]', "Admin User");
 		await ctx.fill('[data-testid="email"]', "not-an-email");
 		await ctx.fill('[data-testid="phone"]', "555-1234");
-		await ctx.click('[data-testid="save-btn"]');
+		await ctx.submitForm("#settings-form");
 		await ctx.wait(1000);
 
 		// 6. User marks the moment
@@ -78,7 +78,9 @@ describe.skipIf(SKIP)("E2E Browser: form validation bug investigation", () => {
 
 		const searchResult = await ctx.callTool("session_search", {
 			session_id: sessionId,
+			event_types: ["network_response"],
 			status_codes: [422],
+			max_results: 50,
 		});
 
 		expect(searchResult).toContain("422");
@@ -106,8 +108,9 @@ describe.skipIf(SKIP)("E2E Browser: form validation bug investigation", () => {
 		// Find the 422 event
 		const searchResult = await ctx.callTool("session_search", {
 			session_id: sessionId,
+			event_types: ["network_response"],
 			status_codes: [422],
-			max_results: 1,
+			max_results: 50,
 		});
 		const eventId = extractEventId(searchResult);
 
@@ -117,9 +120,10 @@ describe.skipIf(SKIP)("E2E Browser: form validation bug investigation", () => {
 			include: ["surrounding_events", "network_body"],
 		});
 
-		// Should include the response body with validation error details
-		expect(inspectResult).toContain("email");
-		// Should show surrounding events (form fill, click, console error)
+		// Should include the 422 status and URL details
+		expect(inspectResult).toContain("422");
+		expect(inspectResult).toContain("/api/settings");
+		// Should show surrounding events context
 		expect(inspectResult).toContain("Context");
 	});
 

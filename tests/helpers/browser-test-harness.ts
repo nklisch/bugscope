@@ -129,11 +129,8 @@ export async function setupBrowserTest(options?: Partial<{ recorderConfig: Parti
 		},
 
 		async submitForm(formSelector: string) {
-			await ctx.evaluate(`
-				document.querySelector(${JSON.stringify(formSelector)}).dispatchEvent(
-					new Event('submit', { bubbles: true, cancelable: true })
-				)
-			`);
+			// requestSubmit() fires the submit event properly (unlike dispatchEvent or button.click())
+			await ctx.evaluate(`document.querySelector(${JSON.stringify(formSelector)}).requestSubmit()`);
 			await wait(500);
 		},
 

@@ -21,13 +21,13 @@ describe.skipIf(SKIP)("E2E Browser: multi-page session lifecycle", () => {
 		// 3. Try wrong password first (401)
 		await ctx.fill('[data-testid="username"]', "admin");
 		await ctx.fill('[data-testid="password"]', "wrong");
-		await ctx.click('[data-testid="login-btn"]');
+		await ctx.submitForm("#login-form");
 		await ctx.wait(1000);
 		await ctx.placeMarker("failed login attempt");
 
 		// 4. Correct login
 		await ctx.fill('[data-testid="password"]', "correct");
-		await ctx.click('[data-testid="login-btn"]');
+		await ctx.submitForm("#login-form");
 		await ctx.wait(1500);
 
 		// 5. On dashboard now — verify data loaded
@@ -41,7 +41,7 @@ describe.skipIf(SKIP)("E2E Browser: multi-page session lifecycle", () => {
 		await ctx.fill('[data-testid="name"]', "New Admin Name");
 		await ctx.fill('[data-testid="email"]', "admin@example.com");
 		await ctx.fill('[data-testid="phone"]', "5551234567");
-		await ctx.click('[data-testid="save-btn"]');
+		await ctx.submitForm("#settings-form");
 		await ctx.wait(1000);
 		await ctx.placeMarker("settings saved");
 
@@ -83,7 +83,9 @@ describe.skipIf(SKIP)("E2E Browser: multi-page session lifecycle", () => {
 
 		const searchResult = await ctx.callTool("session_search", {
 			session_id: sessionId,
+			event_types: ["network_response"],
 			status_codes: [401],
+			max_results: 50,
 		});
 
 		expect(searchResult).toContain("401");

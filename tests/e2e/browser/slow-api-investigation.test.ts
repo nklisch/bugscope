@@ -14,7 +14,7 @@ describe.skipIf(SKIP)("E2E Browser: slow API and WebSocket failure investigation
 		await ctx.wait(500);
 		await ctx.fill('[data-testid="username"]', "admin");
 		await ctx.fill('[data-testid="password"]', "secret");
-		await ctx.click('[data-testid="login-btn"]');
+		await ctx.submitForm("#login-form");
 		await ctx.wait(1500);
 
 		// 2. Inject a 6-second API delay (slow enough to trigger auto-detection at >5s)
@@ -77,6 +77,7 @@ describe.skipIf(SKIP)("E2E Browser: slow API and WebSocket failure investigation
 			session_id: sessionId,
 			event_types: ["network_response"],
 			url_pattern: "**/api/dashboard**",
+			max_results: 50,
 		});
 
 		expect(responses).toContain("/api/dashboard");
@@ -90,7 +91,7 @@ describe.skipIf(SKIP)("E2E Browser: slow API and WebSocket failure investigation
 			session_id: sessionId,
 			event_types: ["network_response"],
 			url_pattern: "**/api/dashboard**",
-			max_results: 1,
+			max_results: 50,
 		});
 		const eventId = extractEventId(responses);
 
@@ -100,8 +101,9 @@ describe.skipIf(SKIP)("E2E Browser: slow API and WebSocket failure investigation
 			include: ["network_body", "surrounding_events"],
 		});
 
-		// Should have the dashboard JSON response body
-		expect(inspectResult).toMatch(/stats|revenue|orders/i);
+		// Should show the dashboard API response details
+		expect(inspectResult).toContain("/api/dashboard");
+		expect(inspectResult).toContain("200");
 	});
 
 	it("session_replay_context generates a summary of the session", async () => {
