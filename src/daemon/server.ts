@@ -3,8 +3,11 @@ import type { Server, Socket } from "node:net";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { HARExporter } from "../browser/export/har.js";
+import { SessionDiffer } from "../browser/investigation/diff.js";
 import { QueryEngine } from "../browser/investigation/query-engine.js";
-import { renderInspectResult, renderSearchResults, renderSessionOverview } from "../browser/investigation/renderers.js";
+import { renderDiff, renderInspectResult, renderSearchResults, renderSessionOverview } from "../browser/investigation/renderers.js";
+import { ReplayContextGenerator } from "../browser/investigation/replay-context.js";
 import { BrowserRecorder } from "../browser/recorder/index.js";
 import { BrowserDatabase } from "../browser/storage/database.js";
 import { AdapterNotFoundError, AdapterPrerequisiteError, AgentLensError, LaunchError, SessionLimitError, SessionNotFoundError, SessionStateError } from "../core/errors.js";
@@ -12,9 +15,12 @@ import type { SessionManager } from "../core/session-manager.js";
 import type { JsonRpcRequest, JsonRpcResponse } from "./protocol.js";
 import {
 	AttachParamsSchema,
+	BrowserDiffParamsSchema,
+	BrowserExportParamsSchema,
 	BrowserInspectParamsSchema,
 	BrowserMarkParamsSchema,
 	BrowserOverviewParamsSchema,
+	BrowserReplayContextParamsSchema,
 	BrowserSearchParamsSchema,
 	BrowserSessionsParamsSchema,
 	BrowserStartParamsSchema,
@@ -468,6 +474,36 @@ export class DaemonServer {
 					contextWindow: p.contextWindow,
 				});
 				return renderInspectResult(result, p.tokenBudget ?? 3000);
+			}
+
+			case "browser.diff": {
+				const p = BrowserDiffParamsSchema.parse(params);
+				const differ = new SessionDiffer(this.getQueryEngine());
+				const diff = differ.diff({ sessionId: p.sessionId, before: p.before, after: p.after, include: p.include });
+				return renderDiff(diff, p.tokenBudget ?? 2000);
+			}
+
+			case "browser.replay-context": {
+				const p = BrowserReplayContextParamsSchema.parse(params);
+				const generator = new ReplayContextGenerator(this.getQueryEngine());
+				return generator.generate({
+					sessionId: p.sessionId,
+					aroundMarker: p.aroundMarker,
+					timeRange: p.timeRange,
+					format: p.format,
+					testFramework: p.testFramework,
+				});
+			}
+
+			case "browser.export": {
+				const p = BrowserExportParamsSchema.parse(params);
+				const exporter = new HARExporter(this.getQueryEngine());
+				const harFile = exporter.export({
+					sessionId: p.sessionId,
+					timeRange: p.timeRange,
+					includeResponseBodies: p.includeResponseBodies,
+				});
+				return JSON.stringify(harFile, null, 2);
 			}
 
 			default: {

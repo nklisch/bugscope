@@ -4,6 +4,8 @@ import type { BrowserDatabase, EventRow, MarkerRow, NetworkBodyRow, SessionRow }
 import { EventWriter } from "../storage/event-writer.js";
 import type { RecordedEvent } from "../types.js";
 
+export type { SessionRow };
+
 export class QueryEngine {
 	constructor(
 		private db: BrowserDatabase,
@@ -207,6 +209,41 @@ export class QueryEngine {
 		}
 
 		return result;
+	}
+
+	// --- Convenience helpers for Phase 12 ---
+
+	getSession(sessionId: string): SessionRow {
+		return this.db.getSession(sessionId);
+	}
+
+	getMarkers(sessionId: string): MarkerRow[] {
+		return this.db.queryMarkers(sessionId);
+	}
+
+	getFullEvent(sessionId: string, eventId: string): RecordedEvent | null {
+		try {
+			const eventRow = this.db.getEventById(sessionId, eventId);
+			const session = this.db.getSession(sessionId);
+			return EventWriter.readAt(resolve(session.recording_dir, "events.jsonl"), eventRow.detail_offset, eventRow.detail_length);
+		} catch {
+			return null;
+		}
+	}
+
+	getNetworkBody(eventId: string): NetworkBodyRow | undefined {
+		return this.db.getNetworkBody(eventId);
+	}
+
+	readNetworkBody(sessionId: string, relPath: string): string | undefined {
+		try {
+			const session = this.db.getSession(sessionId);
+			const fullPath = resolve(session.recording_dir, "network", relPath);
+			if (!existsSync(fullPath)) return undefined;
+			return readFileSync(fullPath, "utf-8");
+		} catch {
+			return undefined;
+		}
 	}
 
 	private summarizeNetwork(events: EventRow[]): NetworkSummary {

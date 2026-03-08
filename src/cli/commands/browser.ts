@@ -314,6 +314,102 @@ export const browserInspectCommand = defineCommand({
 	},
 });
 
+export const browserDiffCommand = defineCommand({
+	meta: {
+		name: "diff",
+		description: "Compare two moments in a recorded browser session",
+	},
+	args: {
+		id: { type: "positional", description: "Session ID", required: true },
+		before: { type: "string", description: "First moment — timestamp (ISO or HH:MM:SS) or event ID", required: true },
+		after: { type: "string", description: "Second moment — timestamp (ISO or HH:MM:SS) or event ID", required: true },
+		include: { type: "string", description: "Comma-separated: form_state,storage,url,console_new,network_new" },
+		budget: { type: "string", description: "Token budget (default: 2000)" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const text = await client.call<string>("browser.diff", {
+				sessionId: args.id,
+				before: args.before,
+				after: args.after,
+				include: args.include ? args.include.split(",").map((s) => s.trim()) : undefined,
+				tokenBudget: args.budget ? Number.parseInt(args.budget, 10) : 2000,
+			});
+			process.stdout.write(`${text}\n`);
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
+export const browserReplayContextCommand = defineCommand({
+	meta: {
+		name: "replay-context",
+		description: "Generate a reproduction context from a recorded browser session",
+	},
+	args: {
+		id: { type: "positional", description: "Session ID", required: true },
+		"around-marker": { type: "string", description: "Focus on events around this marker ID" },
+		format: { type: "string", description: "Output format: summary, reproduction_steps, test_scaffold (default: reproduction_steps)" },
+		framework: { type: "string", description: "Test framework for scaffold: playwright or cypress (default: playwright)" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const format = (args.format ?? "reproduction_steps") as "summary" | "reproduction_steps" | "test_scaffold";
+			const text = await client.call<string>("browser.replay-context", {
+				sessionId: args.id,
+				aroundMarker: args["around-marker"],
+				format,
+				testFramework: args.framework ?? "playwright",
+			});
+			process.stdout.write(`${text}\n`);
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
+export const browserExportCommand = defineCommand({
+	meta: {
+		name: "export",
+		description: "Export a recorded browser session (HAR format)",
+	},
+	args: {
+		id: { type: "positional", description: "Session ID", required: true },
+		format: { type: "string", description: "Export format: har (default: har)" },
+		output: { type: "string", description: "Output file path (default: stdout)" },
+	},
+	async run({ args }) {
+		const client = await getClient();
+		try {
+			const text = await client.call<string>("browser.export", {
+				sessionId: args.id,
+				format: args.format ?? "har",
+			});
+			if (args.output) {
+				const { writeFileSync } = await import("node:fs");
+				writeFileSync(args.output, text, "utf-8");
+				process.stdout.write(`Exported to ${args.output}\n`);
+			} else {
+				process.stdout.write(`${text}\n`);
+			}
+		} catch (err) {
+			process.stderr.write(`Error: ${(err as Error).message}\n`);
+			process.exit(1);
+		} finally {
+			client.dispose();
+		}
+	},
+});
+
 export const browserCommand = defineCommand({
 	meta: {
 		name: "browser",
@@ -328,5 +424,8 @@ export const browserCommand = defineCommand({
 		overview: browserOverviewCommand,
 		search: browserSearchCommand,
 		inspect: browserInspectCommand,
+		diff: browserDiffCommand,
+		"replay-context": browserReplayContextCommand,
+		export: browserExportCommand,
 	},
 });

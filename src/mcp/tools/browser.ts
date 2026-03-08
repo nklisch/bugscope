@@ -1,7 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { SessionDiffer } from "../../browser/investigation/diff.js";
 import type { InspectParams, OverviewOptions, QueryEngine } from "../../browser/investigation/query-engine.js";
-import { renderInspectResult, renderSearchResults, renderSessionList, renderSessionOverview } from "../../browser/investigation/renderers.js";
+import { renderDiff, renderInspectResult, renderSearchResults, renderSessionList, renderSessionOverview } from "../../browser/investigation/renderers.js";
+import { ReplayContextGenerator } from "../../browser/investigation/replay-context.js";
 
 export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine): void {
 	// Tool 1: session_list
@@ -41,10 +43,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			"Focus on a specific marker with around_marker.",
 		{
 			session_id: z.string().describe("Session ID from session_list"),
-			include: z
-				.array(z.enum(["timeline", "markers", "errors", "network_summary"]))
-				.optional()
-				.describe("What to include. Default: all"),
+			include: z.array(z.enum(["timeline", "markers", "errors", "network_summary"])).optional().describe("What to include. Default: all"),
 			around_marker: z.string().optional().describe("Center overview on this marker ID"),
 			time_range: z
 				.object({
@@ -145,6 +144,68 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				return {
 					content: [{ type: "text" as const, text: renderInspectResult(result, token_budget ?? 3000) }],
 				};
+			} catch (err) {
+				return errorResponse(err);
+			}
+		},
+	);
+
+	// Tool 5: session_diff
+	server.tool(
+		"session_diff",
+		"Compare two moments in a recorded browser session. Shows what changed between two " +
+			"timestamps or events: URL, form state, storage, new console messages, and network activity. " +
+			"Useful for understanding what happened between page load and an error.",
+		{
+			session_id: z.string().describe("Session ID"),
+			before: z.string().describe("First moment — timestamp (ISO or HH:MM:SS) or event ID"),
+			after: z.string().describe("Second moment — timestamp (ISO or HH:MM:SS) or event ID"),
+			include: z.array(z.enum(["form_state", "storage", "url", "console_new", "network_new"])).optional().describe("What to diff. Default: all"),
+			token_budget: z.number().optional().describe("Max tokens. Default: 2000"),
+		},
+		async ({ session_id, before, after, include, token_budget }) => {
+			try {
+				const differ = new SessionDiffer(queryEngine);
+				const diff = differ.diff({ sessionId: session_id, before, after, include });
+				return { content: [{ type: "text" as const, text: renderDiff(diff, token_budget ?? 2000) }] };
+			} catch (err) {
+				return errorResponse(err);
+			}
+		},
+	);
+
+	// Tool 6: session_replay_context
+	server.tool(
+		"session_replay_context",
+		"Generate a reproduction context from a recorded browser session. " +
+			"Outputs reproduction steps, test scaffolds (Playwright or Cypress), or a summary. " +
+			"Use this to create actionable artifacts from investigation findings.",
+		{
+			session_id: z.string().describe("Session ID"),
+			around_marker: z.string().optional().describe("Focus on events around this marker"),
+			time_range: z
+				.object({
+					start: z.string(),
+					end: z.string(),
+				})
+				.optional()
+				.describe("Focus on a specific time window"),
+			format: z
+				.enum(["summary", "reproduction_steps", "test_scaffold"])
+				.describe("Output format: 'summary' for overview, 'reproduction_steps' for step-by-step, 'test_scaffold' for automated test code"),
+			test_framework: z.enum(["playwright", "cypress"]).optional().describe("Test framework for scaffold generation. Default: playwright"),
+		},
+		async ({ session_id, around_marker, time_range, format, test_framework }) => {
+			try {
+				const generator = new ReplayContextGenerator(queryEngine);
+				const text = generator.generate({
+					sessionId: session_id,
+					aroundMarker: around_marker,
+					timeRange: time_range ? { start: new Date(time_range.start).getTime(), end: new Date(time_range.end).getTime() } : undefined,
+					format,
+					testFramework: test_framework,
+				});
+				return { content: [{ type: "text" as const, text }] };
 			} catch (err) {
 				return errorResponse(err);
 			}

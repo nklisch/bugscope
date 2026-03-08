@@ -1,5 +1,6 @@
 import { estimateTokens, fitToBudget, type RenderSection, truncateToTokens } from "../../core/token-budget.js";
 import type { EventRow } from "../storage/database.js";
+import type { DiffResult } from "./diff.js";
 import type { InspectResult, SessionOverview, SessionSummary } from "./query-engine.js";
 
 /**
@@ -168,6 +169,74 @@ export function renderInspectResult(result: InspectResult, tokenBudget = 3000): 
 			content: `Screenshot: ${result.screenshot}\n`,
 			priority: 20,
 		});
+	}
+
+	const included = fitToBudget(sections, tokenBudget);
+	return included.map((s) => s.content).join("\n");
+}
+
+/**
+ * Render a session diff result with token budgeting.
+ */
+export function renderDiff(diff: DiffResult, tokenBudget = 2000): string {
+	const sections: RenderSection[] = [];
+
+	// Header
+	sections.push({
+		key: "header",
+		content: `Diff: ${formatTime(diff.beforeTime)} → ${formatTime(diff.afterTime)} (${formatDuration(diff.durationMs)})\n`,
+		priority: 100,
+	});
+
+	// URL change
+	if (diff.urlChange) {
+		sections.push({
+			key: "url",
+			content: `URL: ${diff.urlChange.before} → ${diff.urlChange.after}\n`,
+			priority: 90,
+		});
+	}
+
+	// Form changes
+	if (diff.formChanges && diff.formChanges.length > 0) {
+		const lines = ["Form State Changes:"];
+		for (const f of diff.formChanges) {
+			lines.push(`  ${f.selector}  "${f.before}" → "${f.after}"`);
+		}
+		lines.push("");
+		sections.push({ key: "form", content: lines.join("\n"), priority: 85 });
+	}
+
+	// Storage changes
+	if (diff.storageChanges && diff.storageChanges.length > 0) {
+		const lines = ["Storage Changes:"];
+		for (const s of diff.storageChanges) {
+			if (s.type === "added") lines.push(`  + ${s.key} = ${s.after}`);
+			else if (s.type === "removed") lines.push(`  - ${s.key} (was: ${s.before})`);
+			else lines.push(`  ~ ${s.key}: "${s.before}" → "${s.after}"`);
+		}
+		lines.push("");
+		sections.push({ key: "storage", content: lines.join("\n"), priority: 70 });
+	}
+
+	// Console messages
+	if (diff.newConsoleMessages && diff.newConsoleMessages.length > 0) {
+		const lines = ["New Console Messages:"];
+		for (const m of diff.newConsoleMessages) {
+			lines.push(`  ${formatTime(m.timestamp)}  ${m.summary}`);
+		}
+		lines.push("");
+		sections.push({ key: "console", content: lines.join("\n"), priority: 60 });
+	}
+
+	// Network activity
+	if (diff.newNetworkRequests && diff.newNetworkRequests.length > 0) {
+		const lines = [`Network Activity (${diff.newNetworkRequests.length} requests):`];
+		for (const n of diff.newNetworkRequests) {
+			lines.push(`  ${formatTime(n.timestamp)}  ${n.summary}`);
+		}
+		lines.push("");
+		sections.push({ key: "network", content: lines.join("\n"), priority: 50 });
 	}
 
 	const included = fitToBudget(sections, tokenBudget);

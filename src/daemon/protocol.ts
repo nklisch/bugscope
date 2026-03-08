@@ -96,6 +96,9 @@ export type RpcMethods = {
 	"browser.overview": { params: BrowserOverviewParams; result: string };
 	"browser.search": { params: BrowserSearchParams; result: string };
 	"browser.inspect": { params: BrowserInspectParams; result: string };
+	"browser.diff": { params: BrowserDiffParams; result: string };
+	"browser.replay-context": { params: BrowserReplayContextParams; result: string };
+	"browser.export": { params: BrowserExportParams; result: string };
 };
 
 // --- Param Schemas (Zod) ---
@@ -300,6 +303,32 @@ export const BrowserInspectParamsSchema = z.object({
 	tokenBudget: z.number().optional(),
 });
 export type BrowserInspectParams = z.infer<typeof BrowserInspectParamsSchema>;
+
+export const BrowserDiffParamsSchema = z.object({
+	sessionId: z.string(),
+	before: z.string(),
+	after: z.string(),
+	include: z.array(z.enum(["form_state", "storage", "url", "console_new", "network_new"])).optional(),
+	tokenBudget: z.number().optional(),
+});
+export type BrowserDiffParams = z.infer<typeof BrowserDiffParamsSchema>;
+
+export const BrowserReplayContextParamsSchema = z.object({
+	sessionId: z.string(),
+	aroundMarker: z.string().optional(),
+	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
+	format: z.enum(["summary", "reproduction_steps", "test_scaffold"]),
+	testFramework: z.enum(["playwright", "cypress"]).optional(),
+});
+export type BrowserReplayContextParams = z.infer<typeof BrowserReplayContextParamsSchema>;
+
+export const BrowserExportParamsSchema = z.object({
+	sessionId: z.string(),
+	format: z.enum(["har"]),
+	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
+	includeResponseBodies: z.boolean().optional(),
+});
+export type BrowserExportParams = z.infer<typeof BrowserExportParamsSchema>;
 
 // Re-export browser types for protocol consumers
 export type { BrowserSessionInfo, Marker } from "../browser/types.js";

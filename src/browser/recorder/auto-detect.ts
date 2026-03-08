@@ -62,6 +62,66 @@ export const DEFAULT_DETECTION_RULES: DetectionRule[] = [
 	},
 ];
 
+export const PHASE_12_DETECTION_RULES: DetectionRule[] = [
+	// Failed form submission heuristic:
+	// submit event followed by 4xx response within 3 seconds
+	{
+		eventTypes: ["user_input"],
+		condition: (event, recent) => {
+			if (event.data.type !== "submit") return false;
+			return recent.some((e) => e.type === "network_response" && (e.data.status as number) >= 400 && e.timestamp - event.timestamp < 3000 && e.timestamp >= event.timestamp);
+		},
+		label: (event) => `Form submission failed: ${event.data.selector}`,
+		severity: "high",
+		cooldownMs: 5000,
+	},
+
+	// Rapid repeated requests (possible retry loop)
+	{
+		eventTypes: ["network_request"],
+		condition: (event, recent) => {
+			const sameUrl = recent.filter((e) => e.type === "network_request" && e.data.url === event.data.url && event.timestamp - e.timestamp < 5000);
+			return sameUrl.length >= 3;
+		},
+		label: (event) => `Rapid retries: ${event.data.url} (3+ requests in 5s)`,
+		severity: "medium",
+		cooldownMs: 10000,
+	},
+
+	// Large layout shift (potential rendering bug)
+	{
+		eventTypes: ["performance"],
+		condition: (event) => event.data.metric === "CLS" && (event.data.value as number) > 0.25,
+		label: (event) => `Large layout shift (CLS: ${event.data.value})`,
+		severity: "low",
+		cooldownMs: 30000,
+	},
+
+	// WebSocket connection error
+	{
+		eventTypes: ["websocket"],
+		condition: (event) => event.data.type === "error" || event.data.type === "close",
+		label: (event) => `WebSocket ${event.data.type}: ${event.data.url}`,
+		severity: "medium",
+		cooldownMs: 5000,
+	},
+
+	// Navigation to error page (common SPA patterns)
+	{
+		eventTypes: ["navigation"],
+		condition: (event) => {
+			const url = (event.data.url as string) ?? "";
+			return /\/(error|404|500|oops|not-found)/i.test(url);
+		},
+		label: (event) => `Navigated to error page: ${event.data.url}`,
+		severity: "high",
+		cooldownMs: 5000,
+	},
+];
+
+/** All detection rules: Phase 9 defaults + Phase 12 advanced rules. */
+export const ALL_DETECTION_RULES: DetectionRule[] = [...DEFAULT_DETECTION_RULES, ...PHASE_12_DETECTION_RULES];
+
 /**
  * Checks incoming events against detection rules and returns markers to place.
  * Each rule has an optional cooldown to prevent marker spam.
