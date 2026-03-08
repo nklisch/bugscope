@@ -12,6 +12,7 @@ interface PendingRequest {
  */
 export class EventNormalizer {
 	private pendingRequests = new Map<string, PendingRequest>(); // requestId → pending
+	private pendingWebSockets = new Map<string, string>(); // requestId → url
 
 	/** Process a raw CDP event and return a RecordedEvent, or null to skip. */
 	normalize(method: string, params: Record<string, unknown>, tabId: string): RecordedEvent | null {
@@ -22,6 +23,10 @@ export class EventNormalizer {
 				return this.normalizeNetworkResponse(params, tabId);
 			case "Network.loadingFailed":
 				return this.normalizeNetworkFailed(params, tabId);
+			case "Network.webSocketCreated":
+				return this.normalizeWebSocketLifecycle(params, tabId, "open");
+			case "Network.webSocketClosed":
+				return this.normalizeWebSocketLifecycle(params, tabId, "close");
 			case "Network.webSocketFrameSent":
 				return this.normalizeWebSocketFrame(params, tabId, "SEND");
 			case "Network.webSocketFrameReceived":
@@ -101,6 +106,19 @@ export class EventNormalizer {
 		const requestId = params.requestId as string;
 		const errorText = (params.errorText as string) ?? "Unknown error";
 
+		// Check if this is a WebSocket failure
+		if (this.pendingWebSockets.has(requestId)) {
+			const url = this.pendingWebSockets.get(requestId) ?? "";
+			this.pendingWebSockets.delete(requestId);
+			this.pendingRequests.delete(requestId);
+			return this.buildEvent("websocket", tabId, `WS error: ${url}: ${errorText}`, {
+				type: "error",
+				url,
+				requestId,
+				errorText,
+			});
+		}
+
 		const pending = this.pendingRequests.get(requestId);
 		if (!pending) return null;
 
@@ -114,6 +132,25 @@ export class EventNormalizer {
 			method,
 			failed: true,
 			errorText,
+		});
+	}
+
+	private normalizeWebSocketLifecycle(params: Record<string, unknown>, tabId: string, wsType: "open" | "close"): RecordedEvent {
+		const requestId = params.requestId as string;
+		let url: string;
+
+		if (wsType === "open") {
+			url = (params.url as string) ?? "";
+			this.pendingWebSockets.set(requestId, url);
+		} else {
+			url = this.pendingWebSockets.get(requestId) ?? "";
+			this.pendingWebSockets.delete(requestId);
+		}
+
+		return this.buildEvent("websocket", tabId, `WS ${wsType}: ${url}`, {
+			type: wsType,
+			url,
+			requestId,
 		});
 	}
 

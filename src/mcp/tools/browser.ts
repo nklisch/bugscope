@@ -91,10 +91,14 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				})
 				.optional()
 				.describe("Filter by time window"),
+			around_marker: z.string().optional().describe("Center search around this marker ID (±120s before, +30s after)"),
+			url_pattern: z.string().optional().describe("Glob pattern to filter by URL in summary, e.g. '**/api/patients**'"),
+			console_levels: z.array(z.string()).optional().describe("Filter console events by level, e.g. ['error', 'warn']"),
+			contains_text: z.string().optional().describe("Case-insensitive substring match on event summary"),
 			max_results: z.number().optional().describe("Max results. Default: 10"),
 			token_budget: z.number().optional().describe("Max tokens for the response. Default: 2000"),
 		},
-		async ({ session_id, query, event_types, status_codes, time_range, max_results, token_budget }) => {
+		async ({ session_id, query, event_types, status_codes, time_range, around_marker, url_pattern, console_levels, contains_text, max_results, token_budget }) => {
 			try {
 				const results = queryEngine.search(session_id, {
 					query,
@@ -102,6 +106,10 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 						eventTypes: event_types,
 						statusCodes: status_codes,
 						timeRange: time_range ? { start: new Date(time_range.start).getTime(), end: new Date(time_range.end).getTime() } : undefined,
+						aroundMarker: around_marker,
+						urlPattern: url_pattern,
+						consoleLevels: console_levels,
+						containsText: contains_text,
 					},
 					maxResults: max_results ?? 10,
 				});

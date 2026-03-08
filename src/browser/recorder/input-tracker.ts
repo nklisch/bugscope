@@ -1,15 +1,16 @@
 import type { EventType, RecordedEvent } from "../types.js";
 
 interface InputEventData {
-	type: "click" | "submit" | "change" | "marker";
+	type: "click" | "submit" | "change" | "marker" | "cls";
 	ts: number;
 	selector?: string;
 	text?: string;
 	tag?: string;
 	action?: string;
 	fields?: Record<string, string>;
-	value?: string;
+	value?: string | number;
 	label?: string;
+	metric?: string;
 }
 
 /**
@@ -69,6 +70,24 @@ export class InputTracker {
       report('marker', { label: 'Keyboard marker' });
     }
   }, true);
+
+  if (typeof PerformanceObserver !== 'undefined') {
+    var clsValue = 0;
+    var lastReported = 0;
+    try {
+      new PerformanceObserver(function(list) {
+        for (var entry of list.getEntries()) {
+          if (!entry.hadRecentInput) {
+            clsValue += entry.value;
+          }
+        }
+        if (clsValue - lastReported >= 0.05) {
+          lastReported = clsValue;
+          report('cls', { metric: 'CLS', value: clsValue });
+        }
+      }).observe({ type: 'layout-shift', buffered: true });
+    } catch (e) {}
+  }
 })();`;
 	}
 
@@ -90,6 +109,15 @@ export class InputTracker {
 		// Keyboard marker events are surfaced as marker placement requests by the orchestrator
 		if (parsed.type === "marker") {
 			return this.buildEvent("marker", tabId, parsed.ts, `Keyboard marker: ${parsed.label ?? "unnamed"}`, { label: parsed.label, source: "keyboard" });
+		}
+
+		// CLS performance events from the PerformanceObserver injection
+		if (parsed.type === "cls") {
+			const value = typeof parsed.value === "string" ? Number.parseFloat(parsed.value) : (parsed.value ?? 0);
+			return this.buildEvent("performance", tabId, parsed.ts, `CLS: ${value}`, {
+				metric: "CLS",
+				value,
+			});
 		}
 
 		return this.buildUserInputEvent(parsed, tabId);

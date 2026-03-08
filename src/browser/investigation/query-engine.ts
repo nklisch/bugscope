@@ -87,6 +87,20 @@ export class QueryEngine {
 	// --- Search queries ---
 
 	search(sessionId: string, params: SearchParams): EventRow[] {
+		// Resolve aroundMarker into a timeRange (only if no explicit timeRange provided)
+		if (params.filters?.aroundMarker && !params.filters.timeRange) {
+			const markers = this.db.queryMarkers(sessionId);
+			const marker = markers.find((m) => m.id === params.filters!.aroundMarker);
+			if (!marker) throw new Error(`Marker not found: ${params.filters.aroundMarker}`);
+			params = {
+				...params,
+				filters: {
+					...params.filters,
+					timeRange: { start: marker.timestamp - 120_000, end: marker.timestamp + 30_000 },
+				},
+			};
+		}
+
 		if (params.query) {
 			return this.db.searchFTS(sessionId, params.query, params.maxResults ?? 10);
 		}
@@ -104,6 +118,29 @@ export class QueryEngine {
 				const status = Number.parseInt(e.summary, 10);
 				return codes.includes(status);
 			});
+		}
+
+		// Post-filter by URL pattern (glob-style match on summary)
+		if (params.filters?.urlPattern) {
+			const pattern = params.filters.urlPattern;
+			const regex = new RegExp(pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*"), "i");
+			results = results.filter((e) => regex.test(e.summary));
+		}
+
+		// Post-filter by console levels (parsed from summary "[level] message")
+		if (params.filters?.consoleLevels && params.filters.consoleLevels.length > 0) {
+			const levels = params.filters.consoleLevels;
+			results = results.filter((e) => {
+				if (e.type !== "console") return false;
+				const match = e.summary.match(/^\[(\w+)\]/);
+				return match ? levels.includes(match[1]) : false;
+			});
+		}
+
+		// Post-filter by text content in summary (case-insensitive substring)
+		if (params.filters?.containsText) {
+			const text = params.filters.containsText.toLowerCase();
+			results = results.filter((e) => e.summary.toLowerCase().includes(text));
 		}
 
 		return results;
@@ -303,6 +340,7 @@ export interface SearchParams {
 		consoleLevels?: string[];
 		timeRange?: { start: number; end: number };
 		containsText?: string;
+		aroundMarker?: string; // marker ID, implies ±120s/+30s time range
 	};
 	maxResults?: number;
 }
