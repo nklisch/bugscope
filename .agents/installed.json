@@ -439,13 +439,31 @@
       }
     },
     {
-      "name": "agent-lens",
-      "description": "Agent Lens MCP tool reference. LOAD THIS SKILL before invoking any mcp__agent-lens__* tool. Covers the three tool namespaces (debug_*, browser_*, session_*), when to use each, common workflows, and pitfalls that cause wasted sessions or confusing errors.",
+      "name": "agent-lens-mcp",
+      "description": "Agent Lens MCP tool reference. LOAD THIS SKILL before invoking any mcp__agent-lens__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
       "repo": null,
       "ref": null,
       "sha": null,
       "scope": "project",
-      "path": ".agents/skills/agent-lens",
+      "path": ".agents/skills/agent-lens-mcp",
+      "tap": null,
+      "also": [
+        "claude-code"
+      ],
+      "installedAt": "2026-03-08T00:00:00.000Z",
+      "updatedAt": "2026-03-08T00:00:00.000Z",
+      "trust": {
+        "tier": "local"
+      }
+    },
+    {
+      "name": "agent-lens-cli",
+      "description": "Agent Lens CLI reference. Load when invoking the agent-lens CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup references.",
+      "repo": null,
+      "ref": null,
+      "sha": null,
+      "scope": "project",
+      "path": ".agents/skills/agent-lens-cli",
       "tap": null,
       "also": [
         "claude-code"

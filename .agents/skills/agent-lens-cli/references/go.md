@@ -1,0 +1,1 @@
+../../agent-lens-mcp/references/go.md
