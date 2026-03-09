@@ -35,14 +35,30 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 	server.tool(
 		"browser_start",
 		"Launch Chrome and start recording browser events (network, console, user input). " +
+			"By default, launches a new isolated Chrome instance — no conflict with an existing Chrome window. " +
+			"Use profile='agent-lens' (or any name) to get a fully isolated Chrome that won't collide with your regular browser. " +
 			"Returns a session info summary once Chrome is ready. " +
 			"Use browser_status to check recording state, browser_mark to place markers, browser_stop to end the session. " +
-			"After stopping, use session_list and session_overview to investigate what was recorded.",
+			"After stopping, use session_list and session_overview to investigate what was recorded. " +
+			"Use attach=true only if Chrome was already launched with --remote-debugging-port=9222.",
 		{
 			url: z.string().optional().describe("URL to open when launching Chrome"),
 			port: z.number().optional().describe("Chrome remote debugging port. Default: 9222"),
-			profile: z.string().optional().describe("Chrome profile name — creates an isolated profile under ~/.agent-lens/chrome-profiles/"),
-			attach: z.boolean().optional().describe("Attach to an already-running Chrome instance instead of launching one. Chrome must have been started with --remote-debugging-port=9222"),
+			profile: z
+				.string()
+				.optional()
+				.describe(
+					"Chrome profile name — creates an isolated user-data-dir under ~/.agent-lens/chrome-profiles/<name>. " +
+						"Use this to avoid conflicts with an already-running Chrome. Example: 'agent-lens'",
+				),
+			attach: z
+				.boolean()
+				.optional()
+				.describe(
+					"Attach to an already-running Chrome instance (don't launch). " +
+						"Requires Chrome to have been started with --remote-debugging-port=9222. " +
+						"If Chrome is running normally without that flag, use profile instead to launch an isolated instance.",
+				),
 			all_tabs: z.boolean().optional().describe("Record all browser tabs. Default: first/active tab only"),
 			tab_filter: z.string().optional().describe("Record only tabs whose URL matches this pattern"),
 		},
@@ -59,6 +75,29 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				});
 				return { content: [{ type: "text" as const, text: formatSessionInfo(info) }] };
 			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				const isCdpError = /cdp|chrome|connect|webkit|remote.debug/i.test(msg);
+				if (isCdpError) {
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text:
+									`Error: ${msg}\n\n` +
+									"Likely cause: Chrome is already running without remote debugging enabled.\n\n" +
+									"Fix option 1 — launch an isolated Chrome instance (recommended):\n" +
+									"  browser_start(profile: 'agent-lens', url: '<your-url>')\n" +
+									"  This creates a separate Chrome profile so existing Chrome is not affected.\n\n" +
+									"Fix option 2 — manually start Chrome with debugging enabled, then attach:\n" +
+									"  google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/agent-lens-chrome\n" +
+									"  Then: browser_start(attach: true)\n\n" +
+									"Fix option 3 — kill existing Chrome and retry:\n" +
+									"  pkill -f chrome  (or pkill -f chromium)\n" +
+									"  Then: browser_start(url: '<your-url>')",
+							},
+						],
+					};
+				}
 				return errorResponse(err);
 			} finally {
 				client.dispose();

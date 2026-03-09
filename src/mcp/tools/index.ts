@@ -127,6 +127,22 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 				let resolvedCwd = cwd;
 				let resolvedEnv = env;
 
+				// Guard: URLs are not debuggable processes — redirect to browser tools
+				if (resolvedCommand && /^https?:\/\//i.test(resolvedCommand.trim())) {
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text:
+									"Error: debug_launch runs code debuggers — it cannot open URLs in a browser.\n\n" +
+									"To record browser activity at a URL, use browser_start instead:\n" +
+									`  browser_start(url: "${resolvedCommand}")\n\n` +
+									"browser_start launches Chrome, opens the URL, and records network, console, and user input events.",
+							},
+						],
+					};
+				}
+
 				if (launch_config) {
 					const configPath = launch_config.path ? resolvePath(launch_config.path) : resolvePath(process.cwd(), ".vscode/launch.json");
 					const launchJson = await parseLaunchJson(configPath);
