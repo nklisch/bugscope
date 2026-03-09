@@ -73,7 +73,7 @@ A typical interaction follows this sequence:
 
 Over a long debug session, accumulated viewport snapshots can consume significant context. The server provides three mechanisms:
 
-**Automatic summarization.** The server maintains a running investigation log summarizing each action and its key observation. After every 10 actions, a compressed summary is appended. The agent can retrieve this via `debug_session_log` at any time, allowing earlier raw viewports to be dropped from context while preserving the reasoning chain.
+**Automatic summarization.** The server maintains a running investigation log summarizing each action and its key observation. After every 10 actions, a compressed summary is appended. The agent can retrieve this via `debug_action_log` at any time, allowing earlier raw viewports to be dropped from context while preserving the reasoning chain.
 
 **Viewport diffing.** When consecutive stops are in the same function, the viewport can optionally show only what changed (modified variables, new stack frames) rather than the full snapshot. Controlled by the `diff_mode` session parameter.
 

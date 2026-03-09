@@ -31,14 +31,14 @@ function formatSessionInfo(info: BrowserSessionInfo): string {
 }
 
 export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine): void {
-	// Tool: browser_start
+	// Tool: chrome_start
 	server.tool(
-		"browser_start",
+		"chrome_start",
 		"Launch Chrome and start recording browser events (network, console, user input). " +
 			"By default, launches a new isolated Chrome instance — no conflict with an existing Chrome window. " +
 			"Use profile='agent-lens' (or any name) to get a fully isolated Chrome that won't collide with your regular browser. " +
 			"Returns a session info summary once Chrome is ready. " +
-			"Use browser_status to check recording state, browser_mark to place markers, browser_stop to end the session. " +
+			"Use chrome_status to check recording state, chrome_mark to place markers, chrome_stop to end the session. " +
 			"After stopping, use session_list and session_overview to investigate what was recorded. " +
 			"Use attach=true only if Chrome was already launched with --remote-debugging-port=9222.",
 		{
@@ -49,6 +49,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				.optional()
 				.describe(
 					"Chrome profile name — creates an isolated user-data-dir under ~/.agent-lens/chrome-profiles/<name>. " +
+						"Each profile has its own cookies, storage, and login state. " +
 						"Use this to avoid conflicts with an already-running Chrome. Example: 'agent-lens'",
 				),
 			attach: z
@@ -60,7 +61,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 						"If Chrome is running normally without that flag, use profile instead to launch an isolated instance.",
 				),
 			all_tabs: z.boolean().optional().describe("Record all browser tabs. Default: first/active tab only"),
-			tab_filter: z.string().optional().describe("Record only tabs whose URL matches this pattern"),
+			tab_filter: z.string().optional().describe("Glob pattern — record only tabs whose URL matches, e.g. '**/app/**'"),
 		},
 		async ({ url, port, profile, attach, all_tabs, tab_filter }) => {
 			const client = await getDaemonClient(30_000);
@@ -86,14 +87,14 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 									`Error: ${msg}\n\n` +
 									"Likely cause: Chrome is already running without remote debugging enabled.\n\n" +
 									"Fix option 1 — launch an isolated Chrome instance (recommended):\n" +
-									"  browser_start(profile: 'agent-lens', url: '<your-url>')\n" +
+									"  chrome_start(profile: 'agent-lens', url: '<your-url>')\n" +
 									"  This creates a separate Chrome profile so existing Chrome is not affected.\n\n" +
 									"Fix option 2 — manually start Chrome with debugging enabled, then attach:\n" +
 									"  google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/agent-lens-chrome\n" +
-									"  Then: browser_start(attach: true)\n\n" +
+									"  Then: chrome_start(attach: true)\n\n" +
 									"Fix option 3 — kill existing Chrome and retry:\n" +
 									"  pkill -f chrome  (or pkill -f chromium)\n" +
-									"  Then: browser_start(url: '<your-url>')",
+									"  Then: chrome_start(url: '<your-url>')",
 							},
 						],
 					};
@@ -105,17 +106,17 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 		},
 	);
 
-	// Tool: browser_status
+	// Tool: chrome_status
 	server.tool(
-		"browser_status",
-		"Show the current browser recording status — whether Chrome is active, how many events and markers have been captured, and which tabs are being recorded.",
+		"chrome_status",
+		"Show the current Chrome recording status — whether Chrome is active, how many events and markers have been captured, and which tabs are being recorded.",
 		{},
 		async () => {
 			const client = await getDaemonClient();
 			try {
 				const info = await client.call<BrowserSessionInfo | null>("browser.status", {});
 				if (!info) {
-					return { content: [{ type: "text" as const, text: "No active browser recording. Use browser_start to begin." }] };
+					return { content: [{ type: "text" as const, text: "No active Chrome recording. Use chrome_start to begin." }] };
 				}
 				return { content: [{ type: "text" as const, text: formatSessionInfo(info) }] };
 			} catch (err) {
@@ -126,13 +127,13 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 		},
 	);
 
-	// Tool: browser_mark
+	// Tool: chrome_mark
 	server.tool(
-		"browser_mark",
-		"Place a named marker in the browser recording buffer at the current moment. " +
+		"chrome_mark",
+		"Place a named marker in the Chrome recording buffer at the current moment. " +
 			"Markers let you annotate significant events (e.g. 'submitted form', 'saw error') so you can quickly find them later with session_overview or session_search using around_marker.",
 		{
-			label: z.string().optional().describe("Label for the marker, e.g. 'form submitted' or 'error appeared'"),
+			label: z.string().optional().describe("Label for the marker, e.g. 'form submitted' or 'error appeared'. Descriptive labels help you find this marker later with around_marker."),
 		},
 		async ({ label }) => {
 			const client = await getDaemonClient();
@@ -149,19 +150,19 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 		},
 	);
 
-	// Tool: browser_stop
+	// Tool: chrome_stop
 	server.tool(
-		"browser_stop",
-		"Stop the active browser recording session and flush all buffered events to the database. " +
+		"chrome_stop",
+		"Stop the active Chrome recording session and flush all buffered events to the database. " +
 			"After stopping, use session_list to find the recorded session and session_overview to investigate it.",
 		{
-			close_browser: z.boolean().optional().describe("Also close the Chrome browser. Default: false"),
+			close_chrome: z.boolean().optional().describe("Also close the Chrome browser. Default: false"),
 		},
-		async ({ close_browser }) => {
+		async ({ close_chrome }) => {
 			const client = await getDaemonClient();
 			try {
-				await client.call("browser.stop", { closeBrowser: close_browser ?? false });
-				return { content: [{ type: "text" as const, text: "Browser recording stopped. Use session_list to find the recorded session." }] };
+				await client.call("browser.stop", { closeBrowser: close_chrome ?? false });
+				return { content: [{ type: "text" as const, text: "Chrome recording stopped. Use session_list to find the recorded session." }] };
 			} catch (err) {
 				return errorResponse(err);
 			} finally {
@@ -262,10 +263,10 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			url_pattern: z.string().optional().describe("Glob pattern to filter by URL in summary, e.g. '**/api/patients**'"),
 			console_levels: z.array(z.string()).optional().describe("Filter console events by level, e.g. ['error', 'warn']"),
 			contains_text: z.string().optional().describe("Case-insensitive substring match on event summary"),
-			max_results: z.number().optional().describe("Max results. Default: 10"),
+			limit: z.number().optional().describe("Max results. Default: 10"),
 			token_budget: z.number().optional().describe("Max tokens for the response. Default: 2000"),
 		},
-		async ({ session_id, query, event_types, status_codes, time_range, around_marker, url_pattern, console_levels, contains_text, max_results, token_budget }) => {
+		async ({ session_id, query, event_types, status_codes, time_range, around_marker, url_pattern, console_levels, contains_text, limit, token_budget }) => {
 			try {
 				const results = queryEngine.search(session_id, {
 					query,
@@ -278,7 +279,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 						consoleLevels: console_levels,
 						containsText: contains_text,
 					},
-					maxResults: max_results ?? 10,
+					maxResults: limit ?? 10,
 				});
 				return {
 					content: [{ type: "text" as const, text: renderSearchResults(results, token_budget ?? 2000) }],
@@ -294,7 +295,8 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 		"session_inspect",
 		"Deep-dive into a specific event or moment in a recorded browser session. " +
 			"Returns full event detail, network request/response bodies, surrounding events, " +
-			"and nearest screenshot. This is the primary evidence-gathering tool.",
+			"and nearest screenshot. This is the primary evidence-gathering tool. " +
+			"If multiple of event_id, marker_id, and timestamp are provided, precedence is: event_id > marker_id > timestamp.",
 		{
 			session_id: z.string().describe("Session ID"),
 			event_id: z.string().optional().describe("Specific event ID (from session_search results)"),
@@ -333,18 +335,18 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			"Useful for understanding what happened between page load and an error.",
 		{
 			session_id: z.string().describe("Session ID"),
-			before: z.string().describe("First moment — timestamp (ISO or HH:MM:SS) or event ID"),
-			after: z.string().describe("Second moment — timestamp (ISO or HH:MM:SS) or event ID"),
+			from: z.string().describe("First moment — timestamp (ISO or HH:MM:SS) or event ID"),
+			to: z.string().describe("Second moment — timestamp (ISO or HH:MM:SS) or event ID"),
 			include: z
 				.array(z.enum(["form_state", "storage", "url", "console_new", "network_new"]))
 				.optional()
 				.describe("What to diff. Default: all"),
 			token_budget: z.number().optional().describe("Max tokens. Default: 2000"),
 		},
-		async ({ session_id, before, after, include, token_budget }) => {
+		async ({ session_id, from, to, include, token_budget }) => {
 			try {
 				const differ = new SessionDiffer(queryEngine);
-				const diff = differ.diff({ sessionId: session_id, before, after, include });
+				const diff = differ.diff({ sessionId: session_id, before: from, after: to, include });
 				return { content: [{ type: "text" as const, text: renderDiff(diff, token_budget ?? 2000) }] };
 			} catch (err) {
 				return errorResponse(err);
@@ -363,8 +365,8 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			around_marker: z.string().optional().describe("Focus on events around this marker"),
 			time_range: z
 				.object({
-					start: z.string(),
-					end: z.string(),
+					start: z.string().describe("ISO timestamp"),
+					end: z.string().describe("ISO timestamp"),
 				})
 				.optional()
 				.describe("Focus on a specific time window"),

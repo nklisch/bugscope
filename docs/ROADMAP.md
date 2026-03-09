@@ -121,7 +121,7 @@ Tools to implement (15 total):
 
 **Session intelligence (2, stubs for Phase 3):**
 - `debug_watch` — Store expressions in session, evaluate on each stop. Stub: just store the list.
-- `debug_session_log` — Return action history. Stub: return raw action list.
+- `debug_action_log` — Return action history. Stub: return raw action list.
 
 Each tool should:
 - Validate inputs with Zod schemas
@@ -281,7 +281,7 @@ Upgrade the stub from Phase 1 to full implementation. → UX.md#Watch Expression
 
 ### 3.2 — Session Logging
 
-The investigation log summarizes the debug session. → INTERFACE.md#`debug_session_log`, ARCH.md#Context Compression
+The investigation log summarizes the debug session. → INTERFACE.md#`debug_action_log`, ARCH.md#Context Compression
 
 - **Action recording.** On every tool call, record: action number, tool name, key parameters, timestamp, and a one-line summary of the result (e.g., "BP hit at order.py:147, discount=-149.97").
 - **Key observation extraction.** When a viewport is returned, extract "interesting" observations: unexpected values (negative when positive expected?), variable changes since last stop, new stack frames.
@@ -317,7 +317,7 @@ As action count increases, automatically reduce viewport detail. → ARCH.md#Con
 Not the full token-budget-awareness from the open questions, but a practical version:
 
 - **Viewport token counter.** Estimate token count for each viewport (rough: chars / 4). Track cumulative tokens consumed by viewports in the session.
-- **Include in session log.** `debug_session_log` reports total viewport tokens consumed. Helps agents reason about their remaining budget.
+- **Include in session log.** `debug_action_log` reports total viewport tokens consumed. Helps agents reason about their remaining budget.
 - **Include in `debug_status`.** Report `viewport_tokens_consumed` alongside action count and elapsed time.
 
 **Done when:** A 50-action debug session produces compressed viewports that stay under token budget, and the session log accurately summarizes the investigation chain.

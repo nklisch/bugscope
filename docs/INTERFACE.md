@@ -200,7 +200,7 @@ Add expressions to a watch list. Watched expressions are automatically evaluated
 
 **Returns:** Confirmed watch list.
 
-#### `debug_session_log`
+#### `debug_action_log`
 
 Retrieve the compressed investigation log for the current session. As the agent takes debug actions, the server maintains a running summary of key observations.
 

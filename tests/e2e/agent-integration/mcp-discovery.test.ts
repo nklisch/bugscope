@@ -28,7 +28,7 @@ describe.skipIf(SKIP_NO_DEBUGPY)("Agent integration: MCP discovery", () => {
 		expect(toolNames).toContain("debug_evaluate");
 		expect(toolNames).toContain("debug_variables");
 		expect(toolNames).toContain("debug_set_breakpoints");
-		expect(toolNames).toContain("debug_session_log");
+		expect(toolNames).toContain("debug_action_log");
 
 		// Each tool has a non-empty description
 		for (const tool of result.tools) {
@@ -80,7 +80,7 @@ describe.skipIf(SKIP_NO_DEBUGPY)("Agent integration: MCP discovery", () => {
 			expect(evalResult).toContain("gold");
 
 			// Session log
-			const log = await callTool(client, "debug_session_log", {
+			const log = await callTool(client, "debug_action_log", {
 				session_id: sessionId,
 			});
 			expect(log).toContain("action");

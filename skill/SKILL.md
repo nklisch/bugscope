@@ -38,7 +38,7 @@ If agent-lens is registered as an MCP server, use these tools directly:
 | `debug_stack_trace` | Show the call stack |
 | `debug_source` | Read source with line numbers |
 | `debug_watch` | Add watch expressions — shown in every viewport |
-| `debug_session_log` | Review investigation history |
+| `debug_action_log` | Review investigation history |
 | `debug_output` | Get stdout/stderr from the target |
 | `debug_attach` | Attach to a running process |
 | `debug_threads` | List threads (goroutines, Python threads) |
@@ -133,7 +133,7 @@ debug_stop({ session_id: "..." })
 
 - Prefer conditional breakpoints over stepping through loops: `{ line: 42, condition: "i == 99" }`
 - Use `debug_watch` to track key expressions across multiple stops
-- Use `debug_session_log` to review what you've already checked
+- Use `debug_action_log` to review what you've already checked
 - Each action returns a viewport — source context, locals, stack, and watches — in one view
 - Sessions auto-expire after 5 minutes of inactivity
 - **Always call `debug_stop` when finished** to clean up debugger processes

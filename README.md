@@ -78,7 +78,7 @@ Agent Lens exposes 18 tools over MCP, each with a matching CLI command:
 | `debug_stack_trace` | Get the full call stack |
 | `debug_source` | Read source code around a location |
 | `debug_watch` | Add/remove persistent watch expressions |
-| `debug_session_log` | Review the investigation log |
+| `debug_action_log` | Review the investigation log |
 | `debug_output` | Capture stdout/stderr |
 | `debug_threads` | List threads, goroutines, etc. |
 

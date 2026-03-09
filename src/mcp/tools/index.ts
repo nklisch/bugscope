@@ -97,7 +97,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		`Launch a debug target process. Sets initial breakpoints and returns a session handle. The viewport shows source, locals, and call stack at each stop. ` +
 			`Automatically detects test/web frameworks (${frameworkIds.join(", ")}) to configure the debugger appropriately.`,
 		{
-			command: z.string().describe(`Command to execute, e.g. 'python app.py' or '${frameworkIds[0]} tests/'. Test and web frameworks are auto-detected and configured for debugging.`),
+			command: z.string().optional().describe(`Command to execute, e.g. 'python app.py' or '${frameworkIds[0]} tests/'. Required unless launch_config is provided. Test and web frameworks are auto-detected and configured for debugging.`),
 			language: z.string().optional().describe(buildLanguageDescription()),
 			framework: z.string().optional().describe(buildFrameworkDescription()),
 			breakpoints: z
@@ -135,9 +135,9 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 								type: "text" as const,
 								text:
 									"Error: debug_launch runs code debuggers — it cannot open URLs in a browser.\n\n" +
-									"To record browser activity at a URL, use browser_start instead:\n" +
-									`  browser_start(url: "${resolvedCommand}")\n\n` +
-									"browser_start launches Chrome, opens the URL, and records network, console, and user input events.",
+									"To record browser activity at a URL, use chrome_start instead:\n" +
+									`  chrome_start(url: "${resolvedCommand}")\n\n` +
+									"chrome_start launches Chrome, opens the URL, and records network, console, and user input events.",
 							},
 						],
 					};
@@ -223,7 +223,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 2: debug_stop
 	server.tool(
 		"debug_stop",
-		"Terminate a debug session and clean up all resources.",
+		"Terminate a debug session and kill the target process. This terminates (kills) the process — it does not detach. If the session was created with debug_attach, the attached process is also killed. Cleans up all session resources.",
 		{
 			session_id: z.string().describe("The session to terminate"),
 		},
@@ -329,7 +329,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 6: debug_run_to
 	server.tool(
 		"debug_run_to",
-		"Run execution to a specific file and line number, then pause.",
+		"Run execution to a specific file and line number, then pause. If the target line is never reached, a timeout error is returned (controlled by timeout_ms). Unlike setting a breakpoint, this is a one-time temporary stop.",
 		{
 			session_id: z.string().describe("The active debug session"),
 			file: z.string().describe("Target file path"),
@@ -403,7 +403,10 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 			filters: z
 				.array(z.string())
 				.describe(
-					"Exception filter IDs. Python: 'raised' (all exceptions), " + "'uncaught' (unhandled only), 'userUnhandled'. " + "Use debug_status to see available filters for the current adapter.",
+					"Exception filter IDs. Python: 'raised' (all exceptions), 'uncaught' (unhandled only), 'userUnhandled'. " +
+						"Node.js: 'all' (all exceptions), 'uncaught' (unhandled only). " +
+						"Go/Delve: 'panic' (runtime panics). " +
+						"Use debug_status to see available filters for the current adapter.",
 				),
 		},
 		async ({ session_id, filters }) => {
@@ -478,7 +481,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		"Get variables from a specific scope and stack frame.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			scope: z.enum(["local", "global", "closure", "all"]).optional().describe("Variable scope to retrieve. Default: 'local'"),
+			scope: z.enum(["local", "global", "closure", "all"]).optional().describe("Variable scope to retrieve. Default: 'local'. Note: 'closure' is Node.js only — not available in Python or Go."),
 			frame_index: z.number().optional().describe("Stack frame context (0 = current). Default: 0"),
 			filter: z.string().optional().describe("Regex filter on variable names. E.g., '^user' to show only user-prefixed vars"),
 			max_depth: z.number().optional().describe("Object expansion depth. Default: 1"),
@@ -515,7 +518,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 	// Tool 13: debug_source
 	server.tool(
 		"debug_source",
-		"Read source code from a file with line numbers.",
+		"Read source code from a file with line numbers. Use this instead of a plain file read when you need line numbers that match the debugger's view, or to read source-mapped or virtual files that don't exist at a literal path on disk.",
 		{
 			session_id: z.string().describe("The active debug session"),
 			file: z.string().describe("Source file path"),
@@ -559,9 +562,9 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		},
 	);
 
-	// Tool 15: debug_session_log — enriched session log with observations and token stats
+	// Tool 15: debug_action_log — enriched session log with observations and token stats
 	server.tool(
-		"debug_session_log",
+		"debug_action_log",
 		"Get the investigation log for the current session. " +
 			"Shows actions taken, key observations (unexpected values, variable changes), " +
 			"and cumulative viewport token consumption. Older entries are automatically " +
