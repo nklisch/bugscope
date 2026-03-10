@@ -90,7 +90,8 @@ export class QueryEngine {
 		// Resolve aroundMarker into a timeRange (only if no explicit timeRange provided)
 		if (params.filters?.aroundMarker && !params.filters.timeRange) {
 			const markers = this.db.queryMarkers(sessionId);
-			const marker = markers.find((m) => m.id === params.filters?.aroundMarker);
+				const ref = params.filters?.aroundMarker;
+			const marker = markers.find((m) => m.id === ref || m.label === ref);
 			if (!marker) throw new Error(`Marker not found: ${params.filters.aroundMarker}`);
 			params = {
 				...params,
@@ -105,10 +106,13 @@ export class QueryEngine {
 			return this.db.searchFTS(sessionId, params.query, params.maxResults ?? 10);
 		}
 
+		// When post-filtering by status codes, fetch all events first so the
+		// limit is applied after filtering, not before.
+		const needsPostFilter = !!(params.filters?.statusCodes?.length || params.filters?.urlPattern);
 		let results = this.db.queryEvents(sessionId, {
 			types: params.filters?.eventTypes,
 			timeRange: params.filters?.timeRange,
-			limit: params.maxResults ?? 10,
+			limit: needsPostFilter ? undefined : (params.maxResults ?? 10),
 		});
 
 		// Post-filter by status codes (parsed from summary string)
@@ -141,6 +145,10 @@ export class QueryEngine {
 		if (params.filters?.containsText) {
 			const text = params.filters.containsText.toLowerCase();
 			results = results.filter((e) => e.summary.toLowerCase().includes(text));
+		}
+
+		if (needsPostFilter) {
+			results = results.slice(0, params.maxResults ?? 10);
 		}
 
 		return results;

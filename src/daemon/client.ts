@@ -158,12 +158,13 @@ async function spawnDaemon(socketPath: string): Promise<void> {
 	let command: string;
 	let args: string[];
 
-	const argv0 = process.argv[0] ?? "";
-	const isCompiledBinary = !argv0.endsWith("bun") && !argv0.includes("/bun");
+	// In compiled bun binaries, import.meta.url is "file:///$bunfs/..." (virtual FS).
+	// process.argv[0] is "bun" in both cases, so we must use import.meta.url to detect.
+	const isCompiledBinary = import.meta.url.includes("/$bunfs/");
 
 	if (isCompiledBinary) {
-		// Running as compiled binary — spawn self with _daemon subcommand
-		command = argv0;
+		// Running as compiled binary — spawn self (process.execPath) with _daemon subcommand
+		command = process.execPath;
 		args = ["_daemon"];
 	} else {
 		// Running via bun — spawn the entry file
