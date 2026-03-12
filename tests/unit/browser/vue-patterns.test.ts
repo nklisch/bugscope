@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VUE_PATTERN_DEFAULTS, getVuePatternCode } from "../../../src/browser/recorder/framework/patterns/vue-patterns.js";
+import { getVuePatternCode, VUE_PATTERN_DEFAULTS } from "../../../src/browser/recorder/framework/patterns/vue-patterns.js";
 import type { VueObserverConfig } from "../../../src/browser/recorder/framework/vue-observer.js";
 
 const defaultConfig: Required<VueObserverConfig> = {

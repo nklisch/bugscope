@@ -69,7 +69,9 @@ export function getVuePatternCode(config: Required<VueObserverConfig>): string {
 	parts.push("          pattern: 'lost_reactivity',");
 	parts.push("          componentName: componentName,");
 	parts.push("          severity: 'medium',");
-	parts.push("          detail: '\"' + _lrk + '\" in ' + componentName + ' setupState is a plain object (not reactive). This often happens when destructuring a reactive() object or unwrapping a ref without .value.',");
+	parts.push(
+		"          detail: '\"' + _lrk + '\" in ' + componentName + ' setupState is a plain object (not reactive). This often happens when destructuring a reactive() object or unwrapping a ref without .value.',",
+	);
 	parts.push("          evidence: {");
 	parts.push("            key: _lrk,");
 	parts.push("            actualType: typeof val,");

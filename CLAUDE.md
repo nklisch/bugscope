@@ -68,3 +68,13 @@ This builds `dist/agent-lens` and copies it to `~/.local/bin/agent-lens`. Run th
 ## Bun adapter (unsupported)
 
 `src/adapters/bun.ts` exists but is **not registered** in `registerAllAdapters()`. Bun 1.3.x uses WebKit JSC inspector protocol (not V8 CDP) — `Debugger.paused` events never fire regardless of how breakpoints are set. js-debug is V8/CDP-only and cannot bridge to WebKit protocol. The adapter code is kept for reference. Re-enable when Bun's CDP supports programmatic pause (`Debugger.paused`), or rewrite using `@rttnd/bun-inspector-protocol` (WebKit protocol wrapper). Relevant Bun issues: #4842, #9290, #13994.
+
+## Agent Tracker
+- Project ID: 2d22a87e-8c46-4a52-895a-bd6558111116
+- Project Name: agent-lens
+- Tracker URL: http://localhost:57328/mcp
+
+When you complete a meaningful unit of work, post an update using the
+`post_update` MCP tool with the project ID above. Use status "in-progress"
+for normal progress, "blocked" if you hit an obstacle, or "error" for
+failures. Include relevant tags for categorization.

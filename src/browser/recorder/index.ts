@@ -255,9 +255,7 @@ export class BrowserRecorder {
 
 		// Inject framework detection scripts (before input tracker to ensure hooks install first)
 		for (const script of this.frameworkTracker.getInjectionScripts()) {
-			await this.cdpClient
-				.sendToTarget(sessionId, "Page.addScriptToEvaluateOnNewDocument", { source: script })
-				.catch(() => {});
+			await this.cdpClient.sendToTarget(sessionId, "Page.addScriptToEvaluateOnNewDocument", { source: script }).catch(() => {});
 		}
 
 		// Inject input tracker script

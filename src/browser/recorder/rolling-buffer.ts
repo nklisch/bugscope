@@ -27,7 +27,11 @@ export class RollingBuffer {
 	/** Place a marker at the current time. */
 	placeMarker(label?: string, autoDetected = false, severity?: "low" | "medium" | "high"): Marker {
 		const id = label
-			? `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40)}-${crypto.randomUUID().slice(0, 8)}`
+			? `${label
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, "-")
+					.replace(/^-|-$/g, "")
+					.slice(0, 40)}-${crypto.randomUUID().slice(0, 8)}`
 			: crypto.randomUUID();
 		const marker: Marker = {
 			id,

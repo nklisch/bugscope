@@ -244,9 +244,7 @@ export type OutputParams = z.infer<typeof OutputParamsSchema>;
 
 // --- Browser Param Schemas ---
 
-export const FrameworkStateConfigSchema = z
-	.union([z.boolean(), z.array(z.enum(["react", "vue", "solid", "svelte"]))])
-	.optional();
+export const FrameworkStateConfigSchema = z.union([z.boolean(), z.array(z.enum(["react", "vue", "solid", "svelte"]))]).optional();
 
 export const BrowserStartParamsSchema = z.object({
 	port: z.number().default(9222),

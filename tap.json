@@ -1,18 +1,18 @@
 {
-  "name": "agent-lens",
-  "description": "Agent Lens skills — runtime debugging and browser recording for AI agents.",
-  "skills": [
-    {
-      "name": "agent-lens-mcp",
-      "description": "Agent Lens MCP tool reference. Load before invoking any mcp__agent-lens__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
-      "repo": "nklisch/agent-lens",
-      "tags": ["agent-lens", "mcp", "debugging", "browser", "devtools"]
-    },
-    {
-      "name": "agent-lens-cli",
-      "description": "Agent Lens CLI reference. Load when invoking the agent-lens CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup.",
-      "repo": "nklisch/agent-lens",
-      "tags": ["agent-lens", "cli", "debugging", "browser", "devtools"]
-    }
-  ]
+	"name": "agent-lens",
+	"description": "Agent Lens skills — runtime debugging and browser recording for AI agents.",
+	"skills": [
+		{
+			"name": "agent-lens-mcp",
+			"description": "Agent Lens MCP tool reference. Load before invoking any mcp__agent-lens__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
+			"repo": "nklisch/agent-lens",
+			"tags": ["agent-lens", "mcp", "debugging", "browser", "devtools"]
+		},
+		{
+			"name": "agent-lens-cli",
+			"description": "Agent Lens CLI reference. Load when invoking the agent-lens CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup.",
+			"repo": "nklisch/agent-lens",
+			"tags": ["agent-lens", "cli", "debugging", "browser", "devtools"]
+		}
+	]
 }
