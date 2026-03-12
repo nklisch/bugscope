@@ -119,8 +119,37 @@ export const PHASE_12_DETECTION_RULES: DetectionRule[] = [
 	},
 ];
 
-/** All detection rules: Phase 9 defaults + Phase 12 advanced rules. */
-export const ALL_DETECTION_RULES: DetectionRule[] = [...DEFAULT_DETECTION_RULES, ...PHASE_12_DETECTION_RULES];
+export const FRAMEWORK_DETECTION_RULES: DetectionRule[] = [
+	// Framework detected — informational marker
+	{
+		eventTypes: ["framework_detect"],
+		condition: () => true,
+		label: (e) => `Framework: ${e.data.framework} ${e.data.version ?? ""} detected`,
+		severity: "low",
+		cooldownMs: 60000, // Once per minute (unlikely to fire more than once)
+	},
+
+	// High-severity framework bug patterns
+	{
+		eventTypes: ["framework_error"],
+		condition: (e) => e.data.severity === "high",
+		label: (e) => `${e.data.pattern}: ${(e.data.detail as string)?.slice(0, 100) ?? e.data.componentName}`,
+		severity: "high",
+		cooldownMs: 5000,
+	},
+
+	// Medium-severity framework bug patterns
+	{
+		eventTypes: ["framework_error"],
+		condition: (e) => e.data.severity === "medium",
+		label: (e) => `${e.data.pattern}: ${e.data.componentName}`,
+		severity: "medium",
+		cooldownMs: 10000,
+	},
+];
+
+/** All detection rules: Phase 9 defaults + Phase 12 advanced rules + Phase 14 framework rules. */
+export const ALL_DETECTION_RULES: DetectionRule[] = [...DEFAULT_DETECTION_RULES, ...PHASE_12_DETECTION_RULES, ...FRAMEWORK_DETECTION_RULES];
 
 /**
  * Checks incoming events against detection rules and returns markers to place.

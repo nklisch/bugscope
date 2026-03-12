@@ -413,6 +413,7 @@ export class DaemonServer {
 					url: p.url,
 					persistence: {},
 					...(p.screenshotIntervalMs !== undefined && { screenshots: { intervalMs: p.screenshotIntervalMs } }),
+					frameworkState: p.frameworkState,
 				});
 				return this.browserRecorder.start();
 			}

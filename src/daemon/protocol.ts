@@ -244,6 +244,10 @@ export type OutputParams = z.infer<typeof OutputParamsSchema>;
 
 // --- Browser Param Schemas ---
 
+export const FrameworkStateConfigSchema = z
+	.union([z.boolean(), z.array(z.enum(["react", "vue", "solid", "svelte"]))])
+	.optional();
+
 export const BrowserStartParamsSchema = z.object({
 	port: z.number().default(9222),
 	profile: z.string().optional(),
@@ -252,6 +256,7 @@ export const BrowserStartParamsSchema = z.object({
 	tabFilter: z.string().optional(),
 	url: z.string().optional(),
 	screenshotIntervalMs: z.number().optional(),
+	frameworkState: FrameworkStateConfigSchema,
 });
 export type BrowserStartParams = z.infer<typeof BrowserStartParamsSchema>;
 

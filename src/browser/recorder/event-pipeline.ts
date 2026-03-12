@@ -4,6 +4,7 @@ import type { BrowserSessionInfo, Marker, RecordedEvent } from "../types.js";
 import type { AutoDetector } from "./auto-detect.js";
 import type { CDPClient } from "./cdp-client.js";
 import type { EventNormalizer } from "./event-normalizer.js";
+import type { FrameworkTracker } from "./framework/index.js";
 import type { InputTracker } from "./input-tracker.js";
 import type { RollingBuffer } from "./rolling-buffer.js";
 import type { TabManager } from "./tab-manager.js";
@@ -17,6 +18,8 @@ export interface EventPipelineConfig {
 	cdpClient: CDPClient;
 	persistence?: PersistencePipeline;
 	screenshotCapture?: ScreenshotCapture;
+	/** Framework state tracker. Processes __BL__ framework_* events. */
+	frameworkTracker?: FrameworkTracker;
 	/** Whether to capture a screenshot on navigation events. */
 	captureOnNavigation: boolean;
 	/** Called to get current session info for persistence calls. */
@@ -49,7 +52,8 @@ export class EventPipeline {
 		if (method === "Runtime.consoleAPICalled") {
 			const args = params.args as Array<{ value?: string }> | undefined;
 			if (args?.[0]?.value === "__BL__" && args[1]?.value) {
-				const inputEvent = inputTracker.processInputEvent(args[1].value, tabId);
+				const raw = args[1].value;
+				const inputEvent = inputTracker.processInputEvent(raw, tabId);
 				if (inputEvent) {
 					if (inputEvent.type === "marker") {
 						// Keyboard-triggered marker — fire-and-forget with persistence
@@ -60,6 +64,16 @@ export class EventPipeline {
 						this.checkAutoDetect(inputEvent);
 						if (persistence) {
 							persistence.onNewEvent(inputEvent, this.config.getSessionInfo());
+						}
+					}
+				} else if (this.config.frameworkTracker) {
+					const fwEvent = this.config.frameworkTracker.processFrameworkEvent(raw, tabId);
+					if (fwEvent) {
+						buffer.push(fwEvent);
+						this.config.invalidateSessionCache();
+						this.checkAutoDetect(fwEvent);
+						if (persistence) {
+							persistence.onNewEvent(fwEvent, this.config.getSessionInfo());
 						}
 					}
 				}

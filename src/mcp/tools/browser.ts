@@ -66,8 +66,18 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			.number()
 			.optional()
 			.describe("Periodic screenshot interval in ms. 0 or omit to disable. Example: 5000 for a screenshot every 5s"),
+		framework_state: z
+			.union([z.boolean(), z.array(z.enum(["react", "vue", "solid", "svelte"]))])
+			.optional()
+			.describe(
+				"Enable framework state observation. " +
+					"true = auto-detect all supported frameworks. " +
+					'["react"] = only React. ' +
+					'["react", "vue"] = both. ' +
+					"Default: false (disabled).",
+			),
 		},
-		async ({ url, port, profile, attach, all_tabs, tab_filter, screenshot_interval_ms }) => {
+		async ({ url, port, profile, attach, all_tabs, tab_filter, screenshot_interval_ms, framework_state }) => {
 			const client = await getDaemonClient(30_000);
 			try {
 				const info = await client.call<BrowserSessionInfo>("browser.start", {
@@ -78,6 +88,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 					tabFilter: tab_filter,
 					url,
 					screenshotIntervalMs: screenshot_interval_ms,
+					frameworkState: framework_state,
 				});
 				return { content: [{ type: "text" as const, text: formatSessionInfo(info) }] };
 			} catch (err) {

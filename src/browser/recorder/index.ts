@@ -10,6 +10,7 @@ import type { CDPClient } from "./cdp-client.js";
 import { ChromeLauncher } from "./chrome-launcher.js";
 import { EventNormalizer } from "./event-normalizer.js";
 import { EventPipeline } from "./event-pipeline.js";
+import { FrameworkTracker } from "./framework/index.js";
 import { InputTracker } from "./input-tracker.js";
 import { setupControlPanel } from "./marker-overlay.js";
 import { type BufferConfig, BufferConfigSchema, RollingBuffer } from "./rolling-buffer.js";
@@ -36,6 +37,8 @@ export interface BrowserRecorderConfig {
 	persistence?: Partial<PersistenceConfig>;
 	/** Screenshot config. */
 	screenshots?: Partial<ScreenshotConfig>;
+	/** Framework state observation config. false/undefined = disabled. */
+	frameworkState?: boolean | string[];
 }
 
 const DOMAINS_TO_ENABLE = [
@@ -56,6 +59,7 @@ export class BrowserRecorder {
 	private inputTracker: InputTracker;
 	private buffer: RollingBuffer;
 	private autoDetector: AutoDetector;
+	private frameworkTracker: FrameworkTracker;
 	private recording = false;
 	private sessionId: string;
 	private startedAt = 0;
@@ -78,6 +82,7 @@ export class BrowserRecorder {
 		this.inputTracker = new InputTracker();
 		this.buffer = new RollingBuffer(BufferConfigSchema.parse(config.buffer ?? {}));
 		this.autoDetector = new AutoDetector(config.detectionRules ?? DEFAULT_DETECTION_RULES);
+		this.frameworkTracker = new FrameworkTracker(config.frameworkState);
 		this.launcher = new ChromeLauncher();
 
 		if (config.persistence) {
@@ -134,6 +139,7 @@ export class BrowserRecorder {
 			cdpClient: this.cdpClient,
 			persistence: this.persistence ?? undefined,
 			screenshotCapture: this.screenshotCapture ?? undefined,
+			frameworkTracker: this.frameworkTracker.isEnabled() ? this.frameworkTracker : undefined,
 			captureOnNavigation: this.config.screenshots?.onNavigation !== false,
 			getSessionInfo: () => this.buildSessionInfo(),
 			getPrimaryTabSessionId: () => this.getPrimaryTabSessionId(),
@@ -245,6 +251,13 @@ export class BrowserRecorder {
 		// Enable CDP domains for this tab session
 		for (const { domain, params } of DOMAINS_TO_ENABLE) {
 			await this.cdpClient.sendToTarget(sessionId, `${domain}.enable`, params as Record<string, unknown>).catch(() => {});
+		}
+
+		// Inject framework detection scripts (before input tracker to ensure hooks install first)
+		for (const script of this.frameworkTracker.getInjectionScripts()) {
+			await this.cdpClient
+				.sendToTarget(sessionId, "Page.addScriptToEvaluateOnNewDocument", { source: script })
+				.catch(() => {});
 		}
 
 		// Inject input tracker script
