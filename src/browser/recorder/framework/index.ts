@@ -1,3 +1,4 @@
+import { FRAMEWORKS } from "../../../core/enums.js";
 import type { EventType, RecordedEvent } from "../../types.js";
 import { getDetectionScript } from "./detector.js";
 import { ReactObserver } from "./react-observer.js";
@@ -25,7 +26,7 @@ export class FrameworkTracker {
 		if (!frameworkState) {
 			this.config = { frameworks: [] };
 		} else if (frameworkState === true) {
-			this.config = { frameworks: ["react", "vue", "solid", "svelte"] };
+			this.config = { frameworks: [...FRAMEWORKS] };
 		} else {
 			this.config = { frameworks: frameworkState };
 		}

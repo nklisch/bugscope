@@ -5,6 +5,15 @@ import type { InspectParams, OverviewOptions, QueryEngine } from "../../browser/
 import { renderDiff, renderInspectResult, renderSearchResults, renderSessionList, renderSessionOverview } from "../../browser/investigation/renderers.js";
 import { ReplayContextGenerator } from "../../browser/investigation/replay-context.js";
 import type { BrowserSessionInfo, Marker } from "../../browser/types.js";
+import {
+	DiffIncludeSchema,
+	FrameworkSchema,
+	InspectIncludeSchema,
+	OverviewIncludeSchema,
+	ReplayFormatSchema,
+	SearchableEventTypeSchema,
+	TestFrameworkSchema,
+} from "../../core/enums.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
 import { getDaemonSocketPath } from "../../daemon/protocol.js";
 import { errorResponse, textResponse, toolHandler } from "./utils.js";
@@ -81,7 +90,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			tab_filter: z.string().optional().describe("Glob pattern — record only tabs whose URL matches, e.g. '**/app/**'"),
 			screenshot_interval_ms: z.number().optional().describe("Periodic screenshot interval in ms. 0 or omit to disable. Example: 5000 for a screenshot every 5s"),
 			framework_state: z
-				.union([z.boolean(), z.array(z.enum(["react", "vue", "solid", "svelte"]))])
+				.union([z.boolean(), z.array(FrameworkSchema)])
 				.optional()
 				.describe("Enable framework state observation. " + "true = auto-detect all supported frameworks. " + '["react"] = only React. ' + '["react", "vue"] = both. ' + "Default: false (disabled)."),
 		},
@@ -204,7 +213,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 		{
 			session_id: z.string().describe("Session ID from session_list"),
 			include: z
-				.array(z.enum(["timeline", "markers", "errors", "network_summary", "framework"]))
+				.array(OverviewIncludeSchema)
 				.optional()
 				.describe("What to include. Default: all"),
 			around_marker: z.string().optional().describe("Center overview on this marker ID"),
@@ -241,22 +250,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			session_id: z.string().describe("Session ID"),
 			query: z.string().optional().describe("Natural language search query, e.g. 'validation error' or 'phone format'"),
 			event_types: z
-				.array(
-					z.enum([
-						"navigation",
-						"network_request",
-						"network_response",
-						"console",
-						"page_error",
-						"user_input",
-						"websocket",
-						"performance",
-						"marker",
-						"framework_detect",
-						"framework_state",
-						"framework_error",
-					]),
-				)
+				.array(SearchableEventTypeSchema)
 				.optional()
 				.describe("Filter by event type"),
 			status_codes: z.array(z.number()).optional().describe("Filter network responses by HTTP status code, e.g. [400, 422, 500]"),
@@ -273,7 +267,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			contains_text: z.string().optional().describe("Case-insensitive substring match on event summary"),
 			limit: z.number().optional().describe("Max results. Default: 10"),
 			token_budget: z.number().optional().describe("Max tokens for the response. Default: 2000"),
-			framework: z.enum(["react", "vue", "solid", "svelte"]).optional().describe("Filter by framework. Automatically narrows to framework event types."),
+			framework: FrameworkSchema.optional().describe("Filter by framework. Automatically narrows to framework event types."),
 			component: z.string().optional().describe("Filter by component name (substring match), e.g. 'UserProfile'"),
 			pattern: z.string().optional().describe("Filter by bug pattern name, e.g. 'stale_closure', 'infinite_rerender'"),
 		},
@@ -315,7 +309,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			marker_id: z.string().optional().describe("Jump to a marker"),
 			timestamp: z.string().optional().describe("ISO timestamp — inspect the moment closest to this time"),
 			include: z
-				.array(z.enum(["surrounding_events", "network_body", "screenshot", "form_state", "console_context"]))
+				.array(InspectIncludeSchema)
 				.optional()
 				.describe("What to include alongside the event detail. Default: all"),
 			context_window: z.number().optional().describe("Seconds of surrounding events to include. Default: 5"),
@@ -344,7 +338,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			from: z.string().describe("First moment — timestamp (ISO or HH:MM:SS) or event ID"),
 			to: z.string().describe("Second moment — timestamp (ISO or HH:MM:SS) or event ID"),
 			include: z
-				.array(z.enum(["form_state", "storage", "url", "console_new", "network_new", "framework_state"]))
+				.array(DiffIncludeSchema)
 				.optional()
 				.describe("What to diff. Default: form_state, storage, url, console_new, network_new (framework_state must be explicitly requested)"),
 			token_budget: z.number().optional().describe("Max tokens. Default: 2000"),
@@ -372,10 +366,9 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				})
 				.optional()
 				.describe("Focus on a specific time window"),
-			format: z
-				.enum(["summary", "reproduction_steps", "test_scaffold"])
+			format: ReplayFormatSchema
 				.describe("Output format: 'summary' for overview, 'reproduction_steps' for step-by-step, 'test_scaffold' for automated test code"),
-			test_framework: z.enum(["playwright", "cypress"]).optional().describe("Test framework for scaffold generation. Default: playwright"),
+			test_framework: TestFrameworkSchema.optional().describe("Test framework for scaffold generation. Default: playwright"),
 		},
 		toolHandler(async ({ session_id, around_marker, time_range, format, test_framework }) => {
 			const generator = new ReplayContextGenerator(queryEngine);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { listAdapters } from "../../adapters/registry.js";
 import { configToOptions, parseLaunchJson } from "../../core/launch-json.js";
 import type { SessionManager } from "../../core/session-manager.js";
+import { OutputStreamSchema, SessionLogFormatSchema, StepDirectionSchema, VariableScopeSchema } from "../../core/enums.js";
 import { BreakpointSchema, FileBreakpointsSchema, mapViewportConfig } from "../../core/types.js";
 import { listDetectors } from "../../frameworks/index.js";
 import { errorResponse, textResponse, toolHandler } from "./utils.js";
@@ -252,7 +253,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		"Step execution: 'over' steps over function calls, 'into' steps into them, 'out' steps out to the caller. Returns the viewport after stepping.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			direction: z.enum(["over", "into", "out"]).describe("Step granularity: 'over' skips function calls, 'into' enters them, 'out' runs to parent frame"),
+			direction: StepDirectionSchema.describe("Step granularity: 'over' skips function calls, 'into' enters them, 'out' runs to parent frame"),
 			count: z.number().optional().describe("Number of steps to take. Default: 1. Useful for stepping through loops without setting breakpoints."),
 			thread_id: z.number().optional().describe("Thread ID to step. Default: the thread that last stopped. Use debug_threads to list available threads."),
 		},
@@ -394,7 +395,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		"Get variables from a specific scope and stack frame.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			scope: z.enum(["local", "global", "closure", "all"]).optional().describe("Variable scope to retrieve. Default: 'local'. Note: 'closure' is Node.js only — not available in Python or Go."),
+			scope: VariableScopeSchema.optional().describe("Variable scope to retrieve. Default: 'local'. Note: 'closure' is Node.js only — not available in Python or Go."),
 			frame_index: z.number().optional().describe("Stack frame context (0 = current). Default: 0"),
 			filter: z.string().optional().describe("Regex filter on variable names. E.g., '^user' to show only user-prefixed vars"),
 			max_depth: z.number().optional().describe("Object expansion depth. Default: 1"),
@@ -459,7 +460,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 			"without re-reading old viewports.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			format: z.enum(["summary", "detailed"]).optional().describe("Level of detail. 'summary' compresses older entries. 'detailed' includes timestamps and full observations. Default: 'summary'"),
+			format: SessionLogFormatSchema.optional().describe("Level of detail. 'summary' compresses older entries. 'detailed' includes timestamps and full observations. Default: 'summary'"),
 		},
 		toolHandler(async ({ session_id, format }) => sessionManager.getSessionLog(session_id, format) || "No actions logged."),
 	);
@@ -470,7 +471,7 @@ export function registerTools(server: McpServer, sessionManager: SessionManager)
 		"Get captured stdout/stderr output from the debug target.",
 		{
 			session_id: z.string().describe("The active debug session"),
-			stream: z.enum(["stdout", "stderr", "both"]).optional().describe("Which output stream. Default: 'both'"),
+			stream: OutputStreamSchema.optional().describe("Which output stream. Default: 'both'"),
 			since_action: z.number().optional().describe("Only show output captured since action N. Default: 0 (all)"),
 		},
 		toolHandler(async ({ session_id, stream, since_action }) => sessionManager.getOutput(session_id, stream ?? "both", since_action ?? 0) || "No output captured."),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Severity } from "../../core/enums.js";
 import type { Marker, RecordedEvent } from "../types.js";
 
 export const BufferConfigSchema = z.object({
@@ -25,7 +26,7 @@ export class RollingBuffer {
 	}
 
 	/** Place a marker at the current time. */
-	placeMarker(label?: string, autoDetected = false, severity?: "low" | "medium" | "high"): Marker {
+	placeMarker(label?: string, autoDetected = false, severity?: Severity): Marker {
 		const id = label
 			? `${label
 					.toLowerCase()

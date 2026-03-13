@@ -1,6 +1,7 @@
 // Public API exports
 
 export type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig } from "./adapters/base.js";
+export type { EventType, Framework, Severity, StepDirection, VariableScope } from "./core/enums.js";
 export type {
 	Breakpoint,
 	ResourceLimits,

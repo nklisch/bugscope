@@ -4,6 +4,7 @@ import { listAdapters, registerAllAdapters } from "../../adapters/registry.js";
 import { configToOptions, listConfigurations, parseLaunchJson } from "../../core/launch-json.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
 import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload, ThreadInfoPayload, ViewportPayload } from "../../daemon/protocol.js";
+import { STEP_DIRECTIONS, type StepDirection } from "../../core/enums.js";
 import { getDaemonSocketPath } from "../../daemon/protocol.js";
 import { listDetectors, registerAllDetectors } from "../../frameworks/index.js";
 
@@ -301,8 +302,8 @@ export const stepCommand = defineCommand({
 	},
 	async run({ args }) {
 		await runCommand(args, async (client, sessionId, mode) => {
-			const direction = args.direction as "over" | "into" | "out";
-			if (!["over", "into", "out"].includes(direction)) {
+			const direction = args.direction as StepDirection;
+			if (!(STEP_DIRECTIONS as readonly string[]).includes(direction)) {
 				throw new Error(`Invalid step direction: ${direction}. Must be 'over', 'into', or 'out'.`);
 			}
 			const result = await client.call<ViewportPayload>("session.step", {

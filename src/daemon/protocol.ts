@@ -3,6 +3,20 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import type { BrowserSessionInfo, Marker } from "../browser/types.js";
+import {
+	DiffIncludeSchema,
+	ExportFormatSchema,
+	FrameworkSchema,
+	InspectIncludeSchema,
+	OverviewIncludeSchema,
+	ReplayFormatSchema,
+	SessionLogFormatSchema,
+	OutputStreamSchema,
+	StepDirectionSchema,
+	TestFrameworkSchema,
+	VariableScopeSchema,
+	ViewportConfigPartialSchema,
+} from "../core/enums.js";
 import { BreakpointSchema, FileBreakpointsSchema } from "../core/types.js";
 
 // --- JSON-RPC 2.0 Base Types ---
@@ -115,16 +129,7 @@ export const LaunchParamsSchema = z.object({
 	breakpoints: z.array(FileBreakpointsSchema).optional(),
 	cwd: z.string().optional(),
 	env: z.record(z.string(), z.string()).optional(),
-	viewportConfig: z
-		.object({
-			sourceContextLines: z.number().optional(),
-			stackDepth: z.number().optional(),
-			localsMaxDepth: z.number().optional(),
-			localsMaxItems: z.number().optional(),
-			stringTruncateLength: z.number().optional(),
-			collectionPreviewItems: z.number().optional(),
-		})
-		.optional(),
+	viewportConfig: ViewportConfigPartialSchema.optional(),
 	stopOnEntry: z.boolean().optional(),
 });
 export type LaunchParams = z.infer<typeof LaunchParamsSchema>;
@@ -138,7 +143,7 @@ export type ContinueParams = z.infer<typeof ContinueParamsSchema>;
 
 export const StepParamsSchema = z.object({
 	sessionId: z.string(),
-	direction: z.enum(["over", "into", "out"]),
+	direction: StepDirectionSchema,
 	count: z.number().optional(),
 	threadId: z.number().optional(),
 });
@@ -151,16 +156,7 @@ export const AttachParamsSchema = z.object({
 	host: z.string().optional(),
 	cwd: z.string().optional(),
 	breakpoints: z.array(FileBreakpointsSchema).optional(),
-	viewportConfig: z
-		.object({
-			sourceContextLines: z.number().optional(),
-			stackDepth: z.number().optional(),
-			localsMaxDepth: z.number().optional(),
-			localsMaxItems: z.number().optional(),
-			stringTruncateLength: z.number().optional(),
-			collectionPreviewItems: z.number().optional(),
-		})
-		.optional(),
+	viewportConfig: ViewportConfigPartialSchema.optional(),
 });
 export type AttachParams = z.infer<typeof AttachParamsSchema>;
 
@@ -195,7 +191,7 @@ export type EvaluateParams = z.infer<typeof EvaluateParamsSchema>;
 
 export const VariablesParamsSchema = z.object({
 	sessionId: z.string(),
-	scope: z.enum(["local", "global", "closure", "all"]).optional(),
+	scope: VariableScopeSchema.optional(),
 	frameIndex: z.number().optional(),
 	filter: z.string().optional(),
 	maxDepth: z.number().optional(),
@@ -231,20 +227,20 @@ export type UnwatchParams = z.infer<typeof UnwatchParamsSchema>;
 
 export const SessionLogParamsSchema = z.object({
 	sessionId: z.string(),
-	format: z.enum(["summary", "detailed"]).optional(),
+	format: SessionLogFormatSchema.optional(),
 });
 export type SessionLogParams = z.infer<typeof SessionLogParamsSchema>;
 
 export const OutputParamsSchema = z.object({
 	sessionId: z.string(),
-	stream: z.enum(["stdout", "stderr", "both"]).optional(),
+	stream: OutputStreamSchema.optional(),
 	sinceAction: z.number().optional(),
 });
 export type OutputParams = z.infer<typeof OutputParamsSchema>;
 
 // --- Browser Param Schemas ---
 
-export const FrameworkStateConfigSchema = z.union([z.boolean(), z.array(z.enum(["react", "vue", "solid", "svelte"]))]).optional();
+export const FrameworkStateConfigSchema = z.union([z.boolean(), z.array(FrameworkSchema)]).optional();
 
 export const BrowserStartParamsSchema = z.object({
 	port: z.number().default(9222),
@@ -280,7 +276,7 @@ export type BrowserSessionsParams = z.infer<typeof BrowserSessionsParamsSchema>;
 
 export const BrowserOverviewParamsSchema = z.object({
 	sessionId: z.string(),
-	include: z.array(z.enum(["timeline", "markers", "errors", "network_summary"])).optional(),
+	include: z.array(OverviewIncludeSchema).optional(),
 	aroundMarker: z.string().optional(),
 	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
 	tokenBudget: z.number().optional(),
@@ -303,7 +299,7 @@ export const BrowserInspectParamsSchema = z.object({
 	eventId: z.string().optional(),
 	markerId: z.string().optional(),
 	timestamp: z.number().optional(),
-	include: z.array(z.enum(["surrounding_events", "network_body", "screenshot", "form_state", "console_context"])).optional(),
+	include: z.array(InspectIncludeSchema).optional(),
 	contextWindow: z.number().optional(),
 	tokenBudget: z.number().optional(),
 });
@@ -313,7 +309,7 @@ export const BrowserDiffParamsSchema = z.object({
 	sessionId: z.string(),
 	before: z.string(),
 	after: z.string(),
-	include: z.array(z.enum(["form_state", "storage", "url", "console_new", "network_new"])).optional(),
+	include: z.array(DiffIncludeSchema).optional(),
 	tokenBudget: z.number().optional(),
 });
 export type BrowserDiffParams = z.infer<typeof BrowserDiffParamsSchema>;
@@ -322,14 +318,14 @@ export const BrowserReplayContextParamsSchema = z.object({
 	sessionId: z.string(),
 	aroundMarker: z.string().optional(),
 	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
-	format: z.enum(["summary", "reproduction_steps", "test_scaffold"]),
-	testFramework: z.enum(["playwright", "cypress"]).optional(),
+	format: ReplayFormatSchema,
+	testFramework: TestFrameworkSchema.optional(),
 });
 export type BrowserReplayContextParams = z.infer<typeof BrowserReplayContextParamsSchema>;
 
 export const BrowserExportParamsSchema = z.object({
 	sessionId: z.string(),
-	format: z.enum(["har"]),
+	format: ExportFormatSchema,
 	timeRange: z.object({ start: z.number(), end: z.number() }).optional(),
 	includeResponseBodies: z.boolean().optional(),
 });

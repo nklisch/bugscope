@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { type ActionObservationKind, type SessionStatus, type StopReason } from "./enums.js";
+
+export type { SessionStatus, StopReason } from "./enums.js";
 
 // --- Viewport Configuration ---
 
@@ -65,10 +68,6 @@ export const FileBreakpointsSchema = z.object({
 export type FileBreakpoints = z.infer<typeof FileBreakpointsSchema>;
 
 // --- Session ---
-
-export type SessionStatus = "running" | "stopped" | "terminated" | "error";
-
-export type StopReason = "breakpoint" | "step" | "exception" | "pause" | "entry";
 
 export interface SessionInfo {
 	sessionId: string;
@@ -178,7 +177,7 @@ export const DEFAULT_COMPRESSION_TIERS: CompressionTier[] = [
 
 export interface ActionObservation {
 	/** Type of observation */
-	kind: "unexpected_value" | "variable_changed" | "new_frame" | "exception" | "bp_hit" | "terminated";
+	kind: ActionObservationKind;
 	/** Human-readable description */
 	description: string;
 }

@@ -1,3 +1,4 @@
+import type { Severity } from "../../core/enums.js";
 import type { EventType, RecordedEvent } from "../types.js";
 
 export interface DetectionRule {
@@ -8,7 +9,7 @@ export interface DetectionRule {
 	/** Label for the auto-placed marker. */
 	label: (event: RecordedEvent) => string;
 	/** Severity of the detected anomaly. */
-	severity: "low" | "medium" | "high";
+	severity: Severity;
 	/** Cooldown in ms — don't fire again within this window. Default: 5000. */
 	cooldownMs?: number;
 }

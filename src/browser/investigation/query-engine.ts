@@ -1,10 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { InspectInclude, OverviewInclude } from "../../core/enums.js";
 import type { BrowserDatabase, EventRow, MarkerRow, NetworkBodyRow, SessionRow } from "../storage/database.js";
 import { EventWriter } from "../storage/event-writer.js";
 import type { RecordedEvent } from "../types.js";
-
-export type { SessionRow };
 
 export class QueryEngine {
 	constructor(
@@ -414,7 +413,7 @@ export interface SessionListFilter {
 }
 
 export interface OverviewOptions {
-	include?: ("timeline" | "markers" | "errors" | "network_summary" | "framework")[];
+	include?: OverviewInclude[];
 	aroundMarker?: string;
 	timeRange?: { start: number; end: number };
 }
@@ -443,7 +442,7 @@ export interface InspectParams {
 	eventId?: string;
 	markerId?: string;
 	timestamp?: number;
-	include?: ("surrounding_events" | "network_body" | "screenshot" | "form_state" | "console_context")[];
+	include?: InspectInclude[];
 	contextWindow?: number; // seconds
 }
 

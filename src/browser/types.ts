@@ -1,25 +1,9 @@
-export type EventType =
-	| "navigation"
-	| "network_request"
-	| "network_response"
-	| "console"
-	| "page_error"
-	| "user_input"
-	| "dom_mutation"
-	| "form_state"
-	| "screenshot"
-	| "performance"
-	| "websocket"
-	| "storage_change"
-	| "marker"
-	// Framework state events (Phase 14+)
-	| "framework_detect"
-	| "framework_state"
-	| "framework_error";
+import type { EventType, Framework, FrameworkChangeType, Severity } from "../core/enums.js";
+export type { EventType };
 
 /** Data shape for framework_detect events. */
 export interface FrameworkDetectData {
-	framework: "react" | "vue" | "solid" | "svelte";
+	framework: Framework;
 	version: string;
 	rootCount: number;
 	componentCount: number;
@@ -34,7 +18,7 @@ export interface FrameworkStateData {
 	framework: string;
 	componentName: string;
 	componentPath?: string;
-	changeType: "mount" | "update" | "unmount" | "store_mutation";
+	changeType: FrameworkChangeType;
 	changes?: Array<{ key: string; prev: unknown; next: unknown }>;
 	renderCount?: number;
 	triggerSource?: string;
@@ -49,7 +33,7 @@ export interface FrameworkErrorData {
 	framework: string;
 	pattern: string;
 	componentName: string;
-	severity: "low" | "medium" | "high";
+	severity: Severity;
 	detail: string;
 	evidence: Record<string, unknown>;
 }
@@ -68,7 +52,7 @@ export interface Marker {
 	timestamp: number;
 	label?: string;
 	autoDetected: boolean;
-	severity?: "low" | "medium" | "high";
+	severity?: Severity;
 }
 
 export interface BrowserSessionInfo {

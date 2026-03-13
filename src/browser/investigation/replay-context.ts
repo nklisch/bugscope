@@ -1,8 +1,8 @@
+import type { ReplayFormat, TestFramework } from "../../core/enums.js";
 import type { EventRow } from "../storage/database.js";
 import type { MarkerRow, QueryEngine } from "./query-engine.js";
 
-export type ReplayFormat = "summary" | "reproduction_steps" | "test_scaffold";
-export type TestFramework = "playwright" | "cypress";
+export type { ReplayFormat, TestFramework };
 
 export interface ReplayContextParams {
 	sessionId: string;

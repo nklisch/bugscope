@@ -8,9 +8,12 @@ import { compressionNote, computeEffectiveConfig, estimateTokens, resolveCompres
 import type { StopResult } from "./dap-client.js";
 import { DAPClient } from "./dap-client.js";
 import { AdapterNotFoundError, AdapterPrerequisiteError, SessionLimitError, SessionNotFoundError, SessionStateError } from "./errors.js";
+import { type SessionState, type StepDirection } from "./enums.js";
 import { extractObservations, formatSessionLogDetailed, formatSessionLogSummary } from "./session-logger.js";
 import type { Breakpoint, EnrichedActionLogEntry, ExceptionInfo, ResourceLimits, SessionStatus, StopReason, ThreadInfo, TokenStats, Variable, ViewportConfig, ViewportSnapshot } from "./types.js";
 import { ResourceLimitsSchema, ViewportConfigSchema } from "./types.js";
+
+export type { SessionState };
 import { convertDAPVariables, renderDAPVariable } from "./value-renderer.js";
 import { computeViewportDiff, isDiffEligible, renderViewport, renderViewportDiff } from "./viewport.js";
 
@@ -96,7 +99,6 @@ export interface SessionCapabilities {
 
 // --- Session State Machine ---
 
-export type SessionState = "launching" | "running" | "stopped" | "terminated" | "error";
 
 // --- Action Log Entry (kept for backward compat; EnrichedActionLogEntry is now used internally) ---
 
@@ -634,7 +636,7 @@ export class SessionManager {
 	/**
 	 * Step in the given direction.
 	 */
-	async step(sessionId: string, direction: "over" | "into" | "out", count = 1, threadId?: number): Promise<string> {
+	async step(sessionId: string, direction: StepDirection, count = 1, threadId?: number): Promise<string> {
 		const session = this.getSession(sessionId);
 		this.assertState(session, "stopped");
 
