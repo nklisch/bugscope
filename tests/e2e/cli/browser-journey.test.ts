@@ -111,25 +111,12 @@ describe.skipIf(SKIP)("E2E CLI: browser recording lifecycle — JSON envelope", 
 		}
 	});
 
-	it("browser inspect via MCP with relative timestamp", async () => {
-		// This exercises the HH:MM:SS resolveTimestamp fix (Bug 2).
-		// HH:MM:SS resolves as wall-clock time on the session date.
-		// Get the session overview to find the actual session start time,
-		// then build a HH:MM:SS that falls within the session window.
+	it("browser inspect via MCP with ISO timestamp", async () => {
+		// Extract an ISO timestamp from the session overview, then use it to inspect
 		const overview = await ctx.callTool("session_overview", {
 			session_id: sessionId,
 			include: ["timeline"],
 		});
-		// The overview contains timestamp info. Use the session start time
-		// to build a valid HH:MM:SS reference. Since we don't know the exact
-		// format, search for events and use one's timestamp as ISO, then
-		// extract the time portion.
-		const searchResult = await ctx.callTool("session_search", {
-			session_id: sessionId,
-			limit: 1,
-		});
-		// If we have events, try inspecting with the session's actual time
-		// The resolveTimestamp function correctly parses ISO timestamps too
 		const isoMatch = overview.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
 		if (isoMatch) {
 			const result = await ctx.callTool("session_inspect", {
@@ -140,19 +127,30 @@ describe.skipIf(SKIP)("E2E CLI: browser recording lifecycle — JSON envelope", 
 			});
 			expect(result).toBeTruthy();
 		} else {
-			// Fall back: just verify the search worked (resolveTimestamp is tested in unit tests)
-			expect(searchResult).toBeTruthy();
+			// No ISO timestamps in overview — verify overview itself worked
+			expect(overview).toBeTruthy();
 		}
 	});
 
 	it("browser diff via MCP compares two moments", async () => {
-		const result = await ctx.callTool("session_diff", {
+		// Search for two events to use as diff boundaries
+		const searchResult = await ctx.callTool("session_search", {
 			session_id: sessionId,
-			from: "00:00:01",
-			to: "00:00:10",
-			include: ["url", "network_new"],
+			limit: 5,
 		});
-		expect(result).toBeTruthy();
+		const eventIds = [...searchResult.matchAll(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/gi)].map((m) => m[1]);
+		if (eventIds.length >= 2) {
+			const result = await ctx.callTool("session_diff", {
+				session_id: sessionId,
+				from: eventIds[0],
+				to: eventIds[eventIds.length - 1],
+				include: ["url", "network_new"],
+			});
+			expect(result).toBeTruthy();
+		} else {
+			// Not enough events for diff — verify search worked
+			expect(searchResult).toBeTruthy();
+		}
 	});
 });
 

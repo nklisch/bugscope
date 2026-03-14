@@ -443,7 +443,7 @@ export interface SearchParams {
 export interface InspectParams {
 	eventId?: string;
 	markerId?: string;
-	timestamp?: string; // ISO, HH:MM:SS, event_id, or epoch ms as string
+	timestamp?: string; // ISO timestamp, event_id, or epoch ms as string
 	include?: InspectInclude[];
 	contextWindow?: number; // seconds
 }

@@ -28,30 +28,9 @@ describe("resolveTimestamp", () => {
 		expect(resolveTimestamp(qe, "session-1", iso)).toBe(new Date(iso).getTime());
 	});
 
-	it("parses HH:MM:SS relative to session start date", () => {
-		// Session started at 2024-01-15T08:00:00Z
-		const sessionStart = new Date("2024-01-15T08:00:00.000Z").getTime();
-		const qe = makeQueryEngine(sessionStart);
-
-		// "00:05:30" means the same calendar date as session start, at 00:05:30 local
-		const ref = "00:05:30";
-		const sessionDate = new Date(sessionStart).toISOString().slice(0, 10);
-		const expected = new Date(`${sessionDate}T${ref}`).getTime();
-
-		const result = resolveTimestamp(qe, "session-1", ref);
-		expect(result).toBe(expected);
-		expect(qe.getSession).toHaveBeenCalledWith("session-1");
-	});
-
-	it("parses HH:MM (without seconds) relative to session start", () => {
-		const sessionStart = new Date("2024-03-01T10:00:00.000Z").getTime();
-		const qe = makeQueryEngine(sessionStart);
-
-		const ref = "10:30";
-		const sessionDate = new Date(sessionStart).toISOString().slice(0, 10);
-		const expected = new Date(`${sessionDate}T${ref}`).getTime();
-
-		expect(resolveTimestamp(qe, "session-1", ref)).toBe(expected);
+	it("rejects HH:MM:SS relative timestamps", () => {
+		const qe = makeQueryEngine(0, null);
+		expect(() => resolveTimestamp(qe, "session-1", "00:05:30")).toThrow("Cannot resolve");
 	});
 
 	it("resolves event_id via queryEngine lookup", () => {

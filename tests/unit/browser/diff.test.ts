@@ -89,14 +89,12 @@ describe("SessionDiffer", () => {
 			expect(ts).toBe(new Date("2024-01-15T10:30:00Z").getTime());
 		});
 
-		it("parses HH:MM:SS relative to session date", () => {
-			const ts = resolveTimestamp(queryEngine, SESSION_ID, "14:31:45");
-			expect(ts).toBe(new Date(`${BASE_DATE}T14:31:45`).getTime());
+		it("rejects HH:MM:SS relative timestamps", () => {
+			expect(() => resolveTimestamp(queryEngine, SESSION_ID, "14:31:45")).toThrow("Cannot resolve");
 		});
 
-		it("parses HH:MM relative to session date", () => {
-			const ts = resolveTimestamp(queryEngine, SESSION_ID, "14:31");
-			expect(ts).toBe(new Date(`${BASE_DATE}T14:31`).getTime());
+		it("rejects HH:MM relative timestamps", () => {
+			expect(() => resolveTimestamp(queryEngine, SESSION_ID, "14:31")).toThrow("Cannot resolve");
 		});
 
 		it("resolves event_id to timestamp", () => {

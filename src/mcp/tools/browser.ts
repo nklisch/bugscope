@@ -314,8 +314,8 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			"Useful for understanding what happened between page load and an error.",
 		{
 			session_id: z.string().describe("Session ID"),
-			from: z.string().describe("First moment — timestamp (ISO or HH:MM:SS) or event ID"),
-			to: z.string().describe("Second moment — timestamp (ISO or HH:MM:SS) or event ID"),
+			from: z.string().describe("First moment — ISO timestamp or event ID"),
+			to: z.string().describe("Second moment — ISO timestamp or event ID"),
 			include: z.array(DiffIncludeSchema).optional().describe("What to diff. Default: form_state, storage, url, console_new, network_new (framework_state must be explicitly requested)"),
 			token_budget: z.number().optional().describe("Max tokens. Default: 2000"),
 		},
