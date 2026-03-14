@@ -1,4 +1,4 @@
-# Bugscope — Vision
+# Krometrail — Vision
 
 **Runtime Debugging Viewport for AI Coding Agents**
 
@@ -8,7 +8,7 @@
 
 AI coding agents such as Claude Code and Codex currently debug software through static code analysis and trial-and-error test execution. They lack the ability to inspect runtime state, set breakpoints, or step through executing code. This makes entire categories of bugs—incorrect runtime values, unexpected mutations, race conditions, off-by-one errors deep in call chains—significantly harder to diagnose.
 
-Bugscope is a Model Context Protocol (MCP) server that exposes a language-agnostic debugging interface to AI agents. The server translates MCP tool calls into Debug Adapter Protocol (DAP) messages, enabling any DAP-compatible debugger to be used by any MCP-compatible agent without either side needing awareness of the other.
+Krometrail is a Model Context Protocol (MCP) server that exposes a language-agnostic debugging interface to AI agents. The server translates MCP tool calls into Debug Adapter Protocol (DAP) messages, enabling any DAP-compatible debugger to be used by any MCP-compatible agent without either side needing awareness of the other.
 
 The design prioritizes three qualities: a **compact default viewport** that minimizes token consumption per debug step, a **drill-down-on-demand** pattern that lets the agent selectively expand its view, and a **pluggable adapter layer** that makes adding new languages a bounded, well-defined task.
 
@@ -22,7 +22,7 @@ Several projects have emerged in this space, all converging on the same MCP-over
 - **debugger-mcp** (Govinda-Fichtner) — Rust/Tokio. Python, Ruby, Node.js, Go, Rust. Integration tests using real Claude Code and Codex agents.
 - **dap-mcp** (Kashun Cheng) — Python. Config-driven, one of the earlier entries.
 
-All of these solve the **plumbing** problem: bridging MCP to DAP. None of them address the **agent ergonomics** problem, which is the primary focus of Bugscope. See [UX.md](UX.md) for the detailed gap analysis and how the viewport abstraction addresses each gap. See [PRIOR_ART.md](PRIOR_ART.md) for a deep technical analysis of each project's architecture, tool interfaces, and key lessons.
+All of these solve the **plumbing** problem: bridging MCP to DAP. None of them address the **agent ergonomics** problem, which is the primary focus of Krometrail. See [UX.md](UX.md) for the detailed gap analysis and how the viewport abstraction addresses each gap. See [PRIOR_ART.md](PRIOR_ART.md) for a deep technical analysis of each project's architecture, tool interfaces, and key lessons.
 
 ---
 

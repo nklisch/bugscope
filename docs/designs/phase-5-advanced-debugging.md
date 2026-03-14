@@ -602,8 +602,8 @@ Wire `session.attach` to `sessionManager.attach()`, following the same pattern a
 **File**: `src/cli/commands/index.ts` (add `attachCommand`)
 
 ```typescript
-// CLI: bugscope attach --language python --port 5678
-// CLI: bugscope attach --language go --pid 12345
+// CLI: krometrail attach --language python --port 5678
+// CLI: krometrail attach --language go --pid 12345
 export const attachCommand = defineCommand({
 	meta: { name: "attach", description: "Attach to a running process" },
 	args: {
@@ -877,7 +877,7 @@ export const EvaluateParamsSchema = z.object({
 **File**: `src/cli/commands/index.ts` (add `threadsCommand`, update `--thread` flag)
 
 ```typescript
-// CLI: bugscope threads
+// CLI: krometrail threads
 export const threadsCommand = defineCommand({
 	meta: { name: "threads", description: "List all threads" },
 	// ... standard session/json/quiet flags

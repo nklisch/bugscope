@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	AdapterNotFoundError,
 	AdapterPrerequisiteError,
-	BugscopeError,
+	KrometrailError,
 	CDPConnectionError,
 	ChromeNotFoundError,
 	DAPClientDisposedError,
@@ -22,7 +22,7 @@ describe("getErrorMessage", () => {
 		expect(getErrorMessage(new Error("boom"))).toBe("boom");
 	});
 
-	it("returns .message for BugscopeError subclasses", () => {
+	it("returns .message for KrometrailError subclasses", () => {
 		expect(getErrorMessage(new DAPTimeoutError("initialize", 5000))).toBe("DAP request 'initialize' timed out after 5000ms");
 	});
 
@@ -34,16 +34,16 @@ describe("getErrorMessage", () => {
 	});
 });
 
-describe("BugscopeError", () => {
+describe("KrometrailError", () => {
 	it("sets message and code", () => {
-		const err = new BugscopeError("test message", "TEST_CODE");
+		const err = new KrometrailError("test message", "TEST_CODE");
 		expect(err.message).toBe("test message");
 		expect(err.code).toBe("TEST_CODE");
-		expect(err.name).toBe("BugscopeError");
+		expect(err.name).toBe("KrometrailError");
 	});
 
 	it("is instanceof Error", () => {
-		const err = new BugscopeError("test", "CODE");
+		const err = new KrometrailError("test", "CODE");
 		expect(err).toBeInstanceOf(Error);
 	});
 });
@@ -199,7 +199,7 @@ describe("BrowserRecorderStateError", () => {
 	});
 });
 
-describe("error hierarchy — all errors extend BugscopeError", () => {
+describe("error hierarchy — all errors extend KrometrailError", () => {
 	const errors = [
 		new DAPTimeoutError("cmd", 1000),
 		new DAPClientDisposedError(),
@@ -217,8 +217,8 @@ describe("error hierarchy — all errors extend BugscopeError", () => {
 	];
 
 	for (const err of errors) {
-		it(`${err.constructor.name} extends BugscopeError`, () => {
-			expect(err).toBeInstanceOf(BugscopeError);
+		it(`${err.constructor.name} extends KrometrailError`, () => {
+			expect(err).toBeInstanceOf(KrometrailError);
 			expect(err).toBeInstanceOf(Error);
 			expect(typeof err.code).toBe("string");
 			expect(err.code.length).toBeGreaterThan(0);

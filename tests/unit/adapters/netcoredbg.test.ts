@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 import { getNetcoredbgBinaryPath, getNetcoredbgCachePath, getNetcoredbgDownloadUrl, NETCOREDBG_VERSION } from "../../../src/adapters/netcoredbg.js";
 
 describe("getNetcoredbgCachePath", () => {
-	it("returns path under ~/.bugscope/adapters/netcoredbg", () => {
+	it("returns path under ~/.krometrail/adapters/netcoredbg", () => {
 		const cachePath = getNetcoredbgCachePath();
-		expect(cachePath).toBe(join(homedir(), ".bugscope", "adapters", "netcoredbg"));
+		expect(cachePath).toBe(join(homedir(), ".krometrail", "adapters", "netcoredbg"));
 	});
 });
 
@@ -14,7 +14,7 @@ describe("getNetcoredbgBinaryPath", () => {
 	it("returns binary path inside cache dir", () => {
 		const binaryPath = getNetcoredbgBinaryPath();
 		expect(binaryPath).toContain("netcoredbg");
-		expect(binaryPath).toContain(".bugscope");
+		expect(binaryPath).toContain(".krometrail");
 	});
 
 	it("ends with .exe on Windows, bare name elsewhere", () => {

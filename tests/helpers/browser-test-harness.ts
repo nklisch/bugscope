@@ -29,7 +29,7 @@ export interface BrowserTestContext {
 	recorder: BrowserRecorder;
 	/** Temp directory for persistence data. */
 	dataDir: string;
-	/** MCP client connected to a bugscope server using the same data dir. */
+	/** MCP client connected to a krometrail server using the same data dir. */
 	mcpClient: Client;
 
 	/** Navigate Chrome to a URL. Waits for load. Full page reload — destroys SPA state. */
@@ -103,7 +103,7 @@ export async function setupBrowserTest(options?: BrowserTestOptions): Promise<Br
 	const { port: cdpPort, chromeCleanup } = await launchChrome();
 
 	// 3. Create temp data dir for persistence
-	const dataDir = mkdtempSync(join(tmpdir(), "bugscope-browser-e2e-"));
+	const dataDir = mkdtempSync(join(tmpdir(), "krometrail-browser-e2e-"));
 	mkdirSync(join(dataDir, "recordings"), { recursive: true });
 
 	// 4. Navigate Chrome to the app first so there's a tab to record
@@ -231,7 +231,7 @@ export async function setupBrowserTest(options?: BrowserTestOptions): Promise<Br
 				args: ["run", resolve(import.meta.dirname, "../../src/mcp/index.ts")],
 				env: {
 					...process.env,
-					BUGSCOPE_BROWSER_DATA_DIR: dataDir,
+					KROMETRAIL_BROWSER_DATA_DIR: dataDir,
 				},
 			});
 			const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
@@ -282,7 +282,7 @@ async function launchChrome(): Promise<{ port: number; chromeCleanup: () => Prom
 	if (!binary) throw new Error("Chrome not found — install Chrome or Chromium to run browser e2e tests");
 
 	const port = 9400 + Math.floor(Math.random() * 100);
-	const profileDir = mkdtempSync(join(tmpdir(), "bugscope-e2e-chrome-"));
+	const profileDir = mkdtempSync(join(tmpdir(), "krometrail-e2e-chrome-"));
 
 	const proc = spawn(
 		binary,

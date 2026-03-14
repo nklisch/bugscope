@@ -607,7 +607,7 @@ export type { EventType, Framework, Severity, StepDirection, VariableScope } fro
 Only export types that are part of the public API — internal enums like `OverviewInclude` stay internal.
 
 **Acceptance Criteria**:
-- [ ] Public API types from enums are accessible via `import { ... } from "bugscope"`
+- [ ] Public API types from enums are accessible via `import { ... } from "krometrail"`
 - [ ] No breaking changes to existing public exports
 
 ---

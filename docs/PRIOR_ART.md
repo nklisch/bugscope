@@ -1,6 +1,6 @@
-# Bugscope — Prior Art Reference
+# Krometrail — Prior Art Reference
 
-Analysis of existing MCP-over-DAP projects, their approaches, and key insights for Bugscope.
+Analysis of existing MCP-over-DAP projects, their approaches, and key insights for Krometrail.
 
 ---
 
@@ -305,7 +305,7 @@ The `type` field is a discriminated union (`"debugpy"` | `"lldb"`). Adding a new
 | **Tool registration** | Static full list (most) vs dynamic capability-gated (dap-server) |
 | **Output format** | Plain text (dap-server) vs JSON (mcp-debugger) vs XML (dap-mcp) |
 
-### Key lessons for Bugscope
+### Key lessons for Krometrail
 
 1. **Automatic context return is critical.** mcp-dap-server's pattern of returning full state after every `step`/`continue` eliminates unnecessary round trips. Our viewport snapshot should always be returned with every execution control operation.
 
@@ -321,4 +321,4 @@ The `type` field is a discriminated union (`"debugpy"` | `"lldb"`). Adding a new
 
 7. **The proxy/adapter complexity spectrum.** mcp-debugger's 15-file proxy layer vs mcp-dap-server's single file shows the same result can be achieved with vastly different complexity. Lean toward simplicity.
 
-8. **No one has solved the token problem.** Every project returns raw DAP state with no token awareness. This is the gap Bugscope exists to fill.
+8. **No one has solved the token problem.** Every project returns raw DAP state with no token awareness. This is the gap Krometrail exists to fill.

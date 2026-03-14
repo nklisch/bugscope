@@ -6,22 +6,22 @@ export function getErrorMessage(err: unknown): string {
 }
 
 /**
- * Base error for all Bugscope errors.
+ * Base error for all Krometrail errors.
  */
-export class BugscopeError extends Error {
+export class KrometrailError extends Error {
 	constructor(
 		message: string,
 		public readonly code: string,
 	) {
 		super(message);
-		this.name = "BugscopeError";
+		this.name = "KrometrailError";
 	}
 }
 
 /**
  * DAP request timed out.
  */
-export class DAPTimeoutError extends BugscopeError {
+export class DAPTimeoutError extends KrometrailError {
 	constructor(
 		public readonly command: string,
 		public readonly timeoutMs: number,
@@ -34,7 +34,7 @@ export class DAPTimeoutError extends BugscopeError {
 /**
  * DAP client has been disposed.
  */
-export class DAPClientDisposedError extends BugscopeError {
+export class DAPClientDisposedError extends KrometrailError {
 	constructor() {
 		super("DAP client has been disposed", "DAP_DISPOSED");
 		this.name = "DAPClientDisposedError";
@@ -44,7 +44,7 @@ export class DAPClientDisposedError extends BugscopeError {
 /**
  * DAP connection failed.
  */
-export class DAPConnectionError extends BugscopeError {
+export class DAPConnectionError extends KrometrailError {
 	constructor(
 		public readonly host: string,
 		public readonly port: number,
@@ -58,7 +58,7 @@ export class DAPConnectionError extends BugscopeError {
 /**
  * Session not found.
  */
-export class SessionNotFoundError extends BugscopeError {
+export class SessionNotFoundError extends KrometrailError {
 	constructor(public readonly sessionId: string) {
 		super(`No debug session with id: ${sessionId}`, "SESSION_NOT_FOUND");
 		this.name = "SessionNotFoundError";
@@ -68,7 +68,7 @@ export class SessionNotFoundError extends BugscopeError {
 /**
  * Session is in an invalid state for the requested operation.
  */
-export class SessionStateError extends BugscopeError {
+export class SessionStateError extends KrometrailError {
 	constructor(
 		public readonly sessionId: string,
 		public readonly currentState: string,
@@ -82,7 +82,7 @@ export class SessionStateError extends BugscopeError {
 /**
  * Session resource limit exceeded.
  */
-export class SessionLimitError extends BugscopeError {
+export class SessionLimitError extends KrometrailError {
 	constructor(
 		public readonly limitName: string,
 		public readonly currentValue: number,
@@ -97,7 +97,7 @@ export class SessionLimitError extends BugscopeError {
 /**
  * Adapter prerequisites not met.
  */
-export class AdapterPrerequisiteError extends BugscopeError {
+export class AdapterPrerequisiteError extends KrometrailError {
 	constructor(
 		public readonly adapterId: string,
 		public readonly missing: string[],
@@ -111,7 +111,7 @@ export class AdapterPrerequisiteError extends BugscopeError {
 /**
  * No adapter found for the given language or file extension.
  */
-export class AdapterNotFoundError extends BugscopeError {
+export class AdapterNotFoundError extends KrometrailError {
 	constructor(public readonly languageOrExt: string) {
 		super(`No debug adapter found for '${languageOrExt}'. Available adapters can be checked with debug_status.`, "ADAPTER_NOT_FOUND");
 		this.name = "AdapterNotFoundError";
@@ -121,7 +121,7 @@ export class AdapterNotFoundError extends BugscopeError {
 /**
  * Debugee process launch failed.
  */
-export class LaunchError extends BugscopeError {
+export class LaunchError extends KrometrailError {
 	constructor(
 		message: string,
 		public readonly stderr?: string,
@@ -134,7 +134,7 @@ export class LaunchError extends BugscopeError {
 /**
  * Chrome executable not found.
  */
-export class ChromeNotFoundError extends BugscopeError {
+export class ChromeNotFoundError extends KrometrailError {
 	constructor() {
 		super("Chrome not found. Install Chrome or use --attach to connect to an existing instance.", "CHROME_NOT_FOUND");
 		this.name = "ChromeNotFoundError";
@@ -144,7 +144,7 @@ export class ChromeNotFoundError extends BugscopeError {
 /**
  * Chrome CDP connection failed (WebSocket or HTTP endpoint unavailable).
  */
-export class CDPConnectionError extends BugscopeError {
+export class CDPConnectionError extends KrometrailError {
 	constructor(
 		message: string,
 		public readonly cause?: Error,
@@ -157,7 +157,7 @@ export class CDPConnectionError extends BugscopeError {
 /**
  * Browser tab not found by targetId.
  */
-export class TabNotFoundError extends BugscopeError {
+export class TabNotFoundError extends KrometrailError {
 	constructor(public readonly targetId: string) {
 		super(`Tab not found: ${targetId}`, "TAB_NOT_FOUND");
 		this.name = "TabNotFoundError";
@@ -167,7 +167,7 @@ export class TabNotFoundError extends BugscopeError {
 /**
  * Browser recorder is in an invalid state for the requested operation.
  */
-export class BrowserRecorderStateError extends BugscopeError {
+export class BrowserRecorderStateError extends KrometrailError {
 	constructor(message: string) {
 		super(message, "BROWSER_RECORDER_STATE");
 		this.name = "BrowserRecorderStateError";

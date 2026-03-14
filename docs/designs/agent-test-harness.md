@@ -2,13 +2,13 @@
 
 ## Problem
 
-Bugscope has three test tiers today: unit, integration, and e2e. All three validate the tool chain from the inside — they call MCP tools directly via a test client and assert on viewport output. None of them answer the real question: **can an actual agent use bugscope to autonomously debug and fix a bug?**
+Krometrail has three test tiers today: unit, integration, and e2e. All three validate the tool chain from the inside — they call MCP tools directly via a test client and assert on viewport output. None of them answer the real question: **can an actual agent use krometrail to autonomously debug and fix a bug?**
 
 debugger-mcp proved this kind of testing is viable (5 languages x 2 agents, 10/10 pass rate). But their tests only verify the agent can step through the SBCTED sequence — they don't verify the agent can actually *fix* a bug using the debugger. That's the gap.
 
 We need a harness that:
 1. Gives an agent buggy code and a failing test
-2. Makes bugscope available as an MCP server
+2. Makes krometrail available as an MCP server
 3. Lets the agent autonomously investigate and fix the bug
 4. Validates the fix against a hidden test the agent never saw
 
@@ -28,7 +28,7 @@ We need a harness that:
 
 **The prompt is the only evidence.** The visible test passes with the buggy code — the agent cannot use test failures to locate the bug. The prompt is written as a natural-language bug report (customer complaint, engineer observation, support ticket) with concrete expected vs. actual values. This mirrors real production debugging where tests are green but behavior is wrong.
 
-**The skill is installed, not injected.** The bugscope skill is placed at `.claude/skills/bugscope/SKILL.md` in the workspace — exactly how a real user would have it installed. It is not passed via `--append-system-prompt` or any other out-of-band mechanism.
+**The skill is installed, not injected.** The krometrail skill is placed at `.claude/skills/krometrail/SKILL.md` in the workspace — exactly how a real user would have it installed. It is not passed via `--append-system-prompt` or any other out-of-band mechanism.
 
 **Every workspace has a `CLAUDE.md`.** Each scenario's `src/` includes a `CLAUDE.md` describing the project structure and test commands. The agent discovers it naturally, the same way it would in a real project.
 
@@ -194,7 +194,7 @@ export const claudeCode: AgentDriver = {
 		const args = [
 			"-p", options.prompt,
 			"--mcp-config", options.mcpConfigPath,
-			"--allowedTools", "mcp__bugscope__*",
+			"--allowedTools", "mcp__krometrail__*",
 			"--max-turns", "50",
 			"--permission-mode", "bypassPermissions",
 		];
@@ -237,13 +237,13 @@ New agents are added by creating a new driver module. The harness discovers driv
 
 ### MCP Config Generation
 
-The harness generates an MCP config JSON file that points at bugscope, configured to run in the scenario's workspace:
+The harness generates an MCP config JSON file that points at krometrail, configured to run in the scenario's workspace:
 
 ```typescript
 function generateMcpConfig(workDir: string): McpConfig {
 	return {
 		mcpServers: {
-			"bugscope": {
+			"krometrail": {
 				command: "bun",
 				args: [
 					"run",
@@ -256,7 +256,7 @@ function generateMcpConfig(workDir: string): McpConfig {
 }
 ```
 
-This means bugscope runs from source (not a compiled binary), making it easy to test changes during development.
+This means krometrail runs from source (not a compiled binary), making it easy to test changes during development.
 
 ### Workspace Setup
 
@@ -264,14 +264,14 @@ For each test run, the harness:
 
 1. Creates a temp directory
 2. Copies scenario `src/` files into it (including `CLAUDE.md`)
-3. Installs the bugscope skill at `.claude/skills/bugscope/` — same as real user installation
+3. Installs the krometrail skill at `.claude/skills/krometrail/` — same as real user installation
 4. Git-initializes the workspace (enables diff capture after the agent runs)
 5. Runs setup commands from `scenario.json`
 6. Generates the MCP config file and writes it to the workspace
 
 ```typescript
 async function prepareWorkspace(scenario: Scenario): Promise<Workspace> {
-	const workDir = await mkdtemp(join(tmpdir(), "bugscope-test-"));
+	const workDir = await mkdtemp(join(tmpdir(), "krometrail-test-"));
 
 	// Copy source files
 	await cp(scenario.srcDir, workDir, { recursive: true });
@@ -507,7 +507,7 @@ Every scenario x agent run captures:
 | `tokens_output` | Agent stdout (parsed) | Output tokens consumed (if available) |
 | `model` | Agent stdout (parsed) | Model used (if available) |
 | `agent_version` | `--version` output | Agent binary version |
-| `bugscope_version` | package.json | Bugscope version under test |
+| `krometrail_version` | package.json | Krometrail version under test |
 | `timestamp` | System clock | ISO 8601 run timestamp |
 | `visible_test_before` | Pre-run test | Did the visible test pass before the agent ran? Should always be `true` — if not, the scenario is broken |
 | `visible_test_after` | Post-run test | Does the visible test still pass after the agent ran? |
@@ -525,7 +525,7 @@ Each run produces a `result.json`:
   "agent": "claude-code",
   "model": "claude-sonnet-4-6",
   "agent_version": "1.2.3",
-  "bugscope_version": "0.1.0",
+  "krometrail_version": "0.1.0",
   "timestamp": "2026-03-04T14:30:00Z",
   "passed": true,
   "duration_ms": 45200,
@@ -564,10 +564,10 @@ bun run test:agent:report --dir .traces/2026-03-04
 This produces a **markdown report** suitable for publishing:
 
 ```markdown
-# Bugscope — Agent Test Report
+# Krometrail — Agent Test Report
 
 **Date:** 2026-03-04
-**Bugscope version:** 0.1.0
+**Krometrail version:** 0.1.0
 
 ## Summary
 
@@ -658,9 +658,9 @@ This gives us a clean patch showing exactly what the agent modified, perfect for
 
 ## Non-Goals
 
-- **Benchmarking agents against each other.** The reports show per-agent results side by side, but the purpose is to validate bugscope, not to rank agents. We don't draw conclusions about which agent is "better" — model versions, prompts, and configurations all affect outcomes.
+- **Benchmarking agents against each other.** The reports show per-agent results side by side, but the purpose is to validate krometrail, not to rank agents. We don't draw conclusions about which agent is "better" — model versions, prompts, and configurations all affect outcomes.
 
-- **Testing without bugscope.** ~~We don't run scenarios without bugscope to establish a baseline.~~ *Update: baseline runs are now implemented — see [with-without-comparison.md](with-without-comparison.md).*
+- **Testing without krometrail.** ~~We don't run scenarios without krometrail to establish a baseline.~~ *Update: baseline runs are now implemented — see [with-without-comparison.md](with-without-comparison.md).*
 
 - **Covering every language.** The active suite has Python, Node, and TypeScript. New languages can be added as adapters mature — the harness is language-agnostic, new languages are just new scenario directories.
 

@@ -1,16 +1,16 @@
 ---
-name: bugscope-mcp
+name: krometrail-mcp
 description: >
-  Bugscope MCP tool reference. LOAD THIS SKILL before invoking any mcp__bugscope__* tool.
+  Krometrail MCP tool reference. LOAD THIS SKILL before invoking any mcp__krometrail__* tool.
   Covers the three tool namespaces (debug_*, chrome_*, session_*), when to use each,
   common workflows, and pitfalls that cause wasted sessions or confusing errors.
 ---
 
-# Bugscope MCP Reference
+# Krometrail MCP Reference
 
-**Load this skill before invoking any `mcp__bugscope__*` tool.**
+**Load this skill before invoking any `mcp__krometrail__*` tool.**
 
-Bugscope provides runtime debugging and browser recording via MCP. There are three distinct tool namespaces — picking the wrong one wastes time.
+Krometrail provides runtime debugging and browser recording via MCP. There are three distinct tool namespaces — picking the wrong one wastes time.
 
 ---
 
@@ -66,7 +66,7 @@ Tools: `session_list`, `session_overview`, `session_search`, `session_inspect`, 
 
 ### Record a browser session and investigate it
 1. See `references/chrome.md` for setup
-2. `chrome_start(url: '...', profile: 'bugscope')`
+2. `chrome_start(url: '...', profile: 'krometrail')`
 3. `chrome_mark(label: '...')` at key moments
 4. `chrome_stop()`
 5. `session_list()` → `session_overview(session_id: '...')` → `session_search(...)` → `session_inspect(...)`

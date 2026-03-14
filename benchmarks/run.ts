@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Bugscope Performance Benchmark Suite
+ * Krometrail Performance Benchmark Suite
  *
  * Measures tokens/session, actions-to-diagnosis, and per-tool latency.
  * Run with: bun run benchmarks/run.ts
@@ -193,7 +193,7 @@ async function runScenario(scenario: BenchmarkScenario): Promise<BenchmarkResult
 }
 
 function formatBenchmarkTable(results: BenchmarkResult[]): string {
-	const lines: string[] = ["# Bugscope Benchmark Results", ""];
+	const lines: string[] = ["# Krometrail Benchmark Results", ""];
 	lines.push(`${"Scenario".padEnd(36)} ${"Lang".padEnd(8)} ${"Actions".padEnd(8)} ${"Tokens".padEnd(8)} ${"Tok/View".padEnd(9)} ${"Avg ms".padEnd(8)} ${"Total ms".padEnd(10)} Status`);
 	lines.push("-".repeat(105));
 
@@ -221,7 +221,7 @@ function formatBenchmarkTable(results: BenchmarkResult[]): string {
 // --- Main ---
 
 async function main() {
-	console.log("Running Bugscope benchmarks...\n");
+	console.log("Running Krometrail benchmarks...\n");
 
 	const results: BenchmarkResult[] = [];
 	for (const scenario of SCENARIOS) {

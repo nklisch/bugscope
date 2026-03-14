@@ -1,4 +1,4 @@
-# Bugscope — Roadmap
+# Krometrail — Roadmap
 
 Each phase is a self-contained deliverable with a clear "done" state. Phases are ordered by dependency — each builds on the previous. Steps within a phase can often be parallelized.
 
@@ -171,47 +171,47 @@ End-to-end tests proving the full MCP path works. → TESTING.md
 
 The daemon persists debug sessions across sequential CLI commands. → INTERFACE.md#Session Daemon
 
-- **Auto-start.** First `bugscope launch` starts the daemon if not running. The daemon is a background process running the same core as the MCP server.
-- **Unix domain socket.** Listen on `$XDG_RUNTIME_DIR/bugscope.sock` (fallback: `~/.bugscope/bugscope.sock`). Simple JSON-RPC protocol over the socket (same message format as MCP tool calls).
+- **Auto-start.** First `krometrail launch` starts the daemon if not running. The daemon is a background process running the same core as the MCP server.
+- **Unix domain socket.** Listen on `$XDG_RUNTIME_DIR/krometrail.sock` (fallback: `~/.krometrail/krometrail.sock`). Simple JSON-RPC protocol over the socket (same message format as MCP tool calls).
 - **Idle shutdown.** Daemon exits after configurable idle timeout (default: 60s) with no active sessions.
 - **PID file.** Write PID to socket path + `.pid`. CLI checks PID file to detect stale daemons.
 - **Health check.** CLI sends a ping before each command. If daemon is dead (stale PID), restart it.
-- **Lifecycle logging.** Daemon logs to `~/.bugscope/daemon.log` for diagnostics.
+- **Lifecycle logging.** Daemon logs to `~/.krometrail/daemon.log` for diagnostics.
 
 ### 2.2 — CLI Commands
 
 Implement all CLI commands via citty, each calling the daemon over the socket. → INTERFACE.md#Command Reference
 
 **Session lifecycle:**
-- `bugscope launch "<command>" --break <file>:<line> [--stop-on-entry] [--language <lang>]`
-- `bugscope stop [--session <id>]`
-- `bugscope status [--session <id>]`
+- `krometrail launch "<command>" --break <file>:<line> [--stop-on-entry] [--language <lang>]`
+- `krometrail stop [--session <id>]`
+- `krometrail status [--session <id>]`
 
 **Execution control:**
-- `bugscope continue [--timeout <ms>]`
-- `bugscope step over|into|out [--count <n>]`
-- `bugscope run-to <file>:<line> [--timeout <ms>]`
+- `krometrail continue [--timeout <ms>]`
+- `krometrail step over|into|out [--count <n>]`
+- `krometrail run-to <file>:<line> [--timeout <ms>]`
 
 **Breakpoints:**
-- `bugscope break <file>:<line>[,<line>,...] [when <condition>] [hit <condition>] [log '<message>']`
-- `bugscope break --exceptions <filter>`
-- `bugscope break --clear <file>`
-- `bugscope breakpoints`
+- `krometrail break <file>:<line>[,<line>,...] [when <condition>] [hit <condition>] [log '<message>']`
+- `krometrail break --exceptions <filter>`
+- `krometrail break --clear <file>`
+- `krometrail breakpoints`
 
 **State inspection:**
-- `bugscope eval "<expression>" [--frame <n>] [--depth <n>]`
-- `bugscope vars [--scope local|global|closure|all] [--filter "<regex>"]`
-- `bugscope stack [--frames <n>] [--source]`
-- `bugscope source <file>[:<start>-<end>]`
+- `krometrail eval "<expression>" [--frame <n>] [--depth <n>]`
+- `krometrail vars [--scope local|global|closure|all] [--filter "<regex>"]`
+- `krometrail stack [--frames <n>] [--source]`
+- `krometrail source <file>[:<start>-<end>]`
 
 **Session intelligence:**
-- `bugscope watch "<expr>" ["<expr>" ...]`
-- `bugscope log [--detailed]`
-- `bugscope output [--stderr|--stdout] [--since-action <n>]`
+- `krometrail watch "<expr>" ["<expr>" ...]`
+- `krometrail log [--detailed]`
+- `krometrail output [--stderr|--stdout] [--since-action <n>]`
 
 **Utility:**
-- `bugscope doctor` — Check installed debuggers, report versions and status.
-- `bugscope --version`
+- `krometrail doctor` — Check installed debuggers, report versions and status.
+- `krometrail --version`
 
 **Flags available on all commands:**
 - `--json` — Output structured JSON instead of viewport text.
@@ -229,22 +229,22 @@ Implement all CLI commands via citty, each calling the daemon over the socket. �
 
 ### 2.4 — Skill File
 
-Ship `bugscope-skill.md` as a file agents can load. → UX.md#Agent Skill File
+Ship `krometrail-skill.md` as a file agents can load. → UX.md#Agent Skill File
 
-- Include in the npm package at a known path (`node_modules/bugscope/skill.md` or similar).
-- `bugscope skill` command prints the skill file to stdout for easy piping.
+- Include in the npm package at a known path (`node_modules/krometrail/skill.md` or similar).
+- `krometrail skill` command prints the skill file to stdout for easy piping.
 - Test with Claude Code: load as a custom instruction, verify the agent can use the CLI effectively.
 
 ### 2.5 — Binary Distribution
 
 - **`bun build --compile`** — Build single-file binaries for Linux (x64, arm64), macOS (x64, arm64), Windows (x64).
 - **GitHub Releases.** CI workflow builds binaries on tag push, uploads to GitHub release.
-- **npm publish.** `npx bugscope` and `bunx bugscope` work.
-- **Version command.** `bugscope --version` prints version, Bun version, platform, and available adapters.
+- **npm publish.** `npx krometrail` and `bunx krometrail` work.
+- **Version command.** `krometrail --version` prints version, Bun version, platform, and available adapters.
 
 ### 2.6 — Doctor Command
 
-`bugscope doctor` checks the system for debugger availability.
+`krometrail doctor` checks the system for debugger availability.
 
 - Run `checkPrerequisites()` on every registered adapter.
 - Report: adapter name, status (available/missing), version if available, install hint if missing.
@@ -268,7 +268,7 @@ Ship `bugscope-skill.md` as a file agents can load. → UX.md#Agent Skill File
 
 **Design focus:** Session log data model, diff algorithm for consecutive viewports, compression heuristics, watch expression lifecycle.
 
-→ PRIOR_ART.md: No existing project implements watch expressions, session logging, viewport diffing, or progressive compression. These features are unique to Bugscope and represent the core differentiation (PRIOR_ART.md lesson #8: "no one has solved the token problem").
+→ PRIOR_ART.md: No existing project implements watch expressions, session logging, viewport diffing, or progressive compression. These features are unique to Krometrail and represent the core differentiation (PRIOR_ART.md lesson #8: "no one has solved the token problem").
 
 ### 3.1 — Watch Expressions
 
@@ -414,7 +414,7 @@ Verify every MCP tool and CLI command produces equivalent behavior across all ad
 - **Python attach.** debugpy supports `attach` request with `processId` or `connect` with host/port.
 - **Node.js attach.** `node --inspect={port}` (without `--brk`) starts a debug-ready process. Attach via DAP.
 - **Go attach.** `dlv attach {pid}` or `dlv connect {addr}`.
-- **CLI syntax.** `bugscope attach --pid 12345` or `bugscope attach --port 5678`.
+- **CLI syntax.** `krometrail attach --pid 12345` or `krometrail attach --port 5678`.
 
 ### 5.4 — Multi-Threaded Debugging
 
@@ -433,7 +433,7 @@ Verify every MCP tool and CLI command produces equivalent behavior across all ad
 
 ## Phase 6: Framework Detection
 
-**Goal:** Agents can debug test failures and web requests without manually configuring the debugger. `bugscope launch "pytest tests/"` just works.
+**Goal:** Agents can debug test failures and web requests without manually configuring the debugger. `krometrail launch "pytest tests/"` just works.
 
 **Design focus:** Detection heuristics, framework-specific configuration injection, test isolation.
 
@@ -462,7 +462,7 @@ Detect web frameworks and configure attach-friendly debug sessions:
 - **Auto-detection as default.** When no `framework` is specified, analyze the command string and working directory to detect the framework.
 - **Override mechanism.** Agents can disable auto-detection with `framework: "none"`.
 
-**Done when:** `bugscope launch "pytest tests/test_order.py -x" --break order.py:147` works without any framework-specific agent configuration.
+**Done when:** `krometrail launch "pytest tests/test_order.py -x" --break order.py:147` works without any framework-specific agent configuration.
 
 ---
 
@@ -472,7 +472,7 @@ Detect web frameworks and configure attach-friendly debug sessions:
 
 ### 7.1 — Adapter SDK
 
-- **`create-bugscope-adapter` scaffold.** CLI command or template repo that generates a new adapter project with the interface, build config, and test harness.
+- **`create-krometrail-adapter` scaffold.** CLI command or template repo that generates a new adapter project with the interface, build config, and test harness.
 - **Adapter test harness.** A shared test suite that any adapter can run to verify conformance. Provides fixture programs and expected behaviors.
 - **Adapter documentation.** Step-by-step guide: identify debugger, implement interface, register, test.
 
@@ -493,14 +493,14 @@ Community or first-party adapters for:
 - **Latency.** Measure round-trip time for each tool call (launch, step, evaluate). Identify bottlenecks.
 - **Comparison.** Run the same scenarios against mcp-debugger and mcp-dap-server. Quantify the token savings from viewport compression.
 
-→ PRIOR_ART.md (lesson #8): Every existing project returns raw DAP state with no token awareness. This benchmark should quantify the difference — how many tokens does a 10-action debug session consume with Bugscope vs raw DAP output?
+→ PRIOR_ART.md (lesson #8): Every existing project returns raw DAP state with no token awareness. This benchmark should quantify the difference — how many tokens does a 10-action debug session consume with Krometrail vs raw DAP output?
 
 ### 7.4 — Agent Integration Testing
 
 → PRIOR_ART.md: debugger-mcp's approach (real Claude Code/Codex tests)
 
-- **Claude Code integration test.** Load the skill file, give Claude Code a buggy program, verify it uses bugscope to diagnose the bug.
-- **MCP discovery test.** Configure bugscope as an MCP server, verify Claude Code discovers and uses the tools without a skill file.
+- **Claude Code integration test.** Load the skill file, give Claude Code a buggy program, verify it uses krometrail to diagnose the bug.
+- **MCP discovery test.** Configure krometrail as an MCP server, verify Claude Code discovers and uses the tools without a skill file.
 - **Success criteria.** Agent identifies root cause in the discount-bug fixture within 10 actions, using < 5000 viewport tokens.
 
 ### 7.5 — Documentation & Guides
@@ -515,8 +515,8 @@ Community or first-party adapters for:
 → PRIOR_ART.md: AIDB's launch.json reuse
 
 - **Import VS Code launch configurations.** Parse `.vscode/launch.json`, translate relevant fields to `debug_launch` parameters.
-- **`bugscope launch --config .vscode/launch.json --name "Python: Current File"`** — select a named configuration.
-- **Auto-discovery.** If a `.vscode/launch.json` exists in the working directory, `bugscope doctor` reports available configurations.
+- **`krometrail launch --config .vscode/launch.json --name "Python: Current File"`** — select a named configuration.
+- **Auto-discovery.** If a `.vscode/launch.json` exists in the working directory, `krometrail doctor` reports available configurations.
 
 **Done when:** A new contributor can add a language adapter using the SDK, performance is benchmarked against competitors, and integration guides exist for major agent platforms.
 
@@ -524,7 +524,7 @@ Community or first-party adapters for:
 
 ## Phase 8: Additional Language Adapters
 
-**Goal:** Ruby, C#, Swift, and Kotlin adapters extend Bugscope to cover the remaining major language ecosystems.
+**Goal:** Ruby, C#, Swift, and Kotlin adapters extend Krometrail to cover the remaining major language ecosystems.
 
 → designs/phase-8-ruby-csharp-swift-kotlin.md
 
@@ -532,7 +532,7 @@ Community or first-party adapters for:
 
 ## Phase 9: Browser Lens — CDP Recorder
 
-**Goal:** Bugscope gains passive browser recording. A daemon connects to Chrome via CDP, captures network, console, DOM, and user input events into a rolling buffer, and persists evidence around user-placed markers. The human drives the browser; the system records everything.
+**Goal:** Krometrail gains passive browser recording. A daemon connects to Chrome via CDP, captures network, console, DOM, and user input events into a rolling buffer, and persists evidence around user-placed markers. The human drives the browser; the system records everything.
 
 **Design focus:** CDP connection lifecycle, event normalization, rolling buffer with marker-triggered persistence, input tracking via minimal page injection, auto-detection of anomalies (4xx/5xx, unhandled exceptions).
 
@@ -743,7 +743,7 @@ Decisions made during roadmap planning, for reference:
 | Browser adapter interface | Separate subsystem, not DebugAdapter | CDP recording is passive timeline, not interactive DAP. Different enough to warrant its own module |
 | Browser viewport engine | Separate renderers, shared token-budget utility | Don't generalize renderViewport(). Extract estimateTokens + fitToBudget to core/token-budget.ts |
 | Browser storage | SQLite + JSONL with byte-offset references | SQLite for queries, JSONL for raw events, byte offsets for O(1) event lookup |
-| Browser data location | ~/.bugscope/browser/ | Lives under bugscope, not separate ~/.browser-lens/ |
+| Browser data location | ~/.krometrail/browser/ | Lives under krometrail, not separate ~/.browser-lens/ |
 | Input tracking approach | console.debug('__BL__', ...) | Piggybacks on Runtime.consoleAPICalled, no separate polling mechanism |
 | Framework state: React + Vue first | Tier 1 | Mature global hooks, passive detection, work in production builds |
 | Framework state: Solid as Tier 2 | Requires dev builds | DEV hooks stripped in production. No global hook — harder passive detection |

@@ -2,13 +2,13 @@
 
 ## Overview
 
-Phase 9 adds passive browser recording to Bugscope. A recorder daemon connects to Chrome via the Chrome DevTools Protocol (CDP), captures network, console, page lifecycle, and user input events into an in-memory rolling buffer, and persists evidence around user-placed markers. The human drives the browser; the system records everything.
+Phase 9 adds passive browser recording to Krometrail. A recorder daemon connects to Chrome via the Chrome DevTools Protocol (CDP), captures network, console, page lifecycle, and user input events into an in-memory rolling buffer, and persists evidence around user-placed markers. The human drives the browser; the system records everything.
 
 This is the foundation for Browser Lens — all subsequent phases (storage, investigation tools, intelligence) build on the event stream this recorder produces.
 
 **Key principle:** The recorder is a passive observer. It listens to CDP events but does not modify page behavior, inject automation, or intercept requests. The only exception is a minimal input tracker script injected once per page load to capture clicks, form submissions, and field changes.
 
-**Reference:** `docs/browser-lens-v3-design.md` contains the full standalone vision. This phase doc covers integration into Bugscope.
+**Reference:** `docs/browser-lens-v3-design.md` contains the full standalone vision. This phase doc covers integration into Krometrail.
 
 ---
 
@@ -44,9 +44,9 @@ src/
 - User input tracking via minimal page injection
 - Rolling buffer with configurable max age
 - Marker placement: CLI command, keyboard hotkey, auto-detection
-- `bugscope browser start` launcher (Chrome + recorder in one command)
-- `bugscope browser mark` CLI command
-- `bugscope browser status` to see active recordings
+- `krometrail browser start` launcher (Chrome + recorder in one command)
+- `krometrail browser mark` CLI command
+- `krometrail browser status` to see active recordings
 
 ### What This Phase Does NOT Deliver
 
@@ -529,7 +529,7 @@ export class AutoDetector {
 
 **Marker placement sources:**
 
-1. **CLI command:** `bugscope browser mark "form failed"` — sends a request to the recorder daemon via the existing Unix socket
+1. **CLI command:** `krometrail browser mark "form failed"` — sends a request to the recorder daemon via the existing Unix socket
 2. **Keyboard hotkey:** The injected input tracker script also listens for `Ctrl+Shift+M`. On trigger, it sends a `__BL__` event with `type: "marker"`, which the recorder processes as a marker placement
 3. **Auto-detection:** The `AutoDetector` checks every incoming event. When a rule fires, it places an auto-detected marker
 
@@ -548,10 +548,10 @@ Auto-detection rules have a cooldown to prevent marker spam. A burst of 422 resp
 CLI commands for browser recording.
 
 ```typescript
-// bugscope browser start [--port 9222] [--profile "testing"] [--attach] [--all-tabs]
-// bugscope browser mark ["label"]
-// bugscope browser status
-// bugscope browser stop
+// krometrail browser start [--port 9222] [--profile "testing"] [--attach] [--all-tabs]
+// krometrail browser mark ["label"]
+// krometrail browser status
+// krometrail browser stop
 ```
 
 **`browser start` flow:**
@@ -583,7 +583,7 @@ function launchChrome(port: number, profile?: string): ChildProcess {
 	];
 
 	if (profile) {
-		args.push(`--user-data-dir=${resolve(homedir(), ".bugscope", "chrome-profiles", profile)}`);
+		args.push(`--user-data-dir=${resolve(homedir(), ".krometrail", "chrome-profiles", profile)}`);
 	}
 
 	// Find first available Chrome binary
@@ -619,7 +619,7 @@ function launchChrome(port: number, profile?: string): ChildProcess {
 
 **Daemon integration:**
 
-The browser recorder runs inside the existing Bugscope daemon process. New RPC methods:
+The browser recorder runs inside the existing Krometrail daemon process. New RPC methods:
 
 ```typescript
 // In daemon protocol:
@@ -853,12 +853,12 @@ bun run test tests/unit/browser/
 bun run test tests/integration/browser/
 
 # Manual verification
-bugscope browser start
+krometrail browser start
 # Browse to any page, click around, submit a form
-bugscope browser status    # Should show event count increasing
-bugscope browser mark "test marker"
-bugscope browser status    # Should show 1 marker
-bugscope browser stop
+krometrail browser status    # Should show event count increasing
+krometrail browser mark "test marker"
+krometrail browser status    # Should show 1 marker
+krometrail browser stop
 ```
 
 **Done when:** The recorder connects to Chrome, captures network/console/input events into the rolling buffer, places markers (manual + auto-detected), and the CLI commands work end-to-end.

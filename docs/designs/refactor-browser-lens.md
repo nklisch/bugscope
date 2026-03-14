@@ -2,7 +2,7 @@
 
 ## Summary
 
-The browser subsystem (`src/browser/`) has grown organically across phases 9-10. `BrowserRecorder` is a god-class orchestrating 7+ responsibilities. Screenshot capture is duplicated between `ScreenshotCapture` and `PersistencePipeline`. The `PersistencePipeline` is accessed via unsafe double-cast to reach its private `db` field. Several config types lack Zod validation, and all browser errors use generic `Error` instead of the project's `BugscopeError` hierarchy. This plan addresses these issues in small, testable steps.
+The browser subsystem (`src/browser/`) has grown organically across phases 9-10. `BrowserRecorder` is a god-class orchestrating 7+ responsibilities. Screenshot capture is duplicated between `ScreenshotCapture` and `PersistencePipeline`. The `PersistencePipeline` is accessed via unsafe double-cast to reach its private `db` field. Several config types lack Zod validation, and all browser errors use generic `Error` instead of the project's `KrometrailError` hierarchy. This plan addresses these issues in small, testable steps.
 
 ## Refactor Steps
 
@@ -58,7 +58,7 @@ The browser subsystem (`src/browser/`) has grown organically across phases 9-10.
 **Target State**: `PersistenceConfigSchema` validates config with defaults. `PersistenceConfig` is derived via `z.infer`.
 
 **Approach**:
-1. Define `PersistenceConfigSchema` with `dataDir` (string, default `~/.bugscope/browser`) and `markerPaddingMs` (number, default from buffer config)
+1. Define `PersistenceConfigSchema` with `dataDir` (string, default `~/.krometrail/browser`) and `markerPaddingMs` (number, default from buffer config)
 2. Change `PersistenceConfig` to `z.infer<typeof PersistenceConfigSchema>`
 3. Parse config in `PersistencePipeline` constructor
 
@@ -115,9 +115,9 @@ The browser subsystem (`src/browser/`) has grown organically across phases 9-10.
 **Risk**: Low
 **Files**: `src/core/errors.ts`, `src/browser/recorder/index.ts`, `src/browser/recorder/cdp-client.ts`, `src/browser/recorder/tab-manager.ts`
 
-**Current State**: All browser errors use generic `Error` (10+ locations). Core modules use `BugscopeError` subclasses with error codes.
+**Current State**: All browser errors use generic `Error` (10+ locations). Core modules use `KrometrailError` subclasses with error codes.
 
-**Target State**: Browser-specific errors extend `BugscopeError`: `ChromeNotFoundError`, `CDPConnectionError`, `TabNotFoundError`, `BrowserRecorderStateError`.
+**Target State**: Browser-specific errors extend `KrometrailError`: `ChromeNotFoundError`, `CDPConnectionError`, `TabNotFoundError`, `BrowserRecorderStateError`.
 
 **Approach**:
 1. Add browser error classes to `src/core/errors.ts`

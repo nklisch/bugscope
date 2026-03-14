@@ -8,7 +8,7 @@ See [harness-showcase-simplification.md](harness-showcase-simplification.md) for
 
 ## Purpose
 
-A showcase scenario demonstrates what happens when an agent uses bugscope on a real bug. The bug must be one where:
+A showcase scenario demonstrates what happens when an agent uses krometrail on a real bug. The bug must be one where:
 
 1. **The debugger gives an immediate answer** — set one breakpoint, inspect variables, see the problem
 2. **Reading source alone is slow or unreliable** — the value that reveals the bug is computed at runtime

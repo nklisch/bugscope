@@ -261,8 +261,8 @@ async function runJsDebugParentSession(socket: Socket, launchArgs: Record<string
 
 		// Start the parent session.
 		sendRequest("initialize", {
-			clientID: "bugscope",
-			adapterID: "bugscope",
+			clientID: "krometrail",
+			adapterID: "krometrail",
 			supportsVariableType: true,
 			linesStartAt1: true,
 			columnsStartAt1: true,

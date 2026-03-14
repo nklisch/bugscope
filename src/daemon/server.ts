@@ -10,7 +10,7 @@ import { renderDiff, renderInspectResult, renderSearchResults, renderSessionOver
 import { ReplayContextGenerator } from "../browser/investigation/replay-context.js";
 import { BrowserRecorder } from "../browser/recorder/index.js";
 import { BrowserDatabase } from "../browser/storage/database.js";
-import { AdapterNotFoundError, AdapterPrerequisiteError, BugscopeError, LaunchError, SessionLimitError, SessionNotFoundError, SessionStateError } from "../core/errors.js";
+import { AdapterNotFoundError, AdapterPrerequisiteError, KrometrailError, LaunchError, SessionLimitError, SessionNotFoundError, SessionStateError } from "../core/errors.js";
 import type { SessionManager } from "../core/session-manager.js";
 import type { JsonRpcRequest, JsonRpcResponse } from "./protocol.js";
 import {
@@ -242,12 +242,12 @@ export class DaemonServer {
 			return { code: RPC_SESSION_LIMIT_ERROR, message: err.message };
 		}
 		if (err instanceof AdapterPrerequisiteError || err instanceof AdapterNotFoundError) {
-			return { code: RPC_ADAPTER_ERROR, message: (err as BugscopeError).message };
+			return { code: RPC_ADAPTER_ERROR, message: (err as KrometrailError).message };
 		}
 		if (err instanceof LaunchError) {
 			return { code: RPC_LAUNCH_ERROR, message: err.message };
 		}
-		if (err instanceof BugscopeError) {
+		if (err instanceof KrometrailError) {
 			return { code: RPC_INTERNAL_ERROR, message: err.message };
 		}
 		if (err instanceof Error) {
@@ -518,7 +518,7 @@ export class DaemonServer {
 
 	private getQueryEngine(): QueryEngine {
 		if (!this.browserQueryEngine) {
-			const dataDir = resolve(homedir(), ".bugscope", "browser");
+			const dataDir = resolve(homedir(), ".krometrail", "browser");
 			this.browserDb = new BrowserDatabase(resolve(dataDir, "index.db"));
 			this.browserQueryEngine = new QueryEngine(this.browserDb, dataDir);
 		}

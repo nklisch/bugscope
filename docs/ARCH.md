@@ -1,4 +1,4 @@
-# Bugscope — Architecture
+# Krometrail — Architecture
 
 ---
 
@@ -14,7 +14,7 @@ The system consists of four layers, each with a single responsibility:
 
 **Adapter Layer.** Thin, language-specific modules that implement a standard interface for launching a debug target and connecting to its DAP server. Each adapter encapsulates the setup quirks of a specific debugger (debugpy for Python, node-inspect for Node.js, delve for Go, etc.) while exposing a uniform connection surface to the core. See [SPEC.md](SPEC.md) for the adapter contract.
 
-> **Prior art note:** All existing MCP-DAP projects (see [PRIOR_ART.md](PRIOR_ART.md)) use some form of this four-layer architecture. The key difference is complexity: mcp-debugger's proxy layer alone spans ~15 files with worker processes per session, while mcp-dap-server achieves the same result in ~3 files. Bugscope targets the simpler end of this spectrum — thin adapters, no proxy layer, direct DAP communication.
+> **Prior art note:** All existing MCP-DAP projects (see [PRIOR_ART.md](PRIOR_ART.md)) use some form of this four-layer architecture. The key difference is complexity: mcp-debugger's proxy layer alone spans ~15 files with worker processes per session, while mcp-dap-server achieves the same result in ~3 files. Krometrail targets the simpler end of this spectrum — thin adapters, no proxy layer, direct DAP communication.
 
 ---
 
@@ -30,7 +30,7 @@ A typical interaction follows this sequence:
 6. Core receives the DAP `stopped` event and constructs a **Viewport Snapshot** (see step detail below).
 7. The snapshot is returned to the agent as structured text.
 
-> **Prior art note:** mcp-dap-server's `getFullContext` function follows this same pattern — on every `stopped` event, it queries stack trace, scopes, and variables in sequence. The critical difference: mcp-dap-server returns *all* variables from *all* scopes with no truncation, while Bugscope renders a token-budgeted viewport (~400 tokens). See [PRIOR_ART.md](PRIOR_ART.md) for the full analysis.
+> **Prior art note:** mcp-dap-server's `getFullContext` function follows this same pattern — on every `stopped` event, it queries stack trace, scopes, and variables in sequence. The critical difference: mcp-dap-server returns *all* variables from *all* scopes with no truncation, while Krometrail renders a token-budgeted viewport (~400 tokens). See [PRIOR_ART.md](PRIOR_ART.md) for the full analysis.
 8. The agent reasons about the state and issues further debug commands.
 9. Repeat until the agent has enough information, then call `debug_stop`.
 
@@ -42,11 +42,11 @@ A typical interaction follows this sequence:
            │ MCP (stdio / SSE)            │ bash / shell
            ▼                              ▼
 ┌─────────────────────────────────────────────────────────┐
-│                       bugscope                         │
+│                       krometrail                         │
 │  ┌────────────────────┐    ┌─────────────────────────┐  │
 │  │  MCP Server        │    │  CLI                     │  │
-│  │  (tool interface)  │    │  bugscope launch ...   │  │
-│  │                    │    │  bugscope step ...     │  │
+│  │  (tool interface)  │    │  krometrail launch ...   │  │
+│  │                    │    │  krometrail step ...     │  │
 │  └─────────┬──────────┘    └────────────┬────────────┘  │
 │            └──────────┬─────────────────┘               │
 │  ┌────────────────────┴──────────────────────────────┐  │

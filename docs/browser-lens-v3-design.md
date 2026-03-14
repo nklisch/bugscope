@@ -34,7 +34,7 @@ This is the DVR model: **the human drives, the system records everything, the ag
 
 ### Lineage
 
-The investigation tools use the same token-budgeted viewport concept from Bugscope. Instead of viewing live page state, the agent views recorded session state at a specific point in time. The viewport engine, focus strategies, and token budgeting all carry over — just applied to a timeline of events rather than a live page.
+The investigation tools use the same token-budgeted viewport concept from Krometrail. Instead of viewing live page state, the agent views recorded session state at a specific point in time. The viewport engine, focus strategies, and token budgeting all carry over — just applied to a timeline of events rather than a live page.
 
 ---
 
@@ -246,7 +246,7 @@ interface SessionListResult {
 
 ### `session_overview`
 
-Get a structured overview of a session — the "table of contents" before diving in. Token-budgeted, just like Bugscope viewports.
+Get a structured overview of a session — the "table of contents" before diving in. Token-budgeted, just like Krometrail viewports.
 
 ```typescript
 interface SessionOverviewParams {

@@ -1,4 +1,4 @@
-# Bugscope — Agent UX
+# Krometrail — Agent UX
 
 This document describes the agent-facing experience: the viewport abstraction that makes debugging token-efficient, the interaction patterns agents should use, and the gap analysis motivating these design choices.
 
@@ -8,7 +8,7 @@ This document describes the agent-facing experience: the viewport abstraction th
 
 Existing MCP-DAP bridges solve the plumbing problem. None address the agent ergonomics problem:
 
-| Gap | Impact | Bugscope Approach |
+| Gap | Impact | Krometrail Approach |
 |-----|--------|----------------------|
 | No viewport abstraction | Agents receive raw DAP state, consuming excessive tokens and requiring manual parsing | Compact, configurable viewport snapshot (~400 tokens) returned on every stop |
 | No context compression | Long debug sessions blow up the agent's context window | Automatic investigation logging, viewport diffing, session summarization |
@@ -22,7 +22,7 @@ Existing MCP-DAP bridges solve the plumbing problem. None address the agent ergo
 
 The viewport is the central design innovation. Rather than exposing raw DAP state (which can be enormous), every debug stop produces a compact, structured snapshot optimized for agent consumption.
 
-> **Prior art note:** The closest analog is mcp-dap-server's `getFullContext`, which dumps current location, stack trace, and all variables as markdown. However, it includes *all* scopes and variables with no truncation — a moderately complex program can produce thousands of tokens per stop. mcp-debugger requires 3–4 separate tool calls (stack trace, scopes, variables, source context) to assemble the same information. Bugscope combines both insights: automatic full-context return (like mcp-dap-server) with token-budgeted rendering (unique to this project). See [PRIOR_ART.md](PRIOR_ART.md).
+> **Prior art note:** The closest analog is mcp-dap-server's `getFullContext`, which dumps current location, stack trace, and all variables as markdown. However, it includes *all* scopes and variables with no truncation — a moderately complex program can produce thousands of tokens per stop. mcp-debugger requires 3–4 separate tool calls (stack trace, scopes, variables, source context) to assemble the same information. Krometrail combines both insights: automatic full-context return (like mcp-dap-server) with token-budgeted rendering (unique to this project). See [PRIOR_ART.md](PRIOR_ART.md).
 
 ### Default Viewport
 
@@ -160,36 +160,36 @@ This is tedious for humans but trivial for an agent.
 
 ## Agent Skill File
 
-For agents that use the CLI path, this skill file teaches the agent how to use Bugscope. It can be loaded as a Claude Code skill, a Codex system prompt addition, or any agent's instruction set:
+For agents that use the CLI path, this skill file teaches the agent how to use Krometrail. It can be loaded as a Claude Code skill, a Codex system prompt addition, or any agent's instruction set:
 
 ```markdown
-# Bugscope — Debugging Skill
+# Krometrail — Debugging Skill
 
-You have access to `bugscope`, a CLI debugger. Use it when you need to
+You have access to `krometrail`, a CLI debugger. Use it when you need to
 inspect runtime state to diagnose a bug — especially when static code
 reading and test output aren't enough to identify the root cause.
 
 ## Quick start
-  bugscope launch "<command>" --break <file>:<line>
-  bugscope continue          # run to next breakpoint
-  bugscope step into|over|out
-  bugscope eval "<expr>"     # evaluate expression at current stop
-  bugscope vars              # show local variables
-  bugscope stop              # end session
+  krometrail launch "<command>" --break <file>:<line>
+  krometrail continue          # run to next breakpoint
+  krometrail step into|over|out
+  krometrail eval "<expr>"     # evaluate expression at current stop
+  krometrail vars              # show local variables
+  krometrail stop              # end session
 
 ## Conditional breakpoints
-  bugscope break "<file>:<line> when <condition>"
+  krometrail break "<file>:<line> when <condition>"
 
 ## Strategy
 1. Start by setting a breakpoint where you expect the bug to manifest.
 2. Inspect locals. Look for unexpected values.
 3. If the bad value came from a function call, set a breakpoint inside
    that function and re-launch.
-4. Use `bugscope eval` to test hypotheses without modifying code.
+4. Use `krometrail eval` to test hypotheses without modifying code.
 5. Once you identify the root cause, stop the session and fix the code.
 
 ## Key rules
-- Always call `bugscope stop` when done to clean up.
+- Always call `krometrail stop` when done to clean up.
 - Prefer conditional breakpoints over stepping through loops.
 - Each command prints a viewport showing source, locals, and stack.
 - If a session times out (5 min default), re-launch.

@@ -128,7 +128,7 @@ export class CppAdapter implements DebugAdapter {
 		if (parsed.type === "source" && parsed.compiler) {
 			// Compile the source file
 			const src = resolvePath(cwd, parsed.path);
-			const outName = `bugscope-${Date.now()}`;
+			const outName = `krometrail-${Date.now()}`;
 			const outPath = join(tmpdir(), outName);
 
 			try {

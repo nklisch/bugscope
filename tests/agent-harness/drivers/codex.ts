@@ -4,7 +4,7 @@
  * NOTE: Stubbed — not yet actively tested. Starting with Claude Code first.
  * This driver will be expanded when we begin cross-agent testing.
  *
- * Codex uses the CLI (bash commands) rather than MCP tools — the bugscope
+ * Codex uses the CLI (bash commands) rather than MCP tools — the krometrail
  * skill file is included in the system prompt to tell Codex how to use the CLI.
  *
  * Flags used:
@@ -60,10 +60,10 @@ const codex: AgentDriver = {
 	},
 
 	parseMetrics(result: AgentRunResult): AgentMetrics {
-		const toolCallMatches = result.stdout.matchAll(/bugscope\s+([\w-]+)/g);
+		const toolCallMatches = result.stdout.matchAll(/krometrail\s+([\w-]+)/g);
 		const toolCalls: Record<string, number> = {};
 		for (const m of toolCallMatches) {
-			const tool = `bugscope-${m[1]}`;
+			const tool = `krometrail-${m[1]}`;
 			toolCalls[tool] = (toolCalls[tool] ?? 0) + 1;
 		}
 

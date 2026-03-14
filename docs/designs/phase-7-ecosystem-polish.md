@@ -2,7 +2,7 @@
 
 ## Overview
 
-Phase 7 transforms bugscope from a working tool into a production-ready ecosystem. It covers six areas:
+Phase 7 transforms krometrail from a working tool into a production-ready ecosystem. It covers six areas:
 
 1. **Adapter SDK** — Scaffold, test harness, and docs for third-party adapter contributions
 2. **Additional Language Adapters** — Rust (CodeLLDB), Java (java-debug-adapter), C/C++ (GDB DAP)
@@ -230,7 +230,7 @@ Step-by-step guide for creating a new adapter. This is the primary deliverable f
 Structure:
 
 ```markdown
-# Creating an Bugscope Adapter
+# Creating an Krometrail Adapter
 
 ## Overview
 How adapters fit into the architecture, what they're responsible for, and what they're not.
@@ -379,7 +379,7 @@ export class RustAdapter implements DebugAdapter {
 ```
 
 **Implementation Notes:**
-- CodeLLDB is downloaded as a VSIX (zip) from GitHub releases, extracted to `~/.bugscope/adapters/codelldb/`
+- CodeLLDB is downloaded as a VSIX (zip) from GitHub releases, extracted to `~/.krometrail/adapters/codelldb/`
 - Follow the same caching pattern as `src/adapters/js-debug-adapter.ts` (check cache → download if missing → extract)
 - The VSIX contains platform-specific binaries under `extension/adapter/` — detect platform and extract the right one
 - `cargo build` must run before launching the debugger to produce the target binary
@@ -460,7 +460,7 @@ export class JavaAdapter implements DebugAdapter {
 
 **Implementation Notes:**
 - java-debug-adapter is a standalone JAR from Microsoft's [java-debug](https://github.com/microsoft/java-debug) project
-- Cache at `~/.bugscope/adapters/java-debug/java-debug-adapter.jar`
+- Cache at `~/.krometrail/adapters/java-debug/java-debug-adapter.jar`
 - Command parsing needs to handle: `java Main`, `java -jar app.jar`, `mvn test`, `gradle test`
 - For Maven/Gradle, the adapter needs to configure `classPaths` correctly — this is the tricky part
 - Start simple: support `java -jar` and `java MainClass` first, Maven/Gradle in a follow-up or documented as manual config
@@ -503,8 +503,8 @@ export class CppAdapter implements DebugAdapter {
 	 *
 	 * Flow:
 	 * 1. If command is a source file (.c/.cpp), compile first:
-	 *    `gcc -g -o /tmp/bugscope-{hash} source.c` or
-	 *    `g++ -g -o /tmp/bugscope-{hash} source.cpp`
+	 *    `gcc -g -o /tmp/krometrail-{hash} source.c` or
+	 *    `g++ -g -o /tmp/krometrail-{hash} source.cpp`
 	 * 2. If command is a build system (`make`, `cmake --build`),
 	 *    run build first and find the binary
 	 * 3. Allocate port
@@ -588,7 +588,7 @@ if (adapter.id === "rust") {
 ```
 
 **Acceptance Criteria:**
-- [ ] `bugscope doctor` lists all 6 adapters with correct status
+- [ ] `krometrail doctor` lists all 6 adapters with correct status
 - [ ] New adapters show version when available, install hint when missing
 - [ ] `registerAllAdapters()` registers all 6 adapters in the registry
 
@@ -748,7 +748,7 @@ if __name__ == "__main__":
 
 **File**: `tests/e2e/agent-integration/mcp-discovery.test.ts`
 
-Test that an MCP client can discover and use bugscope tools without any skill file — the tool descriptions alone are sufficient.
+Test that an MCP client can discover and use krometrail tools without any skill file — the tool descriptions alone are sufficient.
 
 ```typescript
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -1014,10 +1014,10 @@ if (launchJson) {
 ```
 
 **Acceptance Criteria:**
-- [ ] `bugscope launch --config .vscode/launch.json --config-name "Python: Current File"` works
-- [ ] `bugscope launch --config-name "Python: Current File"` uses default path
+- [ ] `krometrail launch --config .vscode/launch.json --config-name "Python: Current File"` works
+- [ ] `krometrail launch --config-name "Python: Current File"` uses default path
 - [ ] CLI flags override launch.json values
-- [ ] `bugscope doctor` reports available launch.json configurations
+- [ ] `krometrail doctor` reports available launch.json configurations
 - [ ] MCP `debug_launch` with `launch_config` parameter works
 - [ ] Error message lists available configurations when name doesn't match
 
@@ -1028,7 +1028,7 @@ if (launchJson) {
 **File**: `docs/guides/claude-code.md`
 
 ```markdown
-# Using Bugscope with Claude Code
+# Using Krometrail with Claude Code
 
 ## Setup: MCP Server
 
@@ -1037,9 +1037,9 @@ Add to your Claude Code MCP config (~/.claude/mcp.json or project .mcp.json):
 ```json
 {
   "mcpServers": {
-    "bugscope": {
+    "krometrail": {
       "command": "npx",
-      "args": ["bugscope", "mcp"]
+      "args": ["krometrail", "mcp"]
     }
   }
 }
@@ -1049,8 +1049,8 @@ Or with a compiled binary:
 ```json
 {
   "mcpServers": {
-    "bugscope": {
-      "command": "/path/to/bugscope",
+    "krometrail": {
+      "command": "/path/to/krometrail",
       "args": ["mcp"]
     }
   }
@@ -1064,17 +1064,17 @@ Alternative: use the CLI path. Add to your project's CLAUDE.md:
 ```markdown
 ## Debugging
 
-You have access to `bugscope` for runtime debugging.
-See: node_modules/bugscope/skill.md
+You have access to `krometrail` for runtime debugging.
+See: node_modules/krometrail/skill.md
 ```
 
-Or print the skill: `bugscope skill >> CLAUDE.md`
+Or print the skill: `krometrail skill >> CLAUDE.md`
 
 ## Verification
 
 1. Start Claude Code
 2. Ask: "What debug tools do you have available?"
-3. Claude should list the bugscope debug_* tools (MCP) or know about the CLI commands (skill)
+3. Claude should list the krometrail debug_* tools (MCP) or know about the CLI commands (skill)
 
 ## Example Workflow
 
@@ -1144,7 +1144,7 @@ Structure:
 Structure:
 
 ```markdown
-# Troubleshooting Bugscope
+# Troubleshooting Krometrail
 
 ## Debugger Not Found
 ### Python: debugpy not installed
@@ -1185,15 +1185,15 @@ Structure:
 ### "Failed to connect to debugger on port XXXX"
 
 ## Getting Help
-### `bugscope doctor` output
-### Daemon logs: ~/.bugscope/daemon.log
+### `krometrail doctor` output
+### Daemon logs: ~/.krometrail/daemon.log
 ### GitHub Issues: https://github.com/...
 ```
 
 **Acceptance Criteria:**
 - [ ] Each section has a concrete solution, not just a description of the problem
 - [ ] Error messages match actual error strings from `src/core/errors.ts`
-- [ ] `bugscope doctor` is referenced as the first diagnostic step
+- [ ] `krometrail doctor` is referenced as the first diagnostic step
 
 ---
 

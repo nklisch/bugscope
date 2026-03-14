@@ -2,7 +2,7 @@
 
 ## Quick Start
 ```
-chrome_start(url: 'http://localhost:3000', profile: 'bugscope')
+chrome_start(url: 'http://localhost:3000', profile: 'krometrail')
 # ... interact in the browser ...
 chrome_mark(label: 'submitted form')
 chrome_stop()
@@ -14,9 +14,9 @@ session_list()
 ### Isolated instance (recommended)
 Always pass `profile` to avoid conflicting with your regular Chrome:
 ```
-chrome_start(profile: 'bugscope', url: 'http://localhost:3000')
+chrome_start(profile: 'krometrail', url: 'http://localhost:3000')
 ```
-Creates a separate Chrome with its own user-data-dir under `~/.bugscope/chrome-profiles/bugscope`. Independent cookies, storage, login state.
+Creates a separate Chrome with its own user-data-dir under `~/.krometrail/chrome-profiles/krometrail`. Independent cookies, storage, login state.
 
 ### Attach to existing Chrome
 Chrome must have been started with `--remote-debugging-port`:
@@ -35,7 +35,7 @@ chrome_start(attach: true)
 Likely cause: Chrome is already running without the debug port.
 
 Fix options (returned in the error message):
-1. `chrome_start(profile: 'bugscope')` — isolated instance, no conflict (recommended)
+1. `chrome_start(profile: 'krometrail')` — isolated instance, no conflict (recommended)
 2. `pkill -f chrome && google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/...`
 3. Start Chrome with debug port, then `chrome_start(attach: true)`
 

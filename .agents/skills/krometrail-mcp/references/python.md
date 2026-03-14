@@ -3,7 +3,7 @@
 ## Prerequisites
 ```sh
 pip install debugpy
-bugscope doctor  # verifies debugpy is available
+krometrail doctor  # verifies debugpy is available
 ```
 
 ## Launch

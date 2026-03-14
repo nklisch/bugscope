@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const KDA_MARKER = join(homedir(), ".bugscope", "adapters", "kotlin-debug", "lib", "adapter-0.4.4.jar");
+const KDA_MARKER = join(homedir(), ".krometrail", "adapters", "kotlin-debug", "lib", "adapter-0.4.4.jar");
 
 /**
  * Check if kotlinc, JDK 17+, and the kotlin-debug-adapter are all available.

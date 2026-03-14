@@ -768,7 +768,7 @@ if (browserQueryEngine) {
 }
 ```
 
-The `QueryEngine` is instantiated when the MCP server starts, pointing at `~/.bugscope/browser/index.db`. If the database doesn't exist (user hasn't used Browser Lens yet), the tools are still registered but return "No recordings found."
+The `QueryEngine` is instantiated when the MCP server starts, pointing at `~/.krometrail/browser/index.db`. If the database doesn't exist (user hasn't used Browser Lens yet), the tools are still registered but return "No recordings found."
 
 **Tests:** E2E tests via MCP client. Pre-populate a test database with fixture data, call each tool, verify response format.
 
@@ -781,13 +781,13 @@ The `QueryEngine` is instantiated when the MCP server starts, pointing at `~/.bu
 Add investigation subcommands to the existing browser CLI.
 
 ```typescript
-// bugscope browser sessions [--has-markers] [--has-errors] [--after <date>]
-// bugscope browser overview <session_id> [--around-marker <id>] [--budget <tokens>]
-// bugscope browser search <session_id> --query "validation error"
-// bugscope browser search <session_id> --status-codes 422,500
-// bugscope browser inspect <session_id> --marker <id> --include network_body,console_context
-// bugscope browser inspect <session_id> --event <id>
-// bugscope browser inspect <session_id> --timestamp "14:35:22"
+// krometrail browser sessions [--has-markers] [--has-errors] [--after <date>]
+// krometrail browser overview <session_id> [--around-marker <id>] [--budget <tokens>]
+// krometrail browser search <session_id> --query "validation error"
+// krometrail browser search <session_id> --status-codes 422,500
+// krometrail browser inspect <session_id> --marker <id> --include network_body,console_context
+// krometrail browser inspect <session_id> --event <id>
+// krometrail browser inspect <session_id> --timestamp "14:35:22"
 ```
 
 Each CLI command:
@@ -959,10 +959,10 @@ bun run test tests/e2e/mcp/browser-investigation.test.ts
 
 # Manual verification
 # (Assumes Phase 9+10 are complete with a recorded session)
-bugscope browser sessions --has-markers
-bugscope browser overview <session_id> --around-marker M1
-bugscope browser search <session_id> --query "validation error"
-bugscope browser inspect <session_id> --marker M1 --include network_body,console_context
+krometrail browser sessions --has-markers
+krometrail browser overview <session_id> --around-marker M1
+krometrail browser search <session_id> --query "validation error"
+krometrail browser inspect <session_id> --marker M1 --include network_body,console_context
 ```
 
 **Done when:** All 4 MCP tools are registered, produce token-budgeted output, and the CLI mirrors the tool surface. An agent can list sessions, get an overview, search for errors, and inspect specific moments with full network body evidence.

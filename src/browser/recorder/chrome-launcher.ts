@@ -54,7 +54,7 @@ export class ChromeLauncher {
 		const args = [`--remote-debugging-port=${port}`, "--no-first-run", "--no-default-browser-check"];
 
 		if (profile) {
-			args.push(`--user-data-dir=${resolve(homedir(), ".bugscope", "chrome-profiles", profile)}`);
+			args.push(`--user-data-dir=${resolve(homedir(), ".krometrail", "chrome-profiles", profile)}`);
 		}
 
 		if (url) {

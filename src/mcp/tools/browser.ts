@@ -62,7 +62,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 		"chrome_start",
 		"Launch Chrome and start recording browser events (network, console, user input). " +
 			"By default, launches a new isolated Chrome instance — no conflict with an existing Chrome window. " +
-			"Use profile='bugscope' (or any name) to get a fully isolated Chrome that won't collide with your regular browser. " +
+			"Use profile='krometrail' (or any name) to get a fully isolated Chrome that won't collide with your regular browser. " +
 			"Returns a session info summary once Chrome is ready. " +
 			"Use chrome_status to check recording state, chrome_mark to place markers, chrome_stop to end the session. " +
 			"After stopping, use session_list and session_overview to investigate what was recorded. " +
@@ -74,9 +74,9 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				.string()
 				.optional()
 				.describe(
-					"Chrome profile name — creates an isolated user-data-dir under ~/.bugscope/chrome-profiles/<name>. " +
+					"Chrome profile name — creates an isolated user-data-dir under ~/.krometrail/chrome-profiles/<name>. " +
 						"Each profile has its own cookies, storage, and login state. " +
-						"Use this to avoid conflicts with an already-running Chrome. Example: 'bugscope'",
+						"Use this to avoid conflicts with an already-running Chrome. Example: 'krometrail'",
 				),
 			attach: z
 				.boolean()
@@ -116,10 +116,10 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 						`Error: ${msg}\n\n` +
 							"Likely cause: Chrome is already running without remote debugging enabled.\n\n" +
 							"Fix option 1 — launch an isolated Chrome instance (recommended):\n" +
-							"  chrome_start(profile: 'bugscope', url: '<your-url>')\n" +
+							"  chrome_start(profile: 'krometrail', url: '<your-url>')\n" +
 							"  This creates a separate Chrome profile so existing Chrome is not affected.\n\n" +
 							"Fix option 2 — manually start Chrome with debugging enabled, then attach:\n" +
-							"  google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/bugscope-chrome\n" +
+							"  google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/krometrail-chrome\n" +
 							"  Then: chrome_start(attach: true)\n\n" +
 							"Fix option 3 — kill existing Chrome and retry:\n" +
 							"  pkill -f chrome  (or pkill -f chromium)\n" +

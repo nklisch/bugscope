@@ -1,10 +1,10 @@
 # With vs Without Debugging Tools — Comparison Runs
 
-Extension to the [agent test harness](agent-test-harness.md). Every scenario runs in three modes per agent, producing results that show the value of each bugscope interface.
+Extension to the [agent test harness](agent-test-harness.md). Every scenario runs in three modes per agent, producing results that show the value of each krometrail interface.
 
 ## Motivation
 
-The harness today answers "can an agent fix this bug using bugscope?" but not "would it have fixed it anyway?" Without a baseline, a 100% pass rate could mean bugscope is essential or that the bugs are too easy. Multi-mode runs answer the real question: **which bugs does runtime debugging actually help with, and does the interface matter?**
+The harness today answers "can an agent fix this bug using krometrail?" but not "would it have fixed it anyway?" Without a baseline, a 100% pass rate could mean krometrail is essential or that the bugs are too easy. Multi-mode runs answer the real question: **which bugs does runtime debugging actually help with, and does the interface matter?**
 
 This also directly supports [showcase narrative #6](showcase-narratives.md) (tool usage patterns) and the "difficulty progression" story — showing that easy bugs don't need debugging tools but hard ones do.
 
@@ -20,20 +20,20 @@ Each scenario x agent combination produces three runs:
 
 | Mode | MCP Config | Skill File | Label |
 |------|-----------|------------|-------|
-| **mcp** | bugscope MCP server configured | yes | `mcp` |
+| **mcp** | krometrail MCP server configured | yes | `mcp` |
 | **cli** | none | yes (teaches CLI usage) | `cli` |
 | **baseline** | none | none | `baseline` |
 
 - **mcp** — agent uses `debug_*` MCP tools (Claude Code's primary path)
-- **cli** — agent calls `bugscope` CLI via bash (Codex's primary path, also works with Claude Code)
-- **baseline** — no bugscope at all; agent relies on code reading, test output, and shell
+- **cli** — agent calls `krometrail` CLI via bash (Codex's primary path, also works with Claude Code)
+- **baseline** — no krometrail at all; agent relies on code reading, test output, and shell
 
 The prompt is identical across all three modes. The skill file (which teaches debugging strategy) is only injected in `mcp` and `cli` modes.
 
 ### Prompt Rules
 
 The prompt must work for all modes. This means:
-- **No mention of bugscope or debugging tools** (already a rule in [scenario guidelines](scenario-guidelines.md))
+- **No mention of krometrail or debugging tools** (already a rule in [scenario guidelines](scenario-guidelines.md))
 - The agent should be free to use whatever approach it wants — reading code, running tests, adding print statements, or using debug tools if available
 - The prompt describes the symptom and points to the relevant files, nothing more
 
@@ -70,7 +70,7 @@ What each mode controls:
 interface AgentRunOptions {
   // ... existing fields ...
 
-  /** Run mode — controls what bugscope interfaces are available */
+  /** Run mode — controls what krometrail interfaces are available */
   mode: "mcp" | "cli" | "baseline";
 }
 ```
@@ -201,7 +201,7 @@ This triples the number of runs vs single-mode. Mitigations:
 
 - **A/B test statistical rigor.** LLM runs are non-deterministic. A single run per mode is directional, not statistically significant. For publishable claims, run the suite multiple times and aggregate across `index.json`.
 
-- **Test different tool subsets.** We don't test "bugscope minus eval" or "only breakpoints, no stepping." The comparison is at the interface level: MCP vs CLI vs nothing.
+- **Test different tool subsets.** We don't test "krometrail minus eval" or "only breakpoints, no stepping." The comparison is at the interface level: MCP vs CLI vs nothing.
 
 - **Control for agent strategy.** An agent without debug tools might still succeed by adding print statements, reading tracebacks carefully, or making educated guesses. That's fine — it's what we're measuring. The question is outcome, not method.
 

@@ -641,8 +641,8 @@ Add `unwatchCommand` to the CLI command tree in `src/cli/index.ts`.
 **Acceptance Criteria**:
 - [ ] `session.unwatch` RPC method defined with Zod schema
 - [ ] `StatusResultPayload` includes token stats, action count, elapsed time
-- [ ] `bugscope unwatch "expr"` removes a watch expression
-- [ ] `bugscope status` shows token stats
+- [ ] `krometrail unwatch "expr"` removes a watch expression
+- [ ] `krometrail status` shows token stats
 - [ ] Daemon server dispatches `session.unwatch` correctly
 
 ---

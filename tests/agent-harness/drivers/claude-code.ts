@@ -193,7 +193,7 @@ const claudeCode: AgentDriver = {
 						for (const block of msg.content ?? []) {
 							if (block.type === "tool_result" && block.tool_use_id) {
 								const toolName = pendingCalls.get(block.tool_use_id);
-								if (toolName?.startsWith("mcp__bugscope__")) {
+								if (toolName?.startsWith("mcp__krometrail__")) {
 									pendingCalls.delete(block.tool_use_id);
 									let output = "";
 									if (typeof block.content === "string") {

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - JDK 17+ (`javac` available): [Adoptium](https://adoptium.net)
-- java-debug-adapter v0.53.0 (auto-downloaded to `~/.bugscope/adapters/java-debug/` on first use)
+- java-debug-adapter v0.53.0 (auto-downloaded to `~/.krometrail/adapters/java-debug/` on first use)
 - Verify: `javac -version`
 
 ## Launch examples

@@ -1,6 +1,6 @@
 # Svelte Observer — Specification
 
-This document defines the formal contracts, detection criteria, event schemas, and bug pattern definitions for Svelte framework state observation in Bugscope. Svelte is a Tier 3 target.
+This document defines the formal contracts, detection criteria, event schemas, and bug pattern definitions for Svelte framework state observation in Krometrail. Svelte is a Tier 3 target.
 
 **Status summary:** Svelte 4 dev-mode observation is implementable today. Svelte 5 devtools hooks do not exist yet (sveltejs/svelte#11389). Production builds strip the APIs we depend on.
 
@@ -68,7 +68,7 @@ componentInstance.$inject_state({ count: 5 });
 
 - Also dev-mode only.
 - Calls `$$invalidate` internally for each changed key.
-- Useful for debugging but Bugscope treats this as read-only observation (passive observation principle).
+- Useful for debugging but Krometrail treats this as read-only observation (passive observation principle).
 
 ### `$$.ctx` Array
 

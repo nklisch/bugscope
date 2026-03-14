@@ -3,7 +3,7 @@
 ## Prerequisites
 ```sh
 go install github.com/go-delve/delve/cmd/dlv@latest
-bugscope doctor  # verify
+krometrail doctor  # verify
 ```
 
 ## Launch

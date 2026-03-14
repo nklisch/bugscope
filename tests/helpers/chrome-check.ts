@@ -51,7 +51,7 @@ export async function launchTestChrome(): Promise<{ port: number; cleanup: () =>
 	const { tmpdir } = await import("node:os");
 	const { join } = await import("node:path");
 
-	const profileDir = mkdtempSync(join(tmpdir(), "bugscope-test-chrome-"));
+	const profileDir = mkdtempSync(join(tmpdir(), "krometrail-test-chrome-"));
 
 	const proc = spawn(
 		binary,

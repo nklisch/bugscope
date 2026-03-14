@@ -27,7 +27,7 @@ function makeEvent(id: string, type: string, summary: string, ts: number, data: 
 }
 
 beforeEach(() => {
-	tmpDir = resolve(tmpdir(), "bugscope-filter-test-" + crypto.randomUUID());
+	tmpDir = resolve(tmpdir(), "krometrail-filter-test-" + crypto.randomUUID());
 	recordingDir = resolve(tmpDir, "recordings", SESSION_ID);
 	mkdirSync(resolve(recordingDir, "network"), { recursive: true });
 

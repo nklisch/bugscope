@@ -1,17 +1,17 @@
 ---
-name: bugscope
-description: Use when a test fails and reading the code isn't enough to find why. bugscope gives you a live debugger: set breakpoints, inspect variables, evaluate expressions, and step through execution in Python, JavaScript/TypeScript, Go, Rust, C/C++, and Java. Reach for it when you've read the code and still can't tell what value a variable has at runtime, when the bug is in logic you can't trace statically (closures, async, pipelines, type coercions), or when you need to verify a hypothesis before editing.
+name: krometrail
+description: Use when a test fails and reading the code isn't enough to find why. krometrail gives you a live debugger: set breakpoints, inspect variables, evaluate expressions, and step through execution in Python, JavaScript/TypeScript, Go, Rust, C/C++, and Java. Reach for it when you've read the code and still can't tell what value a variable has at runtime, when the bug is in logic you can't trace statically (closures, async, pipelines, type coercions), or when you need to verify a hypothesis before editing.
 license: MIT
 compatibility: Requires debugger binaries for the target language (e.g., debugpy for Python, dlv for Go). Works with any MCP-compatible agent or via CLI.
 metadata:
-  author: bugscope
+  author: krometrail
   version: "0.1"
-allowed-tools: Bash(bugscope:*)
+allowed-tools: Bash(krometrail:*)
 ---
 
-# Bugscope — Runtime Debugging
+# Krometrail — Runtime Debugging
 
-Use bugscope when you need to inspect runtime state to diagnose a bug — especially when static code reading and test output aren't enough to identify the root cause.
+Use krometrail when you need to inspect runtime state to diagnose a bug — especially when static code reading and test output aren't enough to identify the root cause.
 
 ## When to use
 
@@ -22,7 +22,7 @@ Use bugscope when you need to inspect runtime state to diagnose a bug — especi
 
 ## MCP tools
 
-If bugscope is registered as an MCP server, use these tools directly:
+If krometrail is registered as an MCP server, use these tools directly:
 
 | Tool | Purpose |
 |------|---------|
@@ -61,15 +61,15 @@ debug_stop({ session_id: "..." })
 
 ## CLI commands
 
-If using bugscope via CLI:
+If using krometrail via CLI:
 
 ```bash
-bugscope launch "python3 -m pytest test_discount.py -x" --break discount.py:12
-bugscope eval "rate"
-bugscope vars
-bugscope step over
-bugscope continue
-bugscope stop
+krometrail launch "python3 -m pytest test_discount.py -x" --break discount.py:12
+krometrail eval "rate"
+krometrail vars
+krometrail step over
+krometrail continue
+krometrail stop
 ```
 
 See [references/cli.md](references/cli.md) for the full command reference.

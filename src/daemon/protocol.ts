@@ -48,7 +48,7 @@ export const RPC_METHOD_NOT_FOUND = -32601;
 export const RPC_INVALID_PARAMS = -32602;
 export const RPC_INTERNAL_ERROR = -32603;
 
-// Application error codes (bugscope specific)
+// Application error codes (krometrail specific)
 export const RPC_SESSION_NOT_FOUND = -32000;
 export const RPC_SESSION_STATE_ERROR = -32001;
 export const RPC_SESSION_LIMIT_ERROR = -32002;
@@ -381,17 +381,17 @@ export interface BreakpointsListPayload {
 
 /**
  * Resolve the daemon socket path.
- * Uses $XDG_RUNTIME_DIR/bugscope.sock if available,
- * falls back to ~/.bugscope/bugscope.sock.
+ * Uses $XDG_RUNTIME_DIR/krometrail.sock if available,
+ * falls back to ~/.krometrail/krometrail.sock.
  */
 export function getDaemonSocketPath(): string {
 	const xdgRuntime = process.env.XDG_RUNTIME_DIR;
 	if (xdgRuntime) {
-		return join(xdgRuntime, "bugscope.sock");
+		return join(xdgRuntime, "krometrail.sock");
 	}
-	const dir = join(homedir(), ".bugscope");
+	const dir = join(homedir(), ".krometrail");
 	mkdirSync(dir, { recursive: true });
-	return join(dir, "bugscope.sock");
+	return join(dir, "krometrail.sock");
 }
 
 /**

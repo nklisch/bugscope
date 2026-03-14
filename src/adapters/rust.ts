@@ -186,7 +186,7 @@ export class RustAdapter implements DebugAdapter {
 			return {
 				satisfied: false,
 				missing: ["codelldb"],
-				installHint: `Run: bugscope doctor --install-codelldb, or download from https://github.com/vadimcn/codelldb/releases/v${CODELLDB_VERSION}`,
+				installHint: `Run: krometrail doctor --install-codelldb, or download from https://github.com/vadimcn/codelldb/releases/v${CODELLDB_VERSION}`,
 			};
 		}
 

@@ -1,6 +1,6 @@
 # Solid Internals — Debug Interface Reference
 
-This document describes the internal debugging surfaces in SolidJS that Bugscope hooks into for state observation. These are not stable public APIs — they exist for devtools and may change between minor versions.
+This document describes the internal debugging surfaces in SolidJS that Krometrail hooks into for state observation. These are not stable public APIs — they exist for devtools and may change between minor versions.
 
 ---
 
@@ -65,10 +65,10 @@ For Vite-based Solid apps (the most common setup), a Vite plugin can expose `DEV
 // vite.config.ts
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
-// import bugscopePlugin from "bugscope/vite"; // hypothetical
+// import krometrailPlugin from "krometrail/vite"; // hypothetical
 
 export default defineConfig({
-  plugins: [solidPlugin(), /* bugscopePlugin() */],
+  plugins: [solidPlugin(), /* krometrailPlugin() */],
 });
 ```
 
@@ -410,7 +410,7 @@ A standalone logging utility that dumps reactive graph state to the console. Use
 
 ### How Our Approach Differs
 
-| Aspect | solid-devtools | Bugscope |
+| Aspect | solid-devtools | Krometrail |
 |--------|---------------|------------|
 | Injection | Extension content script | CDP `addScriptToEvaluateOnNewDocument` |
 | Communication | Chrome extension messaging | `console.debug("__BL__", ...)` via CDP |

@@ -1,6 +1,6 @@
-# Using Bugscope with Cursor and Windsurf
+# Using Krometrail with Cursor and Windsurf
 
-Both Cursor and Windsurf support MCP servers. Bugscope integrates via MCP to give the AI runtime debugging.
+Both Cursor and Windsurf support MCP servers. Krometrail integrates via MCP to give the AI runtime debugging.
 
 ## Cursor Setup
 
@@ -9,9 +9,9 @@ Add to your Cursor MCP configuration at `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "bugscope": {
+    "krometrail": {
       "command": "npx",
-      "args": ["bugscope", "mcp"]
+      "args": ["krometrail", "mcp"]
     }
   }
 }
@@ -22,8 +22,8 @@ Or with a compiled binary:
 ```json
 {
   "mcpServers": {
-    "bugscope": {
-      "command": "/usr/local/bin/bugscope",
+    "krometrail": {
+      "command": "/usr/local/bin/krometrail",
       "args": ["mcp"]
     }
   }
@@ -39,9 +39,9 @@ Add to your Windsurf MCP configuration at `~/.windsurf/mcp_config.json` (or via 
 ```json
 {
   "mcpServers": {
-    "bugscope": {
+    "krometrail": {
       "command": "npx",
-      "args": ["bugscope", "mcp"],
+      "args": ["krometrail", "mcp"],
       "env": {}
     }
   }
@@ -67,28 +67,28 @@ For team setups, add a `.mcp.json` file to your project root:
 ```json
 {
   "mcpServers": {
-    "bugscope": {
+    "krometrail": {
       "command": "npx",
-      "args": ["bugscope", "mcp"]
+      "args": ["krometrail", "mcp"]
     }
   }
 }
 ```
 
-This lets all team members use bugscope without individual configuration.
+This lets all team members use krometrail without individual configuration.
 
 ## Known Limitations
 
-- **MCP transport**: Bugscope uses stdio transport, which is supported by both Cursor and Windsurf.
+- **MCP transport**: Krometrail uses stdio transport, which is supported by both Cursor and Windsurf.
 - **Session persistence**: Debug sessions persist as long as the MCP server process runs. If Cursor/Windsurf restarts the MCP server, active sessions are lost.
-- **Port allocation**: Bugscope allocates local ports for debugger connections. Ensure ports 4000–5000 are not blocked by firewall rules.
+- **Port allocation**: Krometrail allocates local ports for debugger connections. Ensure ports 4000–5000 are not blocked by firewall rules.
 
 ## Checking Adapter Status
 
 In a terminal:
 
 ```bash
-bugscope doctor
+krometrail doctor
 ```
 
 This confirms which language debuggers are installed (Python, Node.js, Go, Rust, Java, C/C++).

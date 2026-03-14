@@ -1,8 +1,8 @@
-# Bugscope
+# Krometrail
 
 **Browser observation and runtime debugging for AI coding agents.**
 
-Bugscope is an MCP server and CLI that gives AI coding agents eyes into running applications. It records browser activity — network requests, console output, DOM mutations, framework state, storage changes, and screenshots — then lets agents search, inspect, and diff that recorded session to diagnose bugs. It also bridges the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) for breakpoint-level debugging across 6 languages.
+Krometrail is an MCP server and CLI that gives AI coding agents eyes into running applications. It records browser activity — network requests, console output, DOM mutations, framework state, storage changes, and screenshots — then lets agents search, inspect, and diff that recorded session to diagnose bugs. It also bridges the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) for breakpoint-level debugging across 6 languages.
 
 ## Browser Observation
 
@@ -26,9 +26,9 @@ Add to your agent's MCP config (e.g. Claude Code `settings.json`):
 ```json
 {
   "mcpServers": {
-    "bugscope": {
+    "krometrail": {
       "command": "bunx",
-      "args": ["bugscope", "--mcp"]
+      "args": ["krometrail", "--mcp"]
     }
   }
 }
@@ -39,36 +39,36 @@ Start recording a browser session:
 ```bash
 # MCP: chrome_start({ url: "http://localhost:3000", framework_state: true })
 # CLI:
-bugscope chrome start http://localhost:3000 --framework-state
+krometrail chrome start http://localhost:3000 --framework-state
 
 # Place markers at significant moments
-bugscope chrome mark "submitted form"
+krometrail chrome mark "submitted form"
 
 # Stop recording
-bugscope chrome stop
+krometrail chrome stop
 ```
 
 Investigate what happened:
 
 ```bash
 # List recorded sessions
-bugscope session list --has-errors
+krometrail session list --has-errors
 
 # Get a structured overview
-bugscope session overview <session-id>
+krometrail session overview <session-id>
 
 # Search for specific events
-bugscope session search <session-id> --event-types network_response --status-codes 500
-bugscope session search <session-id> --framework react --pattern stale_closure
+krometrail session search <session-id> --event-types network_response --status-codes 500
+krometrail session search <session-id> --framework react --pattern stale_closure
 
 # Deep-dive into a specific event
-bugscope session inspect <session-id> --event-id <id>
+krometrail session inspect <session-id> --event-id <id>
 
 # Compare two moments (what changed between page load and error?)
-bugscope session diff <session-id> --from <timestamp> --to <timestamp>
+krometrail session diff <session-id> --from <timestamp> --to <timestamp>
 
 # Generate reproduction steps or test scaffolds
-bugscope session replay-context <session-id> --format playwright
+krometrail session replay-context <session-id> --format playwright
 ```
 
 ### Browser MCP Tools
@@ -88,7 +88,7 @@ bugscope session replay-context <session-id> --format playwright
 
 ### Framework State Observation
 
-When enabled, Bugscope hooks into React DevTools and Vue Devtools to track:
+When enabled, Krometrail hooks into React DevTools and Vue Devtools to track:
 
 - Component mount/update/unmount lifecycles
 - State and prop changes with before/after diffs
@@ -120,12 +120,12 @@ Set breakpoints, step through code, and inspect variables across 6 languages via
 ### Debug CLI
 
 ```bash
-bugscope launch "python app.py" --break order.py:147
-bugscope step over
-bugscope eval "discount"
-bugscope vars --scope local
-bugscope continue
-bugscope stop
+krometrail launch "python app.py" --break order.py:147
+krometrail step over
+krometrail eval "discount"
+krometrail vars --scope local
+krometrail continue
+krometrail stop
 ```
 
 ### Debug MCP Tools
@@ -168,7 +168,7 @@ Install the agent skill for CLI-based workflows. Install via [skilltap](https://
 
 ```bash
 skilltap install ./skill  # Install via skilltap
-bugscope skill            # Or print skill to stdout
+krometrail skill            # Or print skill to stdout
 ```
 
 ## Development
@@ -191,11 +191,11 @@ bun run test:e2e         # E2E tests (full MCP path)
 bun run test:agent       # Agent harness scenarios
 ```
 
-Integration and E2E tests require debuggers to be installed. Run `bugscope doctor` to check availability. Tests skip cleanly per-adapter when a debugger is not found.
+Integration and E2E tests require debuggers to be installed. Run `krometrail doctor` to check availability. Tests skip cleanly per-adapter when a debugger is not found.
 
 ### Agent Harness
 
-The agent harness (`tests/agent-harness/`) is a scenario-based test suite for evaluating how well agents debug with Bugscope. It contains 35 scenarios across 3 languages at 5 difficulty levels:
+The agent harness (`tests/agent-harness/`) is a scenario-based test suite for evaluating how well agents debug with Krometrail. It contains 35 scenarios across 3 languages at 5 difficulty levels:
 
 - **Python** — 12 scenarios (closure bugs, mutation errors, float accumulation, deep pipelines)
 - **Node.js** — 11 scenarios (async races, event loop ordering, regex state, `this` binding)

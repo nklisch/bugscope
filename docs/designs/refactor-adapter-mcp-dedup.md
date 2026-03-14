@@ -36,7 +36,7 @@ The adapter layer (`src/adapters/`) contains significant code duplication across
 **Risk**: Low
 **Files**: `src/adapters/helpers.ts`, `src/adapters/java.ts`, `src/adapters/rust.ts`, `src/adapters/kotlin.ts`, `src/adapters/js-debug-adapter.ts`, `src/adapters/netcoredbg.ts`
 
-**Current State**: Each adapter that downloads a tool constructs `join(homedir(), ".bugscope", "adapters", <name>)` independently. Some also have `isCached()` helpers that check `existsSync` on the result.
+**Current State**: Each adapter that downloads a tool constructs `join(homedir(), ".krometrail", "adapters", <name>)` independently. Some also have `isCached()` helpers that check `existsSync` on the result.
 
 **Target State**: Shared helper:
 ```typescript

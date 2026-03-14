@@ -91,7 +91,7 @@ export class SwiftAdapter implements DebugAdapter {
 		if (parsed.type === "source") {
 			// Compile the source file with debug info
 			const src = resolvePath(cwd, parsed.path);
-			const outName = `bugscope-swift-${Date.now()}`;
+			const outName = `krometrail-swift-${Date.now()}`;
 			const outPath = join(tmpdir(), outName);
 
 			try {

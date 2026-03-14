@@ -173,7 +173,7 @@ export function listConfigurations(launchJson: LaunchJsonFile): Array<{ name: st
 }
 
 /**
- * VS Code debugger type → bugscope adapter id mapping.
+ * VS Code debugger type → krometrail adapter id mapping.
  */
 const TYPE_TO_LANGUAGE: Record<string, string> = {
 	python: "python",

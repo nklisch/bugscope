@@ -1,6 +1,6 @@
-# Bugscope Skill
+# Krometrail Skill
 
-The bugscope skill is defined in the [`skill/`](skill/) directory using the [Agent Skills specification](https://agentskills.io/specification).
+The krometrail skill is defined in the [`skill/`](skill/) directory using the [Agent Skills specification](https://agentskills.io/specification).
 
 ## Install
 

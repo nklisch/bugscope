@@ -534,7 +534,7 @@ export interface BrowserTestContext {
 	recorder: BrowserRecorder;
 	/** Temp directory for persistence data. */
 	dataDir: string;
-	/** MCP client connected to an bugscope server using the same data dir. */
+	/** MCP client connected to an krometrail server using the same data dir. */
 	mcpClient: Client;
 
 	/** Navigate Chrome to a URL. Waits for Page.loadEventFired. */
@@ -585,7 +585,7 @@ export async function setupBrowserTest(
 	const { port: cdpPort, process: chromeProc, profileDir } = await launchHeadlessChrome();
 
 	// 3. Create temp data dir for persistence
-	const dataDir = mkdtempSync(join(tmpdir(), "bugscope-browser-e2e-"));
+	const dataDir = mkdtempSync(join(tmpdir(), "krometrail-browser-e2e-"));
 	mkdirSync(join(dataDir, "recordings"), { recursive: true });
 
 	// 4. Create and start BrowserRecorder
@@ -703,7 +703,7 @@ export async function setupBrowserTest(
 				args: ["run", "src/mcp/index.ts"],
 				env: {
 					...process.env,
-					BUGSCOPE_BROWSER_DATA_DIR: dataDir,
+					KROMETRAIL_BROWSER_DATA_DIR: dataDir,
 				},
 			});
 			const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
@@ -747,7 +747,7 @@ async function launchHeadlessChrome(): Promise<{ port: number; process: ChildPro
 	if (!binary) throw new Error("Chrome not found");
 
 	const port = 9400 + Math.floor(Math.random() * 100);
-	const profileDir = mkdtempSync(join(tmpdir(), "bugscope-e2e-chrome-"));
+	const profileDir = mkdtempSync(join(tmpdir(), "krometrail-e2e-chrome-"));
 
 	const proc = spawn(
 		binary,
@@ -835,7 +835,7 @@ export { isChromeAvailable } from "./chrome-check.js";
 **Implementation Notes:**
 - The harness opens ephemeral WebSocket connections for CDP driving commands. This avoids conflicting with the recorder's persistent CDP session. Chrome CDP supports multiple WebSocket connections to the same target.
 - `finishRecording()` stops the recorder (flushing all persistence) then starts an MCP server as a subprocess. The MCP server reads the same SQLite database the recorder wrote to.
-- The MCP server needs to know where to find the browser data. We use an environment variable `BUGSCOPE_BROWSER_DATA_DIR` which the MCP `index.ts` will read (requires a small change — see Unit 3).
+- The MCP server needs to know where to find the browser data. We use an environment variable `KROMETRAIL_BROWSER_DATA_DIR` which the MCP `index.ts` will read (requires a small change — see Unit 3).
 - The cleanup function kills all processes and removes temp directories.
 
 **Acceptance Criteria:**
@@ -857,15 +857,15 @@ A small change to allow the e2e tests to override the browser data directory.
 
 ```typescript
 // Replace:
-const browserDataDir = resolve(homedir(), ".bugscope", "browser");
+const browserDataDir = resolve(homedir(), ".krometrail", "browser");
 
 // With:
-const browserDataDir = process.env.BUGSCOPE_BROWSER_DATA_DIR
-	?? resolve(homedir(), ".bugscope", "browser");
+const browserDataDir = process.env.KROMETRAIL_BROWSER_DATA_DIR
+	?? resolve(homedir(), ".krometrail", "browser");
 ```
 
 **Acceptance Criteria:**
-- [ ] MCP server uses `BUGSCOPE_BROWSER_DATA_DIR` env var when set
+- [ ] MCP server uses `KROMETRAIL_BROWSER_DATA_DIR` env var when set
 - [ ] Default behavior unchanged when env var is absent
 - [ ] Existing tests unaffected
 

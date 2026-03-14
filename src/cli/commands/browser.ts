@@ -42,7 +42,7 @@ export const browserStartCommand = defineCommand({
 		},
 		profile: {
 			type: "string",
-			description: "Chrome profile name (creates isolated user-data-dir under ~/.bugscope/chrome-profiles/)",
+			description: "Chrome profile name (creates isolated user-data-dir under ~/.krometrail/chrome-profiles/)",
 		},
 		attach: {
 			type: "boolean",
@@ -124,7 +124,7 @@ export const browserStatusCommand = defineCommand({
 		try {
 			const info = await client.call<BrowserSessionInfo | null>("browser.status", {});
 			if (!info) {
-				process.stdout.write("No active browser recording. Run `bugscope browser start` to begin.\n");
+				process.stdout.write("No active browser recording. Run `krometrail browser start` to begin.\n");
 				return;
 			}
 			process.stdout.write(`${formatSessionInfo(info)}\n`);

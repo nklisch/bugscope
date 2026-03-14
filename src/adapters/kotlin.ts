@@ -185,7 +185,7 @@ export class KotlinAdapter implements DebugAdapter {
 		// KDA uses projectRoot to discover compiled classes via a Gradle-like structure:
 		// projectRoot/build/classes/kotlin/main/<classfiles>
 		// It ignores `classPaths` from the launch request entirely.
-		const projectDir = join(tmpdir(), `bugscope-kda-${Date.now()}`);
+		const projectDir = join(tmpdir(), `krometrail-kda-${Date.now()}`);
 		const classOutputDir = join(projectDir, "build", "classes", "kotlin", "main");
 		mkdirSync(classOutputDir, { recursive: true });
 		this.projectDir = projectDir;

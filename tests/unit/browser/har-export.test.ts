@@ -71,7 +71,7 @@ describe("HARExporter", () => {
 
 		expect(har).toHaveProperty("log");
 		expect(har.log.version).toBe("1.2");
-		expect(har.log.creator.name).toBe("Bugscope Browser");
+		expect(har.log.creator.name).toBe("Krometrail Browser");
 		expect(Array.isArray(har.log.pages)).toBe(true);
 		expect(Array.isArray(har.log.entries)).toBe(true);
 	});

@@ -1,4 +1,4 @@
-# Bugscope
+# Krometrail
 
 MCP server + CLI that gives AI agents runtime debugging via the Debug Adapter Protocol.
 
@@ -45,7 +45,7 @@ After tagging a release, run the install script to update the local CLI binary:
 bash scripts/install.sh
 ```
 
-This builds `dist/bugscope` and copies it to `~/.local/bin/bugscope`. Run this whenever you push a release so your system has the latest CLI.
+This builds `dist/krometrail` and copies it to `~/.local/bin/krometrail`. Run this whenever you push a release so your system has the latest CLI.
 
 ## Stack
 
@@ -71,7 +71,7 @@ This builds `dist/bugscope` and copies it to `~/.local/bin/bugscope`. Run this w
 
 ## Agent Tracker
 - Project ID: 2d22a87e-8c46-4a52-895a-bd6558111116
-- Project Name: bugscope
+- Project Name: krometrail
 - Tracker URL: http://localhost:57328/mcp
 
 When you complete a meaningful unit of work, post an update using the

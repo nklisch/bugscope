@@ -187,14 +187,14 @@ describe("getDaemonSocketPath", () => {
 	it("uses XDG_RUNTIME_DIR when set", () => {
 		process.env.XDG_RUNTIME_DIR = "/run/user/1000";
 		const path = getDaemonSocketPath();
-		expect(path).toBe("/run/user/1000/bugscope.sock");
+		expect(path).toBe("/run/user/1000/krometrail.sock");
 	});
 
-	it("falls back to ~/.bugscope/bugscope.sock when XDG not set", () => {
+	it("falls back to ~/.krometrail/krometrail.sock when XDG not set", () => {
 		delete process.env.XDG_RUNTIME_DIR;
 		const path = getDaemonSocketPath();
-		expect(path).toContain(".bugscope");
-		expect(path).toContain("bugscope.sock");
+		expect(path).toContain(".krometrail");
+		expect(path).toContain("krometrail.sock");
 	});
 });
 

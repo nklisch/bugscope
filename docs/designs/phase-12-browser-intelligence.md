@@ -679,14 +679,14 @@ export const ALL_DETECTION_RULES = [
 
 ```bash
 # Diff two moments
-bugscope browser diff <session_id> --before "14:31:45" --after "14:35:22" --include form_state
+krometrail browser diff <session_id> --before "14:31:45" --after "14:35:22" --include form_state
 
 # Generate reproduction context
-bugscope browser replay-context <session_id> --around-marker M1 --format reproduction_steps
-bugscope browser replay-context <session_id> --around-marker M1 --format test_scaffold --framework playwright
+krometrail browser replay-context <session_id> --around-marker M1 --format reproduction_steps
+krometrail browser replay-context <session_id> --around-marker M1 --format test_scaffold --framework playwright
 
 # Export as HAR
-bugscope browser export <session_id> --format har --output session.har
+krometrail browser export <session_id> --format har --output session.har
 ```
 
 Implementation follows the same pattern as Phase 11 CLI commands: instantiate query engine, call the appropriate method, render output.
@@ -756,7 +756,7 @@ export class HARExporter {
 		return {
 			log: {
 				version: "1.2",
-				creator: { name: "Bugscope Browser", version: "1.0" },
+				creator: { name: "Krometrail Browser", version: "1.0" },
 				pages: [{
 					startedDateTime: new Date(session.startedAt).toISOString(),
 					id: session.id,
@@ -816,8 +816,8 @@ export class HARExporter {
 **CLI:**
 
 ```bash
-bugscope browser export <session_id> --format har --output session.har
-bugscope browser export <session_id> --format har  # outputs to stdout
+krometrail browser export <session_id> --format har --output session.har
+krometrail browser export <session_id> --format har  # outputs to stdout
 ```
 
 **Tests:** Generate a HAR file from fixture data, validate against the HAR 1.2 spec. Verify it opens in Chrome DevTools.
@@ -836,36 +836,36 @@ Shipped alongside the existing debug SKILL.md. Agents with filesystem access use
 When the user mentions a browser issue, bug, or unexpected behavior:
 
 1. **Find the session:**
-   `bugscope browser sessions --has-markers`
+   `krometrail browser sessions --has-markers`
    Look for sessions with markers near the reported time.
 
 2. **Get the overview:**
-   `bugscope browser overview <session_id> --around-marker M1`
+   `krometrail browser overview <session_id> --around-marker M1`
    Understand the navigation path, errors, and markers.
 
 3. **Search for errors:**
-   `bugscope browser search <session_id> --status-codes 400,422,500`
+   `krometrail browser search <session_id> --status-codes 400,422,500`
    Find network failures. Also try:
-   `bugscope browser search <session_id> --query "validation error"`
+   `krometrail browser search <session_id> --query "validation error"`
 
 4. **Inspect the problem moment:**
-   `bugscope browser inspect <session_id> --marker M1 --include network_body,console_context`
+   `krometrail browser inspect <session_id> --marker M1 --include network_body,console_context`
    Get full request/response bodies, console output, and surrounding events.
 
 5. **Compare before and after:**
-   `bugscope browser diff <session_id> --before <load_time> --after <error_time> --include form_state`
+   `krometrail browser diff <session_id> --before <load_time> --after <error_time> --include form_state`
    See what changed between page load and the error.
 
 6. **Generate reproduction artifacts:**
-   `bugscope browser replay-context <session_id> --around-marker M1 --format reproduction_steps`
+   `krometrail browser replay-context <session_id> --around-marker M1 --format reproduction_steps`
    Or generate a test:
-   `bugscope browser replay-context <session_id> --around-marker M1 --format test_scaffold --framework playwright`
+   `krometrail browser replay-context <session_id> --around-marker M1 --format test_scaffold --framework playwright`
 
 ### Tips
 - Markers placed by the user are labeled [user]. Auto-detected markers are [auto].
 - Use `--token-budget` to control response size (default: 3000 tokens for overview, 2000 for search).
 - Event IDs from search results can be used with `--event <id>` in inspect.
-- HAR export: `bugscope browser export <session_id> --format har --output debug.har`
+- HAR export: `krometrail browser export <session_id> --format har --output debug.har`
 ```
 
 ---
@@ -937,10 +937,10 @@ bun run test tests/unit/browser/auto-detect-advanced.test.ts
 bun run test tests/integration/browser/intelligence.test.ts
 
 # Manual verification
-bugscope browser diff <session_id> --before "14:31:45" --after "14:35:22"
-bugscope browser replay-context <session_id> --around-marker M1 --format reproduction_steps
-bugscope browser replay-context <session_id> --around-marker M1 --format test_scaffold --framework playwright
-bugscope browser export <session_id> --format har --output test.har
+krometrail browser diff <session_id> --before "14:31:45" --after "14:35:22"
+krometrail browser replay-context <session_id> --around-marker M1 --format reproduction_steps
+krometrail browser replay-context <session_id> --around-marker M1 --format test_scaffold --framework playwright
+krometrail browser export <session_id> --format har --output test.har
 # Open test.har in Chrome DevTools → Network → Import
 ```
 

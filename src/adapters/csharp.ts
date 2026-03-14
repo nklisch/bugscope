@@ -58,7 +58,7 @@ export class CSharpAdapter implements DebugAdapter {
 		} else if (parsed.type === "project") {
 			// dotnet run / project directory: build and find the DLL
 			const projectPath = resolvePath(cwd, parsed.path);
-			const outDir = join(tmpdir(), `bugscope-cs-${Date.now()}`);
+			const outDir = join(tmpdir(), `krometrail-cs-${Date.now()}`);
 			mkdirSync(outDir, { recursive: true });
 			try {
 				await execAsync(`dotnet build "${projectPath}" -o "${outDir}" --nologo -v quiet`, {
@@ -191,7 +191,7 @@ export class CSharpAdapter implements DebugAdapter {
  * Returns the path to the built DLL.
  */
 async function compileSingleCsFile(srcPath: string, env?: Record<string, string>): Promise<string> {
-	const projectDir = join(tmpdir(), `bugscope-cs-${Date.now()}`);
+	const projectDir = join(tmpdir(), `krometrail-cs-${Date.now()}`);
 	mkdirSync(projectDir, { recursive: true });
 
 	const projectName = basename(srcPath, ".cs");

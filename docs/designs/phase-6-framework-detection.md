@@ -783,7 +783,7 @@ export function listDetectors(): ReadonlyArray<FrameworkDetector> {
 **Acceptance Criteria:**
 - [ ] `LaunchParamsSchema` accepts `framework` string
 - [ ] CLI `--framework` flag passes through to daemon
-- [ ] `bugscope doctor` lists registered framework detectors
+- [ ] `krometrail doctor` lists registered framework detectors
 - [ ] `registerAllDetectors()` is called on daemon startup
 
 ---

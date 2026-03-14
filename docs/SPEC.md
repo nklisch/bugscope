@@ -1,4 +1,4 @@
-# Bugscope — Specification
+# Krometrail — Specification
 
 This document defines the formal contracts, types, and configuration parameters that implementors must conform to.
 
@@ -72,7 +72,7 @@ interface AttachConfig {
 | Java | java-debug-adapter | `.java` | `java -agentlib:jdwp=... -jar target.jar` |
 | C/C++ | cppdbg (GDB/LLDB) | `.c`, `.cpp`, `.h` | `gdb --interpreter=dap ./binary` |
 
-> **Prior art note:** Existing projects take different approaches to adapter management. mcp-debugger uses a dynamic adapter registry with runtime discovery, lazy loading, and adapter vendoring (downloading vscode-js-debug and CodeLLDB during install). AIDB builds adapters in CI and downloads them on first run. debugger-mcp uses Docker containers with pre-installed debuggers. dap-mcp uses a config-driven approach with Pydantic discriminated unions. Bugscope keeps the adapter boundary deliberately narrow — the contract below is all an adapter needs to implement. See [PRIOR_ART.md](PRIOR_ART.md).
+> **Prior art note:** Existing projects take different approaches to adapter management. mcp-debugger uses a dynamic adapter registry with runtime discovery, lazy loading, and adapter vendoring (downloading vscode-js-debug and CodeLLDB during install). AIDB builds adapters in CI and downloads them on first run. debugger-mcp uses Docker containers with pre-installed debuggers. dap-mcp uses a config-driven approach with Pydantic discriminated unions. Krometrail keeps the adapter boundary deliberately narrow — the contract below is all an adapter needs to implement. See [PRIOR_ART.md](PRIOR_ART.md).
 
 ### Adding a New Adapter
 

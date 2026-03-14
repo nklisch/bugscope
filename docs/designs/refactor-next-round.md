@@ -48,7 +48,7 @@ Most adapters reduce `checkPrerequisites()` to a one-liner. Adapters with multi-
 - Build passes
 - `bun run test:unit` passes
 - `bun run test:integration` passes
-- `bugscope doctor` still reports correct status for all installed adapters
+- `krometrail doctor` still reports correct status for all installed adapters
 
 ---
 
@@ -78,7 +78,7 @@ Or, simpler: add `.describe()` directly to the core schemas (they're harmless ou
 **Verification**:
 - Build passes
 - Unit tests pass
-- MCP tool descriptions still render correctly (check via `bugscope mcp` or MCP inspector)
+- MCP tool descriptions still render correctly (check via `krometrail mcp` or MCP inspector)
 
 ---
 

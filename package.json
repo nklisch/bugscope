@@ -1,10 +1,10 @@
 {
-	"name": "bugscope",
+	"name": "krometrail",
 	"version": "0.1.0",
 	"description": "Runtime debugging viewport for AI coding agents",
 	"type": "module",
 	"bin": {
-		"bugscope": "./src/cli/index.ts"
+		"krometrail": "./src/cli/index.ts"
 	},
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -14,12 +14,12 @@
 	],
 	"scripts": {
 		"dev": "bun run src/cli/index.ts",
-		"build": "bun build --compile src/cli/index.ts --outfile dist/bugscope",
-		"build:linux-x64": "bun build --compile --target=bun-linux-x64 src/cli/index.ts --outfile dist/bugscope-linux-x64",
-		"build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/cli/index.ts --outfile dist/bugscope-linux-arm64",
-		"build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/cli/index.ts --outfile dist/bugscope-darwin-x64",
-		"build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/cli/index.ts --outfile dist/bugscope-darwin-arm64",
-		"build:windows-x64": "bun build --compile --target=bun-windows-x64 src/cli/index.ts --outfile dist/bugscope-windows-x64.exe",
+		"build": "bun build --compile src/cli/index.ts --outfile dist/krometrail",
+		"build:linux-x64": "bun build --compile --target=bun-linux-x64 src/cli/index.ts --outfile dist/krometrail-linux-x64",
+		"build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/cli/index.ts --outfile dist/krometrail-linux-arm64",
+		"build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/cli/index.ts --outfile dist/krometrail-darwin-x64",
+		"build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/cli/index.ts --outfile dist/krometrail-darwin-arm64",
+		"build:windows-x64": "bun build --compile --target=bun-windows-x64 src/cli/index.ts --outfile dist/krometrail-windows-x64.exe",
 		"build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64",
 		"mcp": "bun run src/mcp/index.ts",
 		"test": "vitest run",

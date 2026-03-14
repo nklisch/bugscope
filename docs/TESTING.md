@@ -1,10 +1,10 @@
-# Bugscope — Testing Strategy
+# Krometrail — Testing Strategy
 
 ---
 
 ## Philosophy
 
-Bugscope has a unique property: **the entire dependency chain is local**. The debugee is a script we create, the debugger is a local process, and DAP is a local socket. There is no network, no external API, no cloud service. We own every piece of the stack from the MCP/CLI entry point down to the debugee process.
+Krometrail has a unique property: **the entire dependency chain is local**. The debugee is a script we create, the debugger is a local process, and DAP is a local socket. There is no network, no external API, no cloud service. We own every piece of the stack from the MCP/CLI entry point down to the debugee process.
 
 This means **e2e and integration tests should never mock anything**.
 

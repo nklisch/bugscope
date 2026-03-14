@@ -1,6 +1,6 @@
-# Troubleshooting Bugscope
+# Troubleshooting Krometrail
 
-Start with `bugscope doctor` to check your setup before diving into specific issues.
+Start with `krometrail doctor` to check your setup before diving into specific issues.
 
 ## Debugger Not Found
 
@@ -17,16 +17,16 @@ pip3 install debugpy
 
 ### Node.js: js-debug adapter download failed
 
-**Symptom**: `LaunchError: Failed to download js-debug adapter` or missing adapter at `~/.bugscope/adapters/js-debug/`
+**Symptom**: `LaunchError: Failed to download js-debug adapter` or missing adapter at `~/.krometrail/adapters/js-debug/`
 
 **Fix**:
 ```bash
 # Clear the cache and retry
-rm -rf ~/.bugscope/adapters/js-debug/
-bugscope launch "node app.js"  # triggers re-download
+rm -rf ~/.krometrail/adapters/js-debug/
+krometrail launch "node app.js"  # triggers re-download
 ```
 
-If the download fails due to network restrictions, download manually from the [js-debug releases](https://github.com/microsoft/vscode-js-debug/releases) and extract to `~/.bugscope/adapters/js-debug/`.
+If the download fails due to network restrictions, download manually from the [js-debug releases](https://github.com/microsoft/vscode-js-debug/releases) and extract to `~/.krometrail/adapters/js-debug/`.
 
 ### Go: dlv not found
 
@@ -43,8 +43,8 @@ go install github.com/go-delve/delve/cmd/dlv@latest
 
 **Fix**:
 ```bash
-rm -rf ~/.bugscope/adapters/codelldb/
-bugscope launch "cargo run"  # triggers re-download
+rm -rf ~/.krometrail/adapters/codelldb/
+krometrail launch "cargo run"  # triggers re-download
 ```
 
 Also ensure `cargo` is installed: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
@@ -102,7 +102,7 @@ GDB must be version 14+ for DAP support. Check with: `gdb --version`
 **Symptom**: `DAPConnectionError: ECONNREFUSED` or `LaunchError: Failed to connect to debugger on port XXXX`
 
 **Fix**:
-- Bugscope allocates random ports in the 4000–5000 range. If all are in use, wait and retry.
+- Krometrail allocates random ports in the 4000–5000 range. If all are in use, wait and retry.
 - Check for zombie debugger processes: `pkill -f debugpy` / `pkill -f dlv`
 
 ### Timeout on launch
@@ -110,8 +110,8 @@ GDB must be version 14+ for DAP support. Check with: `gdb --version`
 **Symptom**: `DAPTimeoutError: DAP request timed out`
 
 **Fix**:
-- Increase timeout with `--timeout` flag (in ms): `bugscope continue --timeout 30000`
-- Check if the debugger process started: `bugscope status`
+- Increase timeout with `--timeout` flag (in ms): `krometrail continue --timeout 30000`
+- Check if the debugger process started: `krometrail status`
 - For slow machines or large programs, the debugger may need more time to initialize
 
 ### Debugger process crashed
@@ -121,7 +121,7 @@ GDB must be version 14+ for DAP support. Check with: `gdb --version`
 **Fix**:
 - Check the stderr output in the error message for the root cause
 - Ensure the binary has debug symbols (compiled with `-g` for C/C++, not stripped)
-- Run `bugscope doctor` to verify the debugger version
+- Run `krometrail doctor` to verify the debugger version
 
 ---
 
@@ -132,7 +132,7 @@ GDB must be version 14+ for DAP support. Check with: `gdb --version`
 **Symptom**: Session continues without stopping, or breakpoint shows as unverified
 
 **Fix**:
-- Use absolute paths for breakpoints: `bugscope break /full/path/to/file.py:25`
+- Use absolute paths for breakpoints: `krometrail break /full/path/to/file.py:25`
 - Ensure the file path matches exactly — relative paths are resolved from the working directory
 - For pytest: the breakpoint file should be the test file, not the module being tested
 
@@ -178,10 +178,10 @@ GDB must be version 14+ for DAP support. Check with: `gdb --version`
 **Fix**:
 ```bash
 # List active sessions
-bugscope status
+krometrail status
 
 # Target a specific session
-bugscope eval "x" --session abc123
+krometrail eval "x" --session abc123
 ```
 
 ---
@@ -194,7 +194,7 @@ bugscope eval "x" --session abc123
 
 **Fix**: Override with `--framework`:
 ```bash
-bugscope launch "pytest tests/" --framework pytest
+krometrail launch "pytest tests/" --framework pytest
 ```
 
 ### Framework detection causes launch failure
@@ -203,7 +203,7 @@ bugscope launch "pytest tests/" --framework pytest
 
 **Fix**: Disable framework detection:
 ```bash
-bugscope launch "python app.py" --framework none
+krometrail launch "python app.py" --framework none
 ```
 
 Or for MCP: `debug_launch` with `framework: "none"`
@@ -227,7 +227,7 @@ The viewport is designed to be compact (~400 tokens). If it's growing:
 
 ### Context window exhaustion — use progressive compression
 
-Bugscope compresses older history automatically as sessions grow. The most recent stop always gets full detail. Older stops show summary information.
+Krometrail compresses older history automatically as sessions grow. The most recent stop always gets full detail. Older stops show summary information.
 
 ---
 
@@ -235,16 +235,16 @@ Bugscope compresses older history automatically as sessions grow. The most recen
 
 ### "Adapter not found for extension .xyz"
 
-No adapter is registered for this file extension. Check `bugscope doctor` for supported languages. Use `--language` to force a specific adapter.
+No adapter is registered for this file extension. Check `krometrail doctor` for supported languages. Use `--language` to force a specific adapter.
 
 ### "Session is in 'running' state, expected 'stopped'"
 
-Most debugging commands (eval, vars, step) require the program to be paused. Use `bugscope continue` first to run to a breakpoint.
+Most debugging commands (eval, vars, step) require the program to be paused. Use `krometrail continue` first to run to a breakpoint.
 
 ### "Failed to connect to debugger on port XXXX"
 
 The debugger process started but isn't listening yet. This usually means:
-1. The process crashed immediately — check `bugscope status` for stderr output
+1. The process crashed immediately — check `krometrail status` for stderr output
 2. The program requires input before the debugger port opens
 3. The port was blocked by a firewall
 
@@ -252,6 +252,6 @@ The debugger process started but isn't listening yet. This usually means:
 
 ## Getting Help
 
-1. Run `bugscope doctor` and include the output
-2. Check daemon logs: `cat ~/.bugscope/daemon.log`
-3. File an issue: https://github.com/anthropics/bugscope/issues
+1. Run `krometrail doctor` and include the output
+2. Check daemon logs: `cat ~/.krometrail/daemon.log`
+3. File an issue: https://github.com/anthropics/krometrail/issues

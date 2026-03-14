@@ -72,7 +72,7 @@ interface Report {
 	id: string;
 	date: string;
 	timestamp: string;
-	bugscopeVersion: string;
+	krometrailVersion: string;
 	summary: {
 		totalRuns: number;
 		passed: number;
@@ -89,7 +89,7 @@ interface IndexEntry {
 	id: string;
 	date: string;
 	timestamp: string;
-	bugscopeVersion: string;
+	krometrailVersion: string;
 	summary: Report["summary"];
 	agents: string[];
 	scenarios: string[];
@@ -265,7 +265,7 @@ function generateReport(results: RunResult[], suiteId: string): Report {
 		id: suiteId,
 		date: ts.slice(0, 10),
 		timestamp: ts,
-		bugscopeVersion: results[0]?.bugscopeVersion ?? "unknown",
+		krometrailVersion: results[0]?.krometrailVersion ?? "unknown",
 		summary: {
 			totalRuns: results.length,
 			passed,
@@ -300,7 +300,7 @@ async function generateIndex(tracesDir: string): Promise<Index> {
 				id: report.id,
 				date: report.date,
 				timestamp: report.timestamp,
-				bugscopeVersion: report.bugscopeVersion,
+				krometrailVersion: report.krometrailVersion,
 				summary: report.summary,
 				agents: report.agents.map((a) => a.name),
 				scenarios: report.scenarios.map((s) => s.name),
@@ -314,7 +314,7 @@ async function generateIndex(tracesDir: string): Promise<Index> {
 				id: dir,
 				date: report.date,
 				timestamp: report.timestamp,
-				bugscopeVersion: report.bugscopeVersion,
+				krometrailVersion: report.krometrailVersion,
 				summary: report.summary,
 				agents: report.agents.map((a) => a.name),
 				scenarios: report.scenarios.map((s) => s.name),
@@ -343,7 +343,7 @@ function fmtTools(toolCalls: Record<string, number>): string {
 	return Object.entries(toolCalls)
 		.sort((a, b) => b[1] - a[1])
 		.map(([tool, count]) => {
-			const short = tool.replace(/^mcp__bugscope__debug_/, "").replace(/^debug_/, "");
+			const short = tool.replace(/^mcp__krometrail__debug_/, "").replace(/^debug_/, "");
 			return count > 1 ? `${short}(${count})` : short;
 		})
 		.join(", ");
@@ -356,16 +356,16 @@ function hasModeData(results: ReportResult[]): boolean {
 
 function generateMarkdown(report: Report): string {
 	if (report.results.length === 0) {
-		return "# Bugscope — Agent Test Report\n\nNo results found.\n";
+		return "# Krometrail — Agent Test Report\n\nNo results found.\n";
 	}
 
 	const lines: string[] = [];
 	const withModes = hasModeData(report.results);
 
-	lines.push("# Bugscope — Agent Test Report");
+	lines.push("# Krometrail — Agent Test Report");
 	lines.push("");
 	lines.push(`**Date:** ${report.date}  `);
-	lines.push(`**Bugscope:** ${report.bugscopeVersion}  `);
+	lines.push(`**Krometrail:** ${report.krometrailVersion}  `);
 	lines.push(`**Pass rate:** ${Math.round(report.summary.passRate * 100)}% (${report.summary.passed}/${report.summary.totalRuns})`);
 	lines.push("");
 
@@ -464,7 +464,7 @@ function generateMarkdown(report: Report): string {
 		lines.push("| Tool | Total Calls | Avg per Run |");
 		lines.push("|------|-------------|-------------|");
 		for (const [tool, total] of [...toolTotals.entries()].sort((a, b) => b[1] - a[1])) {
-			const short = tool.replace(/^mcp__bugscope__/, "");
+			const short = tool.replace(/^mcp__krometrail__/, "");
 			lines.push(`| ${short} | ${total} | ${(total / Math.max(toolsResults.length, 1)).toFixed(1)} |`);
 		}
 		lines.push("");

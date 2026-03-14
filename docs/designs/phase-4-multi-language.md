@@ -163,7 +163,7 @@ export function parseNodeCommand(command: string): { script: string; args: strin
   **Decision**: Use the VS Code `js-debug` adapter (`@vscode/js-debug`). Download the DAP adapter binary on first use (similar to mcp-debugger's approach). The adapter binary is a self-contained Node script that speaks DAP over stdin/stdout.
 
   **Revised launch sequence**:
-  1. Ensure the `js-debug` DAP adapter is available (download if needed, cache in `~/.bugscope/adapters/`)
+  1. Ensure the `js-debug` DAP adapter is available (download if needed, cache in `~/.krometrail/adapters/`)
   2. Allocate port for the DAP adapter
   3. Spawn the DAP adapter: `node {dapAdapterPath} {dapPort}`
   4. Connect TCP to the DAP adapter port
@@ -189,14 +189,14 @@ export function parseNodeCommand(command: string): { script: string; args: strin
   Since Node's `--inspect-brk` does NOT speak DAP, and adding a CDP-to-DAP translation layer or vendoring `js-debug` both add significant complexity, the cleanest Phase 4 approach is:
 
   1. Allocate a free port for the DAP adapter
-  2. Use the `@anthropic-ai/bugscope-js-debug-adapter` package (or bundle the js-debug adapter) — **No, this doesn't exist.**
+  2. Use the `@anthropic-ai/krometrail-js-debug-adapter` package (or bundle the js-debug adapter) — **No, this doesn't exist.**
 
   Let me re-examine mcp-debugger's approach:
   - mcp-debugger downloads `vscode-js-debug` during `npm install` via a postinstall script
   - The downloaded package contains `js-debug-dap-node.js` which is a DAP server
 
   **Final decision for Phase 4**: Follow mcp-debugger's proven approach.
-  1. Download `js-debug` DAP adapter on first use (or via `bugscope doctor --install`)
+  1. Download `js-debug` DAP adapter on first use (or via `krometrail doctor --install`)
   2. Spawn the adapter: `node {path-to-js-debug-dap-node.js} --port={port}`
   3. Connect TCP to the DAP port
   4. Send DAP `launch` with `{ program, args, cwd }`
@@ -231,7 +231,7 @@ Manage downloading, caching, and locating the VS Code js-debug DAP adapter.
 /**
  * Get the path to the js-debug DAP adapter entry point.
  * Downloads the adapter if not already cached.
- * Cache location: ~/.bugscope/adapters/js-debug/
+ * Cache location: ~/.krometrail/adapters/js-debug/
  */
 export async function getJsDebugAdapterPath(): Promise<string>;
 
@@ -253,11 +253,11 @@ export function getAdapterCacheDir(): string;
 ```
 
 **Implementation Notes**:
-- Cache directory: `~/.bugscope/adapters/js-debug/`
+- Cache directory: `~/.krometrail/adapters/js-debug/`
 - Download source: VS Code marketplace VSIX for `ms-vscode.js-debug` (it's a zip containing the DAP adapter JS files)
 - The key file is `js-debug/src/dapDebugServer.js` — a self-contained DAP server that can be spawned with `node dapDebugServer.js {port}`
 - Version pinning: store a version file in the cache dir. If the version matches, skip download.
-- The download is triggered lazily on first `NodeAdapter.launch()` call, or eagerly via `bugscope doctor --install`
+- The download is triggered lazily on first `NodeAdapter.launch()` call, or eagerly via `krometrail doctor --install`
 - VSIX download URL: `https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-vscode/vsextensions/js-debug/{version}/vspackage`
 - Extract using Node's built-in `zlib` + tar handling (VSIX is a zip)
 
@@ -731,7 +731,7 @@ async function getDlvVersion(): Promise<string | undefined>;
 - Doctor command also needs to import and register the new adapters (currently it only registers `PythonAdapter`)
 
 **Acceptance Criteria**:
-- [ ] `bugscope doctor` shows Node.js and Go adapter status
+- [ ] `krometrail doctor` shows Node.js and Go adapter status
 - [ ] Version strings are correctly parsed and displayed
 - [ ] Missing adapters show install hints
 - [ ] MCP server registers all three adapters

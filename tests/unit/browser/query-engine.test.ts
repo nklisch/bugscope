@@ -29,7 +29,7 @@ function makeEvent(id: string, type: string, summary: string, ts: number, data: 
 }
 
 beforeEach(() => {
-	tmpDir = resolve(tmpdir(), "bugscope-qe-test-" + crypto.randomUUID());
+	tmpDir = resolve(tmpdir(), "krometrail-qe-test-" + crypto.randomUUID());
 	recordingDir = resolve(tmpDir, "recordings", SESSION_ID);
 	mkdirSync(resolve(recordingDir, "network"), { recursive: true });
 	mkdirSync(resolve(recordingDir, "screenshots"), { recursive: true });

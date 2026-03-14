@@ -22,13 +22,13 @@ export interface McpServerOptions {
  * Resolves when the transport disconnects.
  */
 export async function startMcpServer(options: McpServerOptions = {}): Promise<void> {
-	const toolGroups = options.toolGroups ?? parseToolGroups(process.env.BUGSCOPE_TOOLS);
+	const toolGroups = options.toolGroups ?? parseToolGroups(process.env.KROMETRAIL_TOOLS);
 
 	registerAllAdapters();
 	registerAllDetectors();
 
 	const server = new McpServer({
-		name: "bugscope",
+		name: "krometrail",
 		version: "0.1.0",
 	});
 
@@ -40,7 +40,7 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<vo
 
 	let browserDb: BrowserDatabase | undefined;
 	if (toolGroups.has("browser")) {
-		const browserDataDir = process.env.BUGSCOPE_BROWSER_DATA_DIR ?? resolve(homedir(), ".bugscope", "browser");
+		const browserDataDir = process.env.KROMETRAIL_BROWSER_DATA_DIR ?? resolve(homedir(), ".krometrail", "browser");
 		mkdirSync(browserDataDir, { recursive: true });
 		browserDb = new BrowserDatabase(resolve(browserDataDir, "index.db"));
 		const browserQueryEngine = new QueryEngine(browserDb, browserDataDir);

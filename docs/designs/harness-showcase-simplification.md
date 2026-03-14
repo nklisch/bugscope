@@ -2,7 +2,7 @@
 
 ## Problem
 
-The harness has accumulated 23 scenarios across six difficulty levels. The original goal was to measure whether an agent *could* debug — the level system was designed to find where agents fail. But the more immediate goal is different: **demonstrate that an agent *does* use the debugger** when bugscope is available.
+The harness has accumulated 23 scenarios across six difficulty levels. The original goal was to measure whether an agent *could* debug — the level system was designed to find where agents fail. But the more immediate goal is different: **demonstrate that an agent *does* use the debugger** when krometrail is available.
 
 With the level scheme and large scenario count, the harness is hard to run and the signal is diffuse. A 23-scenario suite that the agent can solve by reading code doesn't prove debugger usage — it just proves the agent can read.
 
@@ -84,7 +84,7 @@ After:
 
 The current prompts describe the symptom but make no mention of debugging strategy — by design, to avoid prescribing an approach. That made sense when we were evaluating whether an agent would reach for the debugger unprompted.
 
-The new goal is different: **we want to see the debugger being used**. We're showcasing what bugscope enables, not evaluating whether the agent discovers it. So prompts now explicitly invite debugger use.
+The new goal is different: **we want to see the debugger being used**. We're showcasing what krometrail enables, not evaluating whether the agent discovers it. So prompts now explicitly invite debugger use.
 
 ### Prompt template addition
 
@@ -164,7 +164,7 @@ If a debugger is available, use it — set a breakpoint at the relevant code and
 ## What This Does Not Change
 
 - Scenario directory structure (`src/`, `hidden/`, `prompt.md`, `scenario.json`, `CLAUDE.md`)
-- Skill delivery mechanism (`.claude/skills/bugscope/SKILL.md` in workspace)
+- Skill delivery mechanism (`.claude/skills/krometrail/SKILL.md` in workspace)
 - Visible test passes / hidden test is oracle — that contract is unchanged
 - The harness runner itself — no structural changes needed
 

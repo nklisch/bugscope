@@ -15,7 +15,7 @@ This phase also extracts a shared `token-budget.ts` utility from the existing co
 ### Storage Layout
 
 ```
-~/.bugscope/browser/                    # All browser data under bugscope
+~/.krometrail/browser/                    # All browser data under krometrail
 ├── index.db                               # SQLite — master index across all sessions
 ├── recordings/
 │   ├── 2026-03-07_14-30-22_acme-dashboard/
@@ -646,7 +646,7 @@ export const RetentionConfigSchema = z.object({
 
 - Default: delete recordings older than 7 days
 - Sessions with **user-placed** markers (not auto-detected) are exempt from automatic cleanup
-- `bugscope browser cleanup --force` overrides the exemption
+- `krometrail browser cleanup --force` overrides the exemption
 - Cleanup runs on recorder startup and can be triggered manually
 
 **Tests:** Unit tests with mock filesystem. Test age-based cleanup, marker exemption, force override.
@@ -867,15 +867,15 @@ bun run test tests/unit/core/token-budget.test.ts
 bun run test tests/integration/browser/
 
 # Manual verification
-bugscope browser start
+krometrail browser start
 # Browse, trigger a 422 error
-bugscope browser mark "form failed"
+krometrail browser mark "form failed"
 # Check storage:
-ls ~/.bugscope/browser/recordings/       # Session directory created
-cat ~/.bugscope/browser/recordings/*/events.jsonl | head  # Events persisted
-sqlite3 ~/.bugscope/browser/index.db "SELECT COUNT(*) FROM events"  # Indexed
-ls ~/.bugscope/browser/recordings/*/screenshots/  # Screenshot captured
-bugscope browser stop
+ls ~/.krometrail/browser/recordings/       # Session directory created
+cat ~/.krometrail/browser/recordings/*/events.jsonl | head  # Events persisted
+sqlite3 ~/.krometrail/browser/index.db "SELECT COUNT(*) FROM events"  # Indexed
+ls ~/.krometrail/browser/recordings/*/screenshots/  # Screenshot captured
+krometrail browser stop
 ```
 
 **Done when:** Markers trigger persistence to JSONL + SQLite, network bodies are extracted, screenshots are captured, and the `token-budget.ts` utility is extracted and tested.

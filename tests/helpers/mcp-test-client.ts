@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 /**
- * Create an MCP client connected to the bugscope server via stdio.
+ * Create an MCP client connected to the krometrail server via stdio.
  * Spawns the server as a child process for e2e testing.
  */
 export async function createTestClient(): Promise<{
@@ -14,7 +14,7 @@ export async function createTestClient(): Promise<{
 		args: ["run", "src/mcp/index.ts"],
 	});
 
-	const client = new Client({ name: "bugscope-test", version: "1.0.0" }, { capabilities: {} });
+	const client = new Client({ name: "krometrail-test", version: "1.0.0" }, { capabilities: {} });
 
 	await client.connect(transport);
 

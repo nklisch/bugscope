@@ -43,13 +43,13 @@ This is the core narrative: "Here's how an AI agent debugged this issue, step by
 Simple but powerful: "This was broken. The agent fixed it. Here's what it did."
 
 ### 3. Debugging tool showcase
-Filter the timeline to just `debug_*` / `mcp__bugscope__*` tool calls. This shows:
+Filter the timeline to just `debug_*` / `mcp__krometrail__*` tool calls. This shows:
 - Which debug tools the agent chose and why
 - What the viewport looked like at each stop (source context, locals, stack trace)
 - How the agent used `eval` to test hypotheses
 - The moment the agent found the root cause (visible in the viewport output)
 
-This is the bugscope pitch: "Here's what runtime debugging looks like for an AI agent."
+This is the krometrail pitch: "Here's what runtime debugging looks like for an AI agent."
 
 ### 4. Difficulty progression
 With scenarios at levels 1-5, you can show:

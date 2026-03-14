@@ -194,7 +194,7 @@ export class DAPClient {
 **Implementation Notes**:
 - The `send()` method must create a timeout timer per request. On timeout, reject with `DAPTimeoutError` containing the command name and timeout value, then delete from `pendingRequests`.
 - `connect()` uses `net.createConnection({ host, port })` and wraps the socket as both reader and writer. Store the socket reference for `disconnect()`.
-- `initialize()` sends the `initialize` request with `clientID: "bugscope"`, `adapterID: "bugscope"`, `supportsVariableType: true`, `linesStartAt1: true`, `columnsStartAt1: true`. Then registers a one-shot handler for the `initialized` event using a Promise. The `initialized` event handler resolves the promise. Returns the capabilities from the `InitializeResponse`.
+- `initialize()` sends the `initialize` request with `clientID: "krometrail"`, `adapterID: "krometrail"`, `supportsVariableType: true`, `linesStartAt1: true`, `columnsStartAt1: true`. Then registers a one-shot handler for the `initialized` event using a Promise. The `initialized` event handler resolves the promise. Returns the capabilities from the `InitializeResponse`.
 - `waitForStop()` registers handlers for `stopped`, `terminated`, and `exited` events. Whichever fires first resolves the promise. All handlers are cleaned up on resolution. Timeout rejects with `DAPTimeoutError`.
 - Each typed helper is a thin wrapper: e.g., `configurationDone()` calls `this.send('configurationDone')`.
 - On `disconnect()`, close the socket if it exists, set `_connected = false`.
@@ -1119,7 +1119,7 @@ const sessionManager = new SessionManager(limits);
 
 // Create and configure MCP server
 const server = new McpServer({
-	name: "bugscope",
+	name: "krometrail",
 	version: "0.1.0",
 });
 
@@ -1162,22 +1162,22 @@ Define structured error types used across the codebase.
 
 ```typescript
 /**
- * Base error for all Bugscope errors.
+ * Base error for all Krometrail errors.
  */
-export class BugscopeError extends Error {
+export class KrometrailError extends Error {
 	constructor(
 		message: string,
 		public readonly code: string,
 	) {
 		super(message);
-		this.name = "BugscopeError";
+		this.name = "KrometrailError";
 	}
 }
 
 /**
  * DAP request timed out.
  */
-export class DAPTimeoutError extends BugscopeError {
+export class DAPTimeoutError extends KrometrailError {
 	constructor(
 		public readonly command: string,
 		public readonly timeoutMs: number,
@@ -1193,7 +1193,7 @@ export class DAPTimeoutError extends BugscopeError {
 /**
  * DAP client has been disposed.
  */
-export class DAPClientDisposedError extends BugscopeError {
+export class DAPClientDisposedError extends KrometrailError {
 	constructor() {
 		super("DAP client has been disposed", "DAP_DISPOSED");
 		this.name = "DAPClientDisposedError";
@@ -1203,7 +1203,7 @@ export class DAPClientDisposedError extends BugscopeError {
 /**
  * DAP connection failed.
  */
-export class DAPConnectionError extends BugscopeError {
+export class DAPConnectionError extends KrometrailError {
 	constructor(
 		public readonly host: string,
 		public readonly port: number,
@@ -1220,7 +1220,7 @@ export class DAPConnectionError extends BugscopeError {
 /**
  * Session not found.
  */
-export class SessionNotFoundError extends BugscopeError {
+export class SessionNotFoundError extends KrometrailError {
 	constructor(public readonly sessionId: string) {
 		super(`No debug session with id: ${sessionId}`, "SESSION_NOT_FOUND");
 		this.name = "SessionNotFoundError";
@@ -1230,7 +1230,7 @@ export class SessionNotFoundError extends BugscopeError {
 /**
  * Session is in an invalid state for the requested operation.
  */
-export class SessionStateError extends BugscopeError {
+export class SessionStateError extends KrometrailError {
 	constructor(
 		public readonly sessionId: string,
 		public readonly currentState: string,
@@ -1248,7 +1248,7 @@ export class SessionStateError extends BugscopeError {
 /**
  * Session resource limit exceeded.
  */
-export class SessionLimitError extends BugscopeError {
+export class SessionLimitError extends KrometrailError {
 	constructor(
 		public readonly limitName: string,
 		public readonly currentValue: number,
@@ -1267,7 +1267,7 @@ export class SessionLimitError extends BugscopeError {
 /**
  * Adapter prerequisites not met.
  */
-export class AdapterPrerequisiteError extends BugscopeError {
+export class AdapterPrerequisiteError extends KrometrailError {
 	constructor(
 		public readonly adapterId: string,
 		public readonly missing: string[],
@@ -1285,7 +1285,7 @@ export class AdapterPrerequisiteError extends BugscopeError {
 /**
  * No adapter found for the given language or file extension.
  */
-export class AdapterNotFoundError extends BugscopeError {
+export class AdapterNotFoundError extends KrometrailError {
 	constructor(public readonly languageOrExt: string) {
 		super(
 			`No debug adapter found for '${languageOrExt}'. ` +
@@ -1299,7 +1299,7 @@ export class AdapterNotFoundError extends BugscopeError {
 /**
  * Debugee process launch failed.
  */
-export class LaunchError extends BugscopeError {
+export class LaunchError extends KrometrailError {
 	constructor(
 		message: string,
 		public readonly stderr?: string,
@@ -1311,12 +1311,12 @@ export class LaunchError extends BugscopeError {
 ```
 
 **Implementation Notes**:
-- All errors extend `BugscopeError` which has a `code` field. This allows MCP tool handlers to pattern-match on error codes for structured responses.
+- All errors extend `KrometrailError` which has a `code` field. This allows MCP tool handlers to pattern-match on error codes for structured responses.
 - Error messages are written to be useful to agents — they explain what happened and suggest remediation.
 - `SessionLimitError` includes a `suggestion` field (e.g., "Consider using conditional breakpoints to reduce step count").
 
 **Acceptance Criteria**:
-- [ ] All error types extend `BugscopeError`
+- [ ] All error types extend `KrometrailError`
 - [ ] Each error type has a unique `code` string
 - [ ] Error messages are descriptive and include remediation suggestions
 - [ ] Errors serialize properly (no circular references, `message` is readable)
@@ -1623,7 +1623,7 @@ Full MCP path for the canonical discount bug scenario.
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 /**
- * Create an MCP client connected to the bugscope server via stdio.
+ * Create an MCP client connected to the krometrail server via stdio.
  * Spawns the server as a child process for e2e testing.
  */
 export async function createTestClient(): Promise<{

@@ -401,13 +401,13 @@
 			}
 		},
 		{
-			"name": "bugscope-mcp",
-			"description": "Bugscope MCP tool reference. LOAD THIS SKILL before invoking any mcp__bugscope__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
+			"name": "krometrail-mcp",
+			"description": "Krometrail MCP tool reference. LOAD THIS SKILL before invoking any mcp__krometrail__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
 			"repo": null,
 			"ref": null,
 			"sha": null,
 			"scope": "project",
-			"path": ".agents/skills/bugscope-mcp",
+			"path": ".agents/skills/krometrail-mcp",
 			"tap": null,
 			"also": ["claude-code"],
 			"installedAt": "2026-03-08T00:00:00.000Z",
@@ -417,13 +417,13 @@
 			}
 		},
 		{
-			"name": "bugscope-cli",
-			"description": "Bugscope CLI reference. Load when invoking the bugscope CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup references.",
+			"name": "krometrail-cli",
+			"description": "Krometrail CLI reference. Load when invoking the krometrail CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup references.",
 			"repo": null,
 			"ref": null,
 			"sha": null,
 			"scope": "project",
-			"path": ".agents/skills/bugscope-cli",
+			"path": ".agents/skills/krometrail-cli",
 			"tap": null,
 			"also": ["claude-code"],
 			"installedAt": "2026-03-08T00:00:00.000Z",

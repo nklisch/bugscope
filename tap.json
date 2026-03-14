@@ -1,18 +1,18 @@
 {
-	"name": "bugscope",
-	"description": "Bugscope skills — runtime debugging and browser recording for AI agents.",
+	"name": "krometrail",
+	"description": "Krometrail skills — runtime debugging and browser recording for AI agents.",
 	"skills": [
 		{
-			"name": "bugscope-mcp",
-			"description": "Bugscope MCP tool reference. Load before invoking any mcp__bugscope__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
-			"repo": "nklisch/bugscope",
-			"tags": ["bugscope", "mcp", "debugging", "browser", "devtools"]
+			"name": "krometrail-mcp",
+			"description": "Krometrail MCP tool reference. Load before invoking any mcp__krometrail__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
+			"repo": "nklisch/krometrail",
+			"tags": ["krometrail", "mcp", "debugging", "browser", "devtools"]
 		},
 		{
-			"name": "bugscope-cli",
-			"description": "Bugscope CLI reference. Load when invoking the bugscope CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup.",
-			"repo": "nklisch/bugscope",
-			"tags": ["bugscope", "cli", "debugging", "browser", "devtools"]
+			"name": "krometrail-cli",
+			"description": "Krometrail CLI reference. Load when invoking the krometrail CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup.",
+			"repo": "nklisch/krometrail",
+			"tags": ["krometrail", "cli", "debugging", "browser", "devtools"]
 		}
 	]
 }

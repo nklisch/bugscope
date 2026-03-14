@@ -149,13 +149,13 @@ export const NETCOREDBG_VERSION: string; // e.g., "3.1.2-1050"
  * Returns the path to the netcoredbg cache directory.
  */
 export function getNetcoredbgCachePath(): string;
-// Returns: ~/.bugscope/adapters/netcoredbg/
+// Returns: ~/.krometrail/adapters/netcoredbg/
 
 /**
  * Returns the path to the netcoredbg binary.
  */
 export function getNetcoredbgBinaryPath(): string;
-// Returns: ~/.bugscope/adapters/netcoredbg/netcoredbg (or .exe on Windows)
+// Returns: ~/.krometrail/adapters/netcoredbg/netcoredbg (or .exe on Windows)
 
 /**
  * Check if netcoredbg is already cached.
@@ -179,7 +179,7 @@ export function getNetcoredbgDownloadUrl(): string;
 
 **Implementation Notes**:
 - Follow the exact same download/cache pattern as `src/adapters/rust.ts` (CodeLLDB download manager)
-- Cache location: `~/.bugscope/adapters/netcoredbg/`
+- Cache location: `~/.krometrail/adapters/netcoredbg/`
 - Platform detection same as Rust adapter: `platform()` + `process.arch`
 - Asset URL format: `https://github.com/nicedoc/netcoredbg/releases/download/v${VERSION}/netcoredbg-${platform}.tar.gz`
   - Actually use `Samsung/netcoredbg` as the repo
@@ -592,7 +592,7 @@ async function getKotlincVersion(): Promise<string | undefined>;
 
 **Acceptance Criteria**:
 - [ ] `registerAllAdapters()` registers all 10 adapters
-- [ ] `bugscope doctor` shows Ruby, C#, Swift, Kotlin adapter status
+- [ ] `krometrail doctor` shows Ruby, C#, Swift, Kotlin adapter status
 - [ ] Version strings are correctly parsed for each language
 - [ ] Missing adapters show install hints
 

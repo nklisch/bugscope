@@ -283,7 +283,7 @@ async function getNetcoredbgVersion(): Promise<string | undefined> {
 
 		// Find netcoredbg binary: PATH first, then cache
 		const ext = platform() === "win32" ? ".exe" : "";
-		const cached = join(homedir(), ".bugscope", "adapters", "netcoredbg", `netcoredbg${ext}`);
+		const cached = join(homedir(), ".krometrail", "adapters", "netcoredbg", `netcoredbg${ext}`);
 		const cmd = existsSync(cached) ? cached : "netcoredbg";
 
 		const result = await new Promise<string>((resolve, reject) => {
@@ -367,7 +367,7 @@ export function formatDoctor(result: DoctorResult, mode: OutputMode): string {
 		return JSON.stringify(result, null, 2);
 	}
 
-	const lines: string[] = [`Bugscope v0.1.0`, `Platform: ${result.platform}`, `Runtime: ${result.runtime} ${result.runtimeVersion}`, "", "Adapters:"];
+	const lines: string[] = [`Krometrail v0.1.0`, `Platform: ${result.platform}`, `Runtime: ${result.runtime} ${result.runtimeVersion}`, "", "Adapters:"];
 
 	for (const adapter of result.adapters) {
 		if (adapter.status === "available") {

@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Check if dotnet CLI and netcoredbg are available.
- * netcoredbg may be on PATH or in the bugscope cache.
+ * netcoredbg may be on PATH or in the krometrail cache.
  */
 export async function isNetcoredbgAvailable(): Promise<boolean> {
 	const dotnetOk = await new Promise<boolean>((resolve) => {
@@ -25,7 +25,7 @@ export async function isNetcoredbgAvailable(): Promise<boolean> {
 
 	// Check cache
 	const ext = platform() === "win32" ? ".exe" : "";
-	const cached = join(homedir(), ".bugscope", "adapters", "netcoredbg", `netcoredbg${ext}`);
+	const cached = join(homedir(), ".krometrail", "adapters", "netcoredbg", `netcoredbg${ext}`);
 	return existsSync(cached);
 }
 

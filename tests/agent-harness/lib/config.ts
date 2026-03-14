@@ -3,10 +3,10 @@ import { z } from "zod";
 // --- Run Mode ---
 
 /**
- * How bugscope is exposed to the agent under test.
- * - "mcp"      — bugscope MCP server configured; agent uses debug_* MCP tools
- * - "cli"      — no MCP server, but bugscope CLI + skill file available; agent uses bash
- * - "baseline" — no bugscope at all; agent relies on code reading and test output
+ * How krometrail is exposed to the agent under test.
+ * - "mcp"      — krometrail MCP server configured; agent uses debug_* MCP tools
+ * - "cli"      — no MCP server, but krometrail CLI + skill file available; agent uses bash
+ * - "baseline" — no krometrail at all; agent relies on code reading and test output
  */
 export type RunMode = "mcp" | "cli" | "baseline";
 
@@ -151,7 +151,7 @@ export interface ValidationResult {
 export interface RunResult {
 	/** Scenario name */
 	scenario: string;
-	/** Run mode — "tools" had bugscope MCP available, "baseline" did not */
+	/** Run mode — "tools" had krometrail MCP available, "baseline" did not */
 	mode: RunMode;
 	/** Scenario metadata for self-contained reports */
 	scenarioMeta: {
@@ -172,8 +172,8 @@ export interface RunResult {
 	agentExitCode: number | null;
 	/** Extracted metrics */
 	metrics: AgentMetrics;
-	/** Bugscope version used */
-	bugscopeVersion: string;
+	/** Krometrail version used */
+	krometrailVersion: string;
 	/** Visible test pass/fail before agent ran */
 	visibleTestBefore: boolean;
 	/** Visible test pass/fail after agent ran */

@@ -8,8 +8,8 @@ const MCP_SERVER_PATH = resolve(import.meta.dirname, "../../../src/mcp/index.ts"
 const CLI_ENTRY_PATH = resolve(import.meta.dirname, "../../../src/cli/index.ts");
 const SKILL_DIR = resolve(import.meta.dirname, "../../../skill");
 
-// Read bugscope version once at module load
-async function readBugscopeVersion(): Promise<string> {
+// Read krometrail version once at module load
+async function readKrometrailVersion(): Promise<string> {
 	try {
 		const pkg = JSON.parse(await readFile(resolve(import.meta.dirname, "../../../package.json"), "utf-8")) as { version: string };
 		return pkg.version;
@@ -18,7 +18,7 @@ async function readBugscopeVersion(): Promise<string> {
 	}
 }
 
-const BUGSCOPE_VERSION = await readBugscopeVersion();
+const KROMETRAIL_VERSION = await readKrometrailVersion();
 
 // --- Shell helper ---
 
@@ -28,9 +28,9 @@ async function exec(cmd: string, cwd: string, env?: Record<string, string>) {
 
 const GIT_ENV = {
 	GIT_AUTHOR_NAME: "agent-harness",
-	GIT_AUTHOR_EMAIL: "harness@bugscope.test",
+	GIT_AUTHOR_EMAIL: "harness@krometrail.test",
 	GIT_COMMITTER_NAME: "agent-harness",
-	GIT_COMMITTER_EMAIL: "harness@bugscope.test",
+	GIT_COMMITTER_EMAIL: "harness@krometrail.test",
 };
 
 async function initGitRepo(workDir: string): Promise<void> {
@@ -54,14 +54,14 @@ async function captureGitDiff(workDir: string): Promise<{ diff: string; filesCha
 // --- CLI wrapper for "cli" mode ---
 
 /**
- * Install a wrapper script so the agent can call `bugscope` via bash.
+ * Install a wrapper script so the agent can call `krometrail` via bash.
  * Returns the bin directory to prepend to PATH.
  */
 async function installCliWrapper(workDir: string): Promise<string> {
 	const binDir = join(workDir, ".bin");
 	await mkdir(binDir, { recursive: true });
 	const wrapper = `#!/usr/bin/env bash\nexec bun run "${CLI_ENTRY_PATH}" "$@"\n`;
-	const wrapperPath = join(binDir, "bugscope");
+	const wrapperPath = join(binDir, "krometrail");
 	await writeFile(wrapperPath, wrapper);
 	await chmod(wrapperPath, 0o755);
 	return binDir;
@@ -72,7 +72,7 @@ async function installCliWrapper(workDir: string): Promise<string> {
 function generateMcpConfig(workDir: string): object {
 	return {
 		mcpServers: {
-			"bugscope": {
+			"krometrail": {
 				command: "bun",
 				args: ["run", MCP_SERVER_PATH],
 				cwd: workDir,
@@ -96,7 +96,7 @@ async function runCommand(command: string, workDir: string): Promise<{ passed: b
 
 export async function prepareWorkspace(scenario: Scenario, mode: RunMode = "mcp"): Promise<Workspace> {
 	const workDir = await (async () => {
-		const base = join(tmpdir(), `bugscope-harness-`);
+		const base = join(tmpdir(), `krometrail-harness-`);
 		await mkdir(base, { recursive: true });
 		const dir = `${base}${scenario.name}-${Date.now()}`;
 		await mkdir(dir, { recursive: true });
@@ -106,15 +106,15 @@ export async function prepareWorkspace(scenario: Scenario, mode: RunMode = "mcp"
 	await cp(scenario.srcDir, workDir, { recursive: true });
 	await writeFile(join(workDir, ".gitignore"), "__pycache__/\n*.pyc\nnode_modules/\n.bin/\n");
 
-	// Install skill and add debugger hint for mcp/cli modes only — baseline has no bugscope access
+	// Install skill and add debugger hint for mcp/cli modes only — baseline has no krometrail access
 	if (mode !== "baseline") {
-		const skillInstallDir = join(workDir, ".claude", "skills", "bugscope");
+		const skillInstallDir = join(workDir, ".claude", "skills", "krometrail");
 		await mkdir(skillInstallDir, { recursive: true });
 		await cp(SKILL_DIR, skillInstallDir, { recursive: true });
 
 		const claudeMdPath = join(workDir, "CLAUDE.md");
 		try {
-			await appendFile(claudeMdPath, "\nUse bugscope debugger tools for hard to solve or non-obvious bugs.\n");
+			await appendFile(claudeMdPath, "\nUse krometrail debugger tools for hard to solve or non-obvious bugs.\n");
 		} catch {
 			// No CLAUDE.md in this scenario — skip
 		}
@@ -191,9 +191,9 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 
 		const prompt = await readFile(scenario.promptPath, "utf-8");
 
-		// In cli mode only, install wrapper script so `bugscope` is callable via bash.
+		// In cli mode only, install wrapper script so `krometrail` is callable via bash.
 		// In mcp mode, the agent uses MCP tools — no CLI wrapper is installed.
-		// In baseline mode, no bugscope access at all.
+		// In baseline mode, no krometrail access at all.
 		let env: Record<string, string> | undefined;
 		if (mode === "cli") {
 			const binDir = await installCliWrapper(workspace.workDir);
@@ -260,7 +260,7 @@ export async function runScenario(agent: AgentDriver, scenario: Scenario, traceD
 		timedOut: agentRunResult.timedOut,
 		agentExitCode: agentRunResult.exitCode,
 		metrics,
-		bugscopeVersion: BUGSCOPE_VERSION,
+		krometrailVersion: KROMETRAIL_VERSION,
 		visibleTestBefore,
 		visibleTestAfter,
 		validation: validationResult,

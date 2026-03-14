@@ -6,7 +6,7 @@ Phase 2 makes the CLI a first-class interface with full command parity to MCP. A
 
 Phase 2 builds on the complete Phase 1 foundation: `SessionManager` (840 lines), `DAPClient`, `PythonAdapter`, 16 MCP tools, viewport renderer, value renderer, and the existing CLI stub (`src/cli/index.ts` with a single `launch` subcommand).
 
-**Key architectural decision:** The CLI commands do NOT embed `SessionManager` directly. Instead, they communicate with a lightweight background daemon over a Unix domain socket using JSON-RPC. The daemon hosts the same `SessionManager` instance that the MCP server uses. This allows sequential CLI commands (`bugscope launch`, `bugscope step`, `bugscope eval`) to share a persistent debug session.
+**Key architectural decision:** The CLI commands do NOT embed `SessionManager` directly. Instead, they communicate with a lightweight background daemon over a Unix domain socket using JSON-RPC. The daemon hosts the same `SessionManager` instance that the MCP server uses. This allows sequential CLI commands (`krometrail launch`, `krometrail step`, `krometrail eval`) to share a persistent debug session.
 
 ---
 
@@ -50,7 +50,7 @@ export const RPC_METHOD_NOT_FOUND = -32601;
 export const RPC_INVALID_PARAMS = -32602;
 export const RPC_INTERNAL_ERROR = -32603;
 
-// Application error codes (bugscope specific)
+// Application error codes (krometrail specific)
 export const RPC_SESSION_NOT_FOUND = -32000;
 export const RPC_SESSION_STATE_ERROR = -32001;
 export const RPC_SESSION_LIMIT_ERROR = -32002;
@@ -262,8 +262,8 @@ export interface BreakpointsListPayload {
 
 /**
  * Resolve the daemon socket path.
- * Uses $XDG_RUNTIME_DIR/bugscope.sock if available,
- * falls back to ~/.bugscope/bugscope.sock.
+ * Uses $XDG_RUNTIME_DIR/krometrail.sock if available,
+ * falls back to ~/.krometrail/krometrail.sock.
  */
 export function getDaemonSocketPath(): string;
 
@@ -274,15 +274,15 @@ export function getDaemonPidPath(): string;
 ```
 
 **Implementation Notes**:
-- `getDaemonSocketPath()` checks `process.env.XDG_RUNTIME_DIR` first, then falls back to `path.join(os.homedir(), ".bugscope")`. Creates the directory if it doesn't exist (`mkdirSync(..., { recursive: true })`). Returns the full path to `bugscope.sock`.
+- `getDaemonSocketPath()` checks `process.env.XDG_RUNTIME_DIR` first, then falls back to `path.join(os.homedir(), ".krometrail")`. Creates the directory if it doesn't exist (`mkdirSync(..., { recursive: true })`). Returns the full path to `krometrail.sock`.
 - `getDaemonPidPath()` returns `getDaemonSocketPath() + ".pid"`.
 - All RPC param schemas use Zod for validation. The daemon validates incoming params before dispatching.
 - The `RpcMethods` type map is used by both client and server for type safety but not at runtime — it's a compile-time contract.
 
 **Acceptance Criteria**:
 - [ ] All Zod schemas parse valid inputs and reject invalid ones
-- [ ] `getDaemonSocketPath()` returns `$XDG_RUNTIME_DIR/bugscope.sock` when env is set
-- [ ] `getDaemonSocketPath()` returns `~/.bugscope/bugscope.sock` as fallback
+- [ ] `getDaemonSocketPath()` returns `$XDG_RUNTIME_DIR/krometrail.sock` when env is set
+- [ ] `getDaemonSocketPath()` returns `~/.krometrail/krometrail.sock` as fallback
 - [ ] `getDaemonPidPath()` returns socket path + `.pid`
 - [ ] Type exports compile without errors
 
@@ -389,7 +389,7 @@ export async function startDaemon(): Promise<void>;
   - (etc. for all methods)
   - `"daemon.ping"` → `{ uptime: Date.now() - this.startedAt, sessions: ... }`
   - `"daemon.shutdown"` → `this.shutdown()`
-- **Error mapping:** Catch `BugscopeError` subclasses and map to appropriate `JsonRpcError` codes using the constants from `protocol.ts`. Unknown errors map to `RPC_INTERNAL_ERROR`.
+- **Error mapping:** Catch `KrometrailError` subclasses and map to appropriate `JsonRpcError` codes using the constants from `protocol.ts`. Unknown errors map to `RPC_INTERNAL_ERROR`.
 - **Idle timeout:** After every request or session stop, check if there are zero active sessions. If so, start the idle timer. If a new request arrives, clear the timer. When the timer fires with zero active sessions, call `shutdown()`.
 - **`startDaemon()`:** This is the entry point for the daemon subprocess. It's invoked by `src/daemon/entry.ts` (see Unit 3). It registers adapters, creates SessionManager with default ResourceLimits, creates DaemonServer, and calls `start()`.
 - **SIGINT/SIGTERM handlers:** Call `shutdown()` then `process.exit(0)`.
@@ -401,7 +401,7 @@ export async function startDaemon(): Promise<void>;
 - [ ] Malformed JSON-RPC returns parse error response (not crash)
 - [ ] Unknown method returns method-not-found error
 - [ ] Invalid params return invalid-params error with Zod details
-- [ ] `BugscopeError` subclasses map to correct RPC error codes
+- [ ] `KrometrailError` subclasses map to correct RPC error codes
 - [ ] Stale socket file is cleaned up on start
 - [ ] PID file is written on start and removed on shutdown
 - [ ] Idle timer shuts down daemon after `idleTimeoutMs` with no active sessions
@@ -523,11 +523,11 @@ export async function ensureDaemon(socketPath: string): Promise<void>;
 ```
 
 **Implementation Notes**:
-- **`call()` flow:** Create a `net.Socket()`, connect to `socketPath`. Write the JSON-RPC request as a JSON line + `\n`. Read the response (buffer until `\n`), parse as `JsonRpcResponse`. If `response.error`, throw an `BugscopeError` with the error message and code. Close socket. Use a timeout via `setTimeout` that destroys the socket on expiry.
+- **`call()` flow:** Create a `net.Socket()`, connect to `socketPath`. Write the JSON-RPC request as a JSON line + `\n`. Read the response (buffer until `\n`), parse as `JsonRpcResponse`. If `response.error`, throw an `KrometrailError` with the error message and code. Close socket. Use a timeout via `setTimeout` that destroys the socket on expiry.
 - **`ping()`:** Calls `this.call("daemon.ping")` wrapped in try/catch. Returns `true` on success, `false` on any error.
 - **`ensureDaemon()` spawn details:**
   - The daemon entry path is resolved relative to the package: use `import.meta.resolve("./entry.ts")` to get the absolute path, then strip the `file://` prefix.
-  - For compiled binaries, the entry point will be different — the daemon will be a subcommand of the compiled binary itself (`bugscope _daemon`). Handle both cases: if running from source, spawn `bun run <entry.ts>`; if running as compiled binary, spawn `<binary> _daemon`.
+  - For compiled binaries, the entry point will be different — the daemon will be a subcommand of the compiled binary itself (`krometrail _daemon`). Handle both cases: if running from source, spawn `bun run <entry.ts>`; if running as compiled binary, spawn `<binary> _daemon`.
   - Detect compiled mode: check if `process.argv[0]` does NOT end in `bun` and the binary exists.
   - Spawning: `spawn(command, args, { detached: true, stdio: "ignore", env: process.env })`. Call `child.unref()` to let the parent exit.
 - **Request ID tracking:** Use a simple incrementing counter. Since each CLI invocation creates a fresh client, starting at 1 is fine.
@@ -537,7 +537,7 @@ export async function ensureDaemon(socketPath: string): Promise<void>;
 - [ ] `call()` sends valid JSON-RPC and parses the response
 - [ ] `call()` throws descriptive error when daemon is not running (ECONNREFUSED)
 - [ ] `call()` throws on timeout with descriptive message
-- [ ] `call()` throws `BugscopeError` when response contains JSON-RPC error
+- [ ] `call()` throws `KrometrailError` when response contains JSON-RPC error
 - [ ] `ping()` returns `true` for a running daemon, `false` when down
 - [ ] `ensureDaemon()` spawns a daemon when none is running
 - [ ] `ensureDaemon()` detects an already-running daemon and returns immediately
@@ -777,7 +777,7 @@ import {
 
 const main = defineCommand({
 	meta: {
-		name: "bugscope",
+		name: "krometrail",
 		version: "0.1.0",
 		description: "Runtime debugging viewport for AI coding agents",
 	},
@@ -1141,7 +1141,7 @@ export const breakCommand = defineCommand({
 				);
 			} else {
 				throw new Error(
-					"Usage: bugscope break <file:line> | --exceptions <filter> | --clear <file>",
+					"Usage: krometrail break <file:line> | --exceptions <filter> | --clear <file>",
 				);
 			}
 		} catch (err) {
@@ -1452,8 +1452,8 @@ export { doctorCommand } from "./doctor.js";
 - **`resolveSessionId()`:** The daemon needs a way to report its active sessions. Add a `"daemon.sessions"` RPC method that returns `Array<{ id: string; status: string }>`. If the list has exactly one session, auto-resolve its ID. If multiple, require `--session`. If zero, throw "No active sessions". This avoids the need to store session IDs in files.
 - **`getClient()`:** Every command calls this. It ensures the daemon is running (spawning if needed) and returns a fresh client. The client is disposed in `finally` blocks.
 - **Exit codes:** `process.exit(0)` on success (implicit), `process.exit(1)` on error, `process.exit(2)` on timeout (detect by checking if error is `DAPTimeoutError`).
-- **`_daemon` hidden subcommand:** When the compiled binary needs to spawn itself as the daemon, it runs `bugscope _daemon`. This is a hidden subcommand that imports `src/daemon/entry.ts`.
-- **`--break` flag on `launch`:** Currently accepts a single string. For multiple breakpoints, the user calls `bugscope break` after launching. The `--break` flag on launch is a convenience for the most common case.
+- **`_daemon` hidden subcommand:** When the compiled binary needs to spawn itself as the daemon, it runs `krometrail _daemon`. This is a hidden subcommand that imports `src/daemon/entry.ts`.
+- **`--break` flag on `launch`:** Currently accepts a single string. For multiple breakpoints, the user calls `krometrail break` after launching. The `--break` flag on launch is a convenience for the most common case.
 - **`watch` command with multiple args:** Citty collects remaining positional args in `args._`. The command gathers the named positional plus any extras.
 
 **Acceptance Criteria**:
@@ -1548,7 +1548,7 @@ export const doctorCommand = defineCommand({
   4. `doctor` does NOT need the daemon — it checks locally by importing and registering adapters directly.
 - **Text output format:**
   ```
-  Bugscope v0.1.0
+  Krometrail v0.1.0
   Platform: linux x86_64
   Runtime: Bun 1.x.x
 
@@ -1577,53 +1577,53 @@ export const doctorCommand = defineCommand({
 The skill file teaches agents how to use the CLI. It's the content from UX.md's "Agent Skill File" section, refined based on the actual implemented command syntax.
 
 ```markdown
-# Bugscope — Debugging Skill
+# Krometrail — Debugging Skill
 
-You have access to `bugscope`, a CLI debugger. Use it when you need to
+You have access to `krometrail`, a CLI debugger. Use it when you need to
 inspect runtime state to diagnose a bug — especially when static code
 reading and test output aren't enough to identify the root cause.
 
 ## Quick start
-  bugscope launch "<command>" --break <file>:<line>
-  bugscope continue          # run to next breakpoint
-  bugscope step into|over|out
-  bugscope eval "<expr>"     # evaluate expression at current stop
-  bugscope vars              # show local variables
-  bugscope stop              # end session
+  krometrail launch "<command>" --break <file>:<line>
+  krometrail continue          # run to next breakpoint
+  krometrail step into|over|out
+  krometrail eval "<expr>"     # evaluate expression at current stop
+  krometrail vars              # show local variables
+  krometrail stop              # end session
 
 ## Conditional breakpoints
-  bugscope break "<file>:<line> when <condition>"
+  krometrail break "<file>:<line> when <condition>"
 
 ## All commands
-  bugscope launch "<cmd>" [--break <bp>] [--stop-on-entry] [--language <lang>]
-  bugscope stop [--session <id>]
-  bugscope status [--session <id>]
-  bugscope continue [--timeout <ms>]
-  bugscope step over|into|out [--count <n>]
-  bugscope run-to <file>:<line> [--timeout <ms>]
-  bugscope break <file>:<line>[,<line>,...] [when <cond>] [hit <cond>] [log '<msg>']
-  bugscope break --exceptions <filter>
-  bugscope break --clear <file>
-  bugscope breakpoints
-  bugscope eval "<expr>" [--frame <n>] [--depth <n>]
-  bugscope vars [--scope local|global|closure|all] [--filter "<regex>"]
-  bugscope stack [--frames <n>] [--source]
-  bugscope source <file>[:<start>-<end>]
-  bugscope watch "<expr>" ["<expr>" ...]
-  bugscope log [--detailed]
-  bugscope output [--stderr|--stdout] [--since-action <n>]
-  bugscope doctor
+  krometrail launch "<cmd>" [--break <bp>] [--stop-on-entry] [--language <lang>]
+  krometrail stop [--session <id>]
+  krometrail status [--session <id>]
+  krometrail continue [--timeout <ms>]
+  krometrail step over|into|out [--count <n>]
+  krometrail run-to <file>:<line> [--timeout <ms>]
+  krometrail break <file>:<line>[,<line>,...] [when <cond>] [hit <cond>] [log '<msg>']
+  krometrail break --exceptions <filter>
+  krometrail break --clear <file>
+  krometrail breakpoints
+  krometrail eval "<expr>" [--frame <n>] [--depth <n>]
+  krometrail vars [--scope local|global|closure|all] [--filter "<regex>"]
+  krometrail stack [--frames <n>] [--source]
+  krometrail source <file>[:<start>-<end>]
+  krometrail watch "<expr>" ["<expr>" ...]
+  krometrail log [--detailed]
+  krometrail output [--stderr|--stdout] [--since-action <n>]
+  krometrail doctor
 
 ## Strategy
 1. Start by setting a breakpoint where you expect the bug to manifest.
 2. Inspect locals. Look for unexpected values.
 3. If the bad value came from a function call, set a breakpoint inside
    that function and re-launch.
-4. Use `bugscope eval` to test hypotheses without modifying code.
+4. Use `krometrail eval` to test hypotheses without modifying code.
 5. Once you identify the root cause, stop the session and fix the code.
 
 ## Key rules
-- Always call `bugscope stop` when done to clean up.
+- Always call `krometrail stop` when done to clean up.
 - Prefer conditional breakpoints over stepping through loops.
 - Each command prints a viewport showing source, locals, and stack.
 - If a session times out (5 min default), re-launch.
@@ -1654,12 +1654,12 @@ subCommands: {
 
 **Implementation Notes**:
 - The skill file lives at the project root so it's included in the npm package.
-- `bugscope skill` prints it to stdout. An agent can load it via `$(bugscope skill)` or a tool can read it from the known npm path.
+- `krometrail skill` prints it to stdout. An agent can load it via `$(krometrail skill)` or a tool can read it from the known npm path.
 - The skill content matches the actual command syntax implemented in Unit 7.
 
 **Acceptance Criteria**:
 - [ ] `skill.md` exists at project root
-- [ ] `bugscope skill` prints the skill file to stdout
+- [ ] `krometrail skill` prints the skill file to stdout
 - [ ] Skill file documents all commands with correct syntax
 - [ ] Skill file includes strategy guidance for agents
 
@@ -1675,7 +1675,7 @@ Updates to package.json and build configuration for compiled binary distribution
 // package.json updates:
 {
 	"bin": {
-		"bugscope": "./src/cli/index.ts"
+		"krometrail": "./src/cli/index.ts"
 	},
 	"files": [
 		"src/",
@@ -1683,12 +1683,12 @@ Updates to package.json and build configuration for compiled binary distribution
 	],
 	"scripts": {
 		// ... existing scripts ...
-		"build": "bun build --compile src/cli/index.ts --outfile dist/bugscope",
-		"build:linux-x64": "bun build --compile --target=bun-linux-x64 src/cli/index.ts --outfile dist/bugscope-linux-x64",
-		"build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/cli/index.ts --outfile dist/bugscope-linux-arm64",
-		"build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/cli/index.ts --outfile dist/bugscope-darwin-x64",
-		"build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/cli/index.ts --outfile dist/bugscope-darwin-arm64",
-		"build:windows-x64": "bun build --compile --target=bun-windows-x64 src/cli/index.ts --outfile dist/bugscope-windows-x64.exe",
+		"build": "bun build --compile src/cli/index.ts --outfile dist/krometrail",
+		"build:linux-x64": "bun build --compile --target=bun-linux-x64 src/cli/index.ts --outfile dist/krometrail-linux-x64",
+		"build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/cli/index.ts --outfile dist/krometrail-linux-arm64",
+		"build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/cli/index.ts --outfile dist/krometrail-darwin-x64",
+		"build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/cli/index.ts --outfile dist/krometrail-darwin-arm64",
+		"build:windows-x64": "bun build --compile --target=bun-windows-x64 src/cli/index.ts --outfile dist/krometrail-windows-x64.exe",
 		"build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64"
 	}
 }
@@ -1698,13 +1698,13 @@ Updates to package.json and build configuration for compiled binary distribution
 - **`bun build --compile`:** Bundles all dependencies into a single binary. The `--target` flag cross-compiles for different platforms.
 - **Daemon spawning in compiled mode:** When the binary detects it's running compiled (not via `bun run`), `ensureDaemon()` spawns `<binary-path> _daemon` instead of `bun run src/daemon/entry.ts`. Detection: check `process.argv[0]` — if it doesn't contain `bun`, we're compiled.
 - **`files` field:** Ensures `skill.md` is included in the npm package.
-- **`bugscope --version`:** citty handles this via `meta.version`. Should also print platform and Bun version. Add a `setup` hook on the main command to enhance version output.
+- **`krometrail --version`:** citty handles this via `meta.version`. Should also print platform and Bun version. Add a `setup` hook on the main command to enhance version output.
 - **`.gitignore` update:** Add `dist/` to `.gitignore`.
 
 **Acceptance Criteria**:
 - [ ] `bun run build` produces a working single-file binary in `dist/`
 - [ ] Binary starts, accepts commands, spawns daemon
-- [ ] `bugscope --version` prints version, platform, and runtime info
+- [ ] `krometrail --version` prints version, platform, and runtime info
 - [ ] `npm pack` includes `src/`, `skill.md`, and `package.json`
 - [ ] `dist/` is gitignored
 
@@ -1827,15 +1827,15 @@ Unit 8 (doctor) ── independent, can parallel with Units 2-7
 - Verify exit codes
 
 **`tests/e2e/cli/breakpoint-parsing.test.ts`** — End-to-end breakpoint flows:
-- `bugscope launch "python app.py" --break "order.py:147"`
-- `bugscope break "order.py:147 when discount < 0"`
-- `bugscope break --clear order.py`
-- `bugscope breakpoints` listing
+- `krometrail launch "python app.py" --break "order.py:147"`
+- `krometrail break "order.py:147 when discount < 0"`
+- `krometrail break --clear order.py`
+- `krometrail breakpoints` listing
 
 **`tests/e2e/cli/daemon-lifecycle.test.ts`** — Daemon lifecycle:
 - First command auto-starts daemon
 - Subsequent commands reuse daemon
-- `bugscope stop` on last session triggers idle shutdown
+- `krometrail stop` on last session triggers idle shutdown
 - Stale daemon recovery
 
 ---
@@ -1857,18 +1857,18 @@ bun run lint
 
 # Build produces working binary
 bun run build
-./dist/bugscope --version
-./dist/bugscope doctor
+./dist/krometrail --version
+./dist/krometrail doctor
 
 # Full CLI debug scenario works
-./dist/bugscope launch "python tests/fixtures/simple.py" --break simple.py:3 --stop-on-entry
-./dist/bugscope step over
-./dist/bugscope eval "x"
-./dist/bugscope stop
+./dist/krometrail launch "python tests/fixtures/simple.py" --break simple.py:3 --stop-on-entry
+./dist/krometrail step over
+./dist/krometrail eval "x"
+./dist/krometrail stop
 
 # Skill file prints correctly
-./dist/bugscope skill
+./dist/krometrail skill
 
 # JSON mode produces valid JSON
-./dist/bugscope launch "python tests/fixtures/simple.py" --break simple.py:3 --stop-on-entry --json | python3 -m json.tool
+./dist/krometrail launch "python tests/fixtures/simple.py" --break simple.py:3 --stop-on-entry --json | python3 -m json.tool
 ```

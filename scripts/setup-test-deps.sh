@@ -38,7 +38,7 @@ echo "Node.js:"
 if command -v node &>/dev/null; then
     ok "node $(node --version)"
 
-    JS_DEBUG_CACHE="$HOME/.bugscope/adapters/js-debug/js-debug/src/dapDebugServer.js"
+    JS_DEBUG_CACHE="$HOME/.krometrail/adapters/js-debug/js-debug/src/dapDebugServer.js"
     if [ -f "$JS_DEBUG_CACHE" ]; then
         ok "js-debug DAP adapter cached"
     else
@@ -74,7 +74,7 @@ echo "Rust:"
 if command -v cargo &>/dev/null; then
     ok "cargo $(cargo --version | awk '{print $2}')"
 
-    CODELLDB_CACHE="$HOME/.bugscope/adapters/codelldb/adapter/codelldb"
+    CODELLDB_CACHE="$HOME/.krometrail/adapters/codelldb/adapter/codelldb"
     if [ -f "$CODELLDB_CACHE" ]; then
         ok "CodeLLDB DAP adapter cached"
     else
@@ -96,7 +96,7 @@ if command -v javac &>/dev/null; then
     if [ "$JAVAC_MAJOR" -ge 17 ] 2>/dev/null; then
         ok "javac $JAVAC_VERSION"
 
-        JAVA_DEBUG_JAR="$HOME/.bugscope/adapters/java-debug"
+        JAVA_DEBUG_JAR="$HOME/.krometrail/adapters/java-debug"
         if ls "$JAVA_DEBUG_JAR"/java-debug-adapter-*.jar &>/dev/null 2>&1; then
             ok "java-debug-adapter JAR cached"
         else
@@ -194,7 +194,7 @@ echo "C# (.NET):"
 if command -v dotnet &>/dev/null; then
     ok "dotnet $(dotnet --version)"
 
-    NETCOREDBG_CACHE="$HOME/.bugscope/adapters/netcoredbg/netcoredbg"
+    NETCOREDBG_CACHE="$HOME/.krometrail/adapters/netcoredbg/netcoredbg"
     if [ -f "$NETCOREDBG_CACHE" ]; then
         ok "netcoredbg cached"
     elif command -v netcoredbg &>/dev/null; then
@@ -257,7 +257,7 @@ if command -v kotlinc &>/dev/null; then
     ok "kotlinc ${KOTLIN_VERSION:-installed}"
 
     # Kotlin reuses the java-debug-adapter JAR — check it was cached in the Java section above
-    JAVA_DEBUG_JAR_DIR="$HOME/.bugscope/adapters/java-debug"
+    JAVA_DEBUG_JAR_DIR="$HOME/.krometrail/adapters/java-debug"
     if ls "$JAVA_DEBUG_JAR_DIR"/java-debug-adapter-*.jar &>/dev/null 2>&1 || ls "$JAVA_DEBUG_JAR_DIR"/com.microsoft.java.debug.plugin-*.jar &>/dev/null 2>&1; then
         ok "java-debug-adapter JAR available (shared with Java adapter)"
     else

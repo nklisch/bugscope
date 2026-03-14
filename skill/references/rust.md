@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - `cargo` available in PATH
-- CodeLLDB v1.12.1 (auto-downloaded to `~/.bugscope/adapters/codelldb/` on first use)
+- CodeLLDB v1.12.1 (auto-downloaded to `~/.krometrail/adapters/codelldb/` on first use)
 - Verify: `cargo --version`
 
 ## Launch examples

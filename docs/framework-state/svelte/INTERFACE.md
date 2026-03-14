@@ -88,7 +88,7 @@ componentInstance.$inject_state({ count: 42 });
 ```
 
 - Triggers re-render for all injected values.
-- Bugscope does NOT use this (passive observation only) but documents it for completeness.
+- Krometrail does NOT use this (passive observation only) but documents it for completeness.
 
 **Stability:** These exist in all Svelte 4.x dev builds. They are deliberately omitted in production builds.
 

@@ -1,10 +1,10 @@
-# Creating an Bugscope Adapter
+# Creating an Krometrail Adapter
 
-This guide walks through creating a new language adapter for Bugscope. By the end, you'll have a working adapter that integrates with the CLI, MCP server, and doctor command.
+This guide walks through creating a new language adapter for Krometrail. By the end, you'll have a working adapter that integrates with the CLI, MCP server, and doctor command.
 
 ## Overview
 
-Adapters are the bridge between Bugscope and language-specific debuggers. Each adapter:
+Adapters are the bridge between Krometrail and language-specific debuggers. Each adapter:
 
 1. Checks that the debugger is installed (`checkPrerequisites`)
 2. Launches a debugger process and returns a DAP connection (`launch`)
@@ -21,7 +21,7 @@ The session manager handles all DAP protocol communication — the adapter just 
 export interface PrerequisiteResult {
     satisfied: boolean;
     missing?: string[];      // e.g., ["debugpy", "python3"]
-    installHint?: string;    // shown in `bugscope doctor`
+    installHint?: string;    // shown in `krometrail doctor`
 }
 
 export interface DAPConnection {
@@ -47,7 +47,7 @@ export interface AttachConfig {
 export interface DebugAdapter {
     id: string;                    // unique: "python", "node", "go", etc.
     fileExtensions: string[];      // [".py"] or [".js", ".ts"]
-    displayName: string;           // shown in `bugscope doctor`
+    displayName: string;           // shown in `krometrail doctor`
     checkPrerequisites(): Promise<PrerequisiteResult>;
     launch(config: LaunchConfig): Promise<DAPConnection>;
     attach(config: AttachConfig): Promise<DAPConnection>;
@@ -388,7 +388,7 @@ Key pattern: `python3 -m debugpy --listen {port} --wait-for-client {script}` the
 
 ### Node.js Adapter (download/caching)
 
-`src/adapters/node.ts` and `src/adapters/js-debug-adapter.ts` — downloads the js-debug VSIX to `~/.bugscope/adapters/js-debug/`, checks cache before downloading, extracts with unzip. TCP transport.
+`src/adapters/node.ts` and `src/adapters/js-debug-adapter.ts` — downloads the js-debug VSIX to `~/.krometrail/adapters/js-debug/`, checks cache before downloading, extracts with unzip. TCP transport.
 
 Key pattern: check cache → download VSIX → extract → spawn adapter with port → connect TCP.
 

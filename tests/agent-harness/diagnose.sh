@@ -12,7 +12,7 @@ echo "Claude version: $(claude --version 2>&1)"
 echo ""
 
 # Create a temp workspace similar to what the harness does
-WORKDIR=$(mktemp -d /tmp/bugscope-diag-XXXXXX)
+WORKDIR=$(mktemp -d /tmp/krometrail-diag-XXXXXX)
 echo "=== Workspace: $WORKDIR ==="
 
 # Copy the python-discount-bug scenario

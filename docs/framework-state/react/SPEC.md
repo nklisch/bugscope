@@ -78,7 +78,7 @@ interface ReactDevtoolsGlobalHook {
 
 	// ---- Our extensions (not part of React's contract) ----
 
-	/** Bugscope observer callback registration. */
+	/** Krometrail observer callback registration. */
 	_blObserver?: ReactObserverCallbacks;
 }
 

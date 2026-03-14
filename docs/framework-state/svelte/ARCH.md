@@ -1,6 +1,6 @@
 # Svelte Observer — Architecture
 
-This document describes the implementation architecture for the Svelte framework state observer in Bugscope. It covers the injection strategy, observation flow, component tracking, bug pattern detection, and integration with the broader Browser Lens pipeline.
+This document describes the implementation architecture for the Svelte framework state observer in Krometrail. It covers the injection strategy, observation flow, component tracking, bug pattern detection, and integration with the broader Browser Lens pipeline.
 
 ---
 
@@ -440,7 +440,7 @@ When neither Svelte 4 dev APIs nor Svelte 5 hooks are available:
 3. **Rely on generic observation.** The existing Browser Lens DOM observation (MutationObserver), console capture, and network tracking continue to function. The agent gets DOM-level events without framework attribution.
 4. **Inform the agent.** The `framework_detect` event includes a clear statement that framework-level state granularity is unavailable and why.
 
-This ensures Bugscope never degrades the debugging experience — it either adds value or stays out of the way.
+This ensures Krometrail never degrades the debugging experience — it either adds value or stays out of the way.
 
 ---
 

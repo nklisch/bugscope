@@ -5,9 +5,9 @@
  * using a hidden test the agent never saw.
  *
  * Each scenario runs in three modes:
- *   - baseline: no bugscope at all — agent relies on code reading, tests, shell
- *   - cli:      bugscope CLI + skill file available — agent uses bash commands
- *   - mcp:      bugscope MCP server configured — agent can use debug_* tools
+ *   - baseline: no krometrail at all — agent relies on code reading, tests, shell
+ *   - cli:      krometrail CLI + skill file available — agent uses bash commands
+ *   - mcp:      krometrail MCP server configured — agent can use debug_* tools
  *
  * Starting with Claude Code as the first agent under test. Other drivers
  * (Codex, etc.) are stubbed and will be enabled for cross-agent comparison.

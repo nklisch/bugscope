@@ -1,6 +1,6 @@
 # Solid Observer — Architecture
 
-This document describes the implementation architecture for Solid state observation in Bugscope: injection strategy, observer flow, state tracking, bug pattern detection, and integration with the existing event pipeline.
+This document describes the implementation architecture for Solid state observation in Krometrail: injection strategy, observer flow, state tracking, bug pattern detection, and integration with the existing event pipeline.
 
 ---
 

@@ -1,25 +1,25 @@
-# Design: Rename bugscope → krometrail
+# Design: Rename krometrail → krometrail
 
 ## Overview
 
-Full project rename from `bugscope` to `krometrail`. Covers every identifier, path, env var, config dir, doc reference, skill directory, script, and the GitHub repo + local folder.
+Full project rename from `krometrail` to `krometrail`. Covers every identifier, path, env var, config dir, doc reference, skill directory, script, and the GitHub repo + local folder.
 
 ### Naming Convention Map
 
 | Context | Old | New |
 |---|---|---|
-| Package / CLI / MCP name | `bugscope` | `krometrail` |
-| Title case (prose) | `Bugscope` | `Krometrail` |
-| Error base class | `BugscopeError` | `KrometrailError` |
-| Env var prefix | `BUGSCOPE_` | `KROMETRAIL_` |
-| Config directory | `~/.bugscope/` | `~/.krometrail/` |
-| Socket file | `bugscope.sock` | `krometrail.sock` |
-| JS window bindings | `bugscopeMark`, `bugscopeScreenshot` | `krometrailMark`, `krometrailScreenshot` |
-| Window guard | `window.__bugscopePanel` | `window.__krometrailPanel` |
-| DOM element ID | `__bugscope_panel` | `__krometrail_panel` |
-| DAP client/adapter ID | `"bugscope"` | `"krometrail"` |
-| HAR creator name | `Bugscope Browser` | `Krometrail Browser` |
-| Skill directories | `bugscope-cli/`, `bugscope-mcp/` | `krometrail-cli/`, `krometrail-mcp/` |
+| Package / CLI / MCP name | `krometrail` | `krometrail` |
+| Title case (prose) | `Krometrail` | `Krometrail` |
+| Error base class | `KrometrailError` | `KrometrailError` |
+| Env var prefix | `KROMETRAIL_` | `KROMETRAIL_` |
+| Config directory | `~/.krometrail/` | `~/.krometrail/` |
+| Socket file | `krometrail.sock` | `krometrail.sock` |
+| JS window bindings | `krometrailMark`, `krometrailScreenshot` | `krometrailMark`, `krometrailScreenshot` |
+| Window guard | `window.__krometrailPanel` | `window.__krometrailPanel` |
+| DOM element ID | `__krometrail_panel` | `__krometrail_panel` |
+| DAP client/adapter ID | `"krometrail"` | `"krometrail"` |
+| HAR creator name | `Krometrail Browser` | `Krometrail Browser` |
+| Skill directories | `krometrail-cli/`, `krometrail-mcp/` | `krometrail-cli/`, `krometrail-mcp/` |
 
 ---
 
@@ -30,9 +30,9 @@ Full project rename from `bugscope` to `krometrail`. Covers every identifier, pa
 **File**: `package.json`
 
 Replace all occurrences:
-- `"name": "bugscope"` → `"name": "krometrail"`
-- `"bugscope": "./src/cli/index.ts"` → `"krometrail": "./src/cli/index.ts"`
-- All `dist/bugscope*` → `dist/krometrail*` in build scripts
+- `"name": "krometrail"` → `"name": "krometrail"`
+- `"krometrail": "./src/cli/index.ts"` → `"krometrail": "./src/cli/index.ts"`
+- All `dist/krometrail*` → `dist/krometrail*` in build scripts
 
 **Acceptance Criteria**:
 - [ ] `bun run build` produces `dist/krometrail`
@@ -54,10 +54,10 @@ export class KrometrailError extends Error {
 }
 ```
 
-All 13 subclasses keep their names (DAPTimeoutError, etc.) but `extends BugscopeError` → `extends KrometrailError`.
+All 13 subclasses keep their names (DAPTimeoutError, etc.) but `extends KrometrailError` → `extends KrometrailError`.
 
 **Acceptance Criteria**:
-- [ ] `BugscopeError` no longer exists anywhere in source
+- [ ] `KrometrailError` no longer exists anywhere in source
 - [ ] All error subclasses extend `KrometrailError`
 - [ ] `instanceof KrometrailError` works for all error types
 
@@ -89,15 +89,15 @@ const browserDataDir = process.env.KROMETRAIL_BROWSER_DATA_DIR ?? resolve(homedi
 
 **File**: `src/cli/index.ts`
 
-- `name: "bugscope"` → `name: "krometrail"`
+- `name: "krometrail"` → `name: "krometrail"`
 
 **File**: `src/cli/commands/doctor.ts`
 
-- `Bugscope v0.1.0` → `Krometrail v0.1.0`
+- `Krometrail v0.1.0` → `Krometrail v0.1.0`
 
 **File**: `src/cli/commands/index.ts`, `src/cli/commands/browser.ts`
 
-- Any prose/description references to "bugscope" or "Bugscope"
+- Any prose/description references to "krometrail" or "Krometrail"
 
 **Acceptance Criteria**:
 - [ ] `krometrail --help` shows correct name
@@ -137,7 +137,7 @@ export function getDaemonSocketPath(): string {
 
 **File**: `src/daemon/server.ts`, `src/daemon/client.ts`, `src/daemon/entry.ts`
 
-- Any "bugscope" references in log messages or comments
+- Any "krometrail" references in log messages or comments
 
 **Acceptance Criteria**:
 - [ ] Socket path resolves to `krometrail.sock`
@@ -161,7 +161,7 @@ panel.id = '__krometrail_panel';
 
 **File**: `src/browser/recorder/chrome-launcher.ts`
 
-- Chrome profile path: `~/.bugscope/chrome-profiles/` → `~/.krometrail/chrome-profiles/`
+- Chrome profile path: `~/.krometrail/chrome-profiles/` → `~/.krometrail/chrome-profiles/`
 
 **File**: `src/browser/storage/persistence.ts`
 
@@ -182,9 +182,9 @@ creator: { name: "Krometrail Browser", version: "1.0" }
 
 ### Unit 8: Adapter Cache Paths
 
-**Files**: `src/adapters/kotlin.ts`, `src/adapters/csharp.ts`, `src/adapters/netcoredbg.ts`, `src/adapters/js-debug-adapter.ts`, and any other adapter referencing `~/.bugscope/adapters/`
+**Files**: `src/adapters/kotlin.ts`, `src/adapters/csharp.ts`, `src/adapters/netcoredbg.ts`, `src/adapters/js-debug-adapter.ts`, and any other adapter referencing `~/.krometrail/adapters/`
 
-Replace `~/.bugscope/adapters/` → `~/.krometrail/adapters/` (or however each adapter resolves its cache dir).
+Replace `~/.krometrail/adapters/` → `~/.krometrail/adapters/` (or however each adapter resolves its cache dir).
 
 **Acceptance Criteria**:
 - [ ] All adapter cache dirs resolve under `~/.krometrail/`
@@ -195,10 +195,10 @@ Replace `~/.bugscope/adapters/` → `~/.krometrail/adapters/` (or however each a
 
 **File**: `src/mcp/tools/index.ts`, `src/mcp/tools/browser.ts`, `src/mcp/tools/utils.ts`
 
-- Any description strings or comments mentioning "bugscope" or "Bugscope"
+- Any description strings or comments mentioning "krometrail" or "Krometrail"
 
 **Acceptance Criteria**:
-- [ ] No MCP tool description contains "bugscope"
+- [ ] No MCP tool description contains "krometrail"
 
 ---
 
@@ -222,7 +222,7 @@ echo "Installed: $DEST/krometrail"
 
 **File**: `scripts/setup-test-deps.sh`
 
-- Any "bugscope" references
+- Any "krometrail" references
 
 **Acceptance Criteria**:
 - [ ] `bash scripts/install.sh` installs `~/.local/bin/krometrail`
@@ -231,18 +231,18 @@ echo "Installed: $DEST/krometrail"
 
 ### Unit 11: Test Files
 
-**Scope**: All files under `tests/` containing "bugscope" (case-insensitive).
+**Scope**: All files under `tests/` containing "krometrail" (case-insensitive).
 
 Key files:
-- `tests/unit/core/errors.test.ts` — `BugscopeError` → `KrometrailError`
+- `tests/unit/core/errors.test.ts` — `KrometrailError` → `KrometrailError`
 - `tests/unit/daemon/protocol.test.ts` — socket path assertions
-- `tests/helpers/browser-test-harness.ts` — `BUGSCOPE_BROWSER_DATA_DIR` env var
+- `tests/helpers/browser-test-harness.ts` — `KROMETRAIL_BROWSER_DATA_DIR` env var
 - `tests/agent-harness/lib/harness.ts` — binary name, skill dir paths
 - `tests/agent-harness/lib/config.ts` — any config references
 - `tests/agent-harness/report.ts` — product name in output
 - `tests/agent-harness/drivers/*.ts` — tool name references
 - `tests/agent-harness/README.md` — prose
-- All unit tests referencing `BUGSCOPE_*` env vars or `~/.bugscope/` paths
+- All unit tests referencing `KROMETRAIL_*` env vars or `~/.krometrail/` paths
 
 **Implementation Notes**:
 - Use project-wide find-and-replace with the naming convention map
@@ -250,23 +250,23 @@ Key files:
 
 **Acceptance Criteria**:
 - [ ] `bun run test:unit` passes
-- [ ] No test file contains "bugscope" (case-insensitive)
+- [ ] No test file contains "krometrail" (case-insensitive)
 
 ---
 
 ### Unit 12: Skill Directories
 
 **Directory renames**:
-- `.agents/skills/bugscope-cli/` → `.agents/skills/krometrail-cli/`
-- `.agents/skills/bugscope-mcp/` → `.agents/skills/krometrail-mcp/`
+- `.agents/skills/krometrail-cli/` → `.agents/skills/krometrail-cli/`
+- `.agents/skills/krometrail-mcp/` → `.agents/skills/krometrail-mcp/`
 
 **File content**: Update all `.md` files within these directories plus:
 - `.agents/installed.json` — skill name references
-- `skill.md`, `skill/SKILL.md`, `skill/references/*.md` — all "bugscope" refs
+- `skill.md`, `skill/SKILL.md`, `skill/references/*.md` — all "krometrail" refs
 - `src/browser/SKILL.md` — any refs
 
 **Acceptance Criteria**:
-- [ ] No directory or file under `.agents/skills/` contains "bugscope" in name or content
+- [ ] No directory or file under `.agents/skills/` contains "krometrail" in name or content
 
 ---
 
@@ -281,19 +281,19 @@ Key files:
 
 **File**: `.claude/settings.local.json`
 
-- Path references: `~/.bugscope/` → `~/.krometrail/`
-- MCP tool patterns: `mcp__bugscope__*` → `mcp__krometrail__*`
+- Path references: `~/.krometrail/` → `~/.krometrail/`
+- MCP tool patterns: `mcp__krometrail__*` → `mcp__krometrail__*`
 
 **File**: `.claude/rules/patterns.md`
 
-- Any "bugscope"/"Bugscope" references
+- Any "krometrail"/"Krometrail" references
 
 **File**: `.claude/skills/patterns/error-hierarchy.md`
 
-- `BugscopeError` → `KrometrailError`
+- `KrometrailError` → `KrometrailError`
 
 **Acceptance Criteria**:
-- [ ] No file under `.claude/` contains "bugscope" (case-insensitive)
+- [ ] No file under `.claude/` contains "krometrail" (case-insensitive)
 
 ---
 
@@ -302,17 +302,17 @@ Key files:
 **Scope**: All `.md` files in `docs/`, `README.md`, `mcp-debug-adapter-design.md`
 
 Apply the naming convention map across all prose:
-- `bugscope` → `krometrail` (CLI commands, config keys, paths)
-- `Bugscope` → `Krometrail` (titles, sentences)
-- `BUGSCOPE_` → `KROMETRAIL_` (env vars)
-- `~/.bugscope/` → `~/.krometrail/`
+- `krometrail` → `krometrail` (CLI commands, config keys, paths)
+- `Krometrail` → `Krometrail` (titles, sentences)
+- `KROMETRAIL_` → `KROMETRAIL_` (env vars)
+- `~/.krometrail/` → `~/.krometrail/`
 
 **Implementation Notes**:
 - ~50 markdown files, ~300+ occurrences total
-- Bulk find-and-replace is safe here since "bugscope" is unique to this project
+- Bulk find-and-replace is safe here since "krometrail" is unique to this project
 
 **Acceptance Criteria**:
-- [ ] No `.md` file in the repo contains "bugscope" (case-insensitive)
+- [ ] No `.md` file in the repo contains "krometrail" (case-insensitive)
 
 ---
 
@@ -320,10 +320,10 @@ Apply the naming convention map across all prose:
 
 **File**: `benchmarks/run.ts`
 
-- Any "bugscope" references
+- Any "krometrail" references
 
 **Acceptance Criteria**:
-- [ ] No "bugscope" in benchmark files
+- [ ] No "krometrail" in benchmark files
 
 ---
 
@@ -336,7 +336,7 @@ gh repo rename krometrail
 ```
 
 Then update the one GitHub URL found in docs:
-- `docs/guides/troubleshooting.md` line 257: `https://github.com/anthropics/bugscope/issues` → update to new repo URL
+- `docs/guides/troubleshooting.md` line 257: `https://github.com/anthropics/krometrail/issues` → update to new repo URL
 
 **Acceptance Criteria**:
 - [ ] GitHub repo is renamed
@@ -349,7 +349,7 @@ Then update the one GitHub URL found in docs:
 **Manual step** (after all code changes are committed):
 
 ```bash
-mv ~/dev/bugscope ~/dev/krometrail
+mv ~/dev/krometrail ~/dev/krometrail
 ```
 
 **Acceptance Criteria**:
@@ -359,14 +359,14 @@ mv ~/dev/bugscope ~/dev/krometrail
 
 ### Unit 18: Dist Artifacts
 
-**File**: `dist/bugscope`, `dist/agent-lens`
+**File**: `dist/krometrail`, `dist/agent-lens`
 
 - Old binaries should be cleaned up
 - New build produces `dist/krometrail`
 
 **Acceptance Criteria**:
 - [ ] `dist/krometrail` exists after build
-- [ ] Old `dist/bugscope` removed
+- [ ] Old `dist/krometrail` removed
 
 ---
 
@@ -391,25 +391,25 @@ mv ~/dev/bugscope ~/dev/krometrail
 17. **Unit 16**: GitHub repo rename (manual)
 18. **Unit 17**: Local folder rename (manual, last)
 
-**Implementation strategy**: Units 1–15 can be done as a single bulk find-and-replace operation across the repo, since "bugscope" is a unique token with no substring collisions. The replacements are:
+**Implementation strategy**: Units 1–15 can be done as a single bulk find-and-replace operation across the repo, since "krometrail" is a unique token with no substring collisions. The replacements are:
 
 | Find | Replace |
 |---|---|
-| `BugscopeError` | `KrometrailError` |
-| `BUGSCOPE_` | `KROMETRAIL_` |
-| `bugscopeMark` | `krometrailMark` |
-| `bugscopeScreenshot` | `krometrailScreenshot` |
-| `__bugscopePanel` | `__krometrailPanel` |
-| `__bugscope_panel` | `__krometrail_panel` |
-| `Bugscope` | `Krometrail` |
-| `bugscope` | `krometrail` |
+| `KrometrailError` | `KrometrailError` |
+| `KROMETRAIL_` | `KROMETRAIL_` |
+| `krometrailMark` | `krometrailMark` |
+| `krometrailScreenshot` | `krometrailScreenshot` |
+| `__krometrailPanel` | `__krometrailPanel` |
+| `__krometrail_panel` | `__krometrail_panel` |
+| `Krometrail` | `Krometrail` |
+| `krometrail` | `krometrail` |
 
-**Order matters** — replace specific identifiers (BugscopeError, BUGSCOPE_, bugscopeMark, etc.) before the generic `bugscope`/`Bugscope` catch-all to avoid double-replacing.
+**Order matters** — replace specific identifiers (KrometrailError, KROMETRAIL_, krometrailMark, etc.) before the generic `krometrail`/`Krometrail` catch-all to avoid double-replacing.
 
 After bulk replace, manually handle:
-- Directory renames (`.agents/skills/bugscope-*`)
+- Directory renames (`.agents/skills/krometrail-*`)
 - `bun.lock` — run `bun install` to regenerate
-- Verify no "bugscope" remains: `grep -ri bugscope .`
+- Verify no "krometrail" remains: `grep -ri krometrail .`
 
 ## Testing
 
@@ -417,7 +417,7 @@ After bulk replace, manually handle:
 
 ```bash
 # Confirm no references remain
-grep -ri "bugscope" --include="*.ts" --include="*.json" --include="*.md" --include="*.sh" .
+grep -ri "krometrail" --include="*.ts" --include="*.json" --include="*.md" --include="*.sh" .
 
 # Rebuild
 bun run build
@@ -433,7 +433,7 @@ dist/krometrail doctor
 
 ## Verification Checklist
 
-- [ ] `grep -ri bugscope` returns zero results (excluding git history and bun.lock)
+- [ ] `grep -ri krometrail` returns zero results (excluding git history and bun.lock)
 - [ ] `bun run build` succeeds and produces `dist/krometrail`
 - [ ] `bun run test:unit` passes
 - [ ] `bun run lint` passes

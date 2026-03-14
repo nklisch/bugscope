@@ -1,4 +1,4 @@
-# Bugscope — Design Document
+# Krometrail — Design Document
 
 **Runtime Debugging Viewport for AI Coding Agents**
 
@@ -10,7 +10,7 @@ Version 1.0 — March 2026 | Draft
 
 AI coding agents such as Claude Code and Codex currently debug software through static code analysis and trial-and-error test execution. They lack the ability to inspect runtime state, set breakpoints, or step through executing code. This makes entire categories of bugs—incorrect runtime values, unexpected mutations, race conditions, off-by-one errors deep in call chains—significantly harder to diagnose.
 
-This document specifies **Bugscope**, a Model Context Protocol (MCP) server that exposes a language-agnostic debugging interface to AI agents. The server translates MCP tool calls into Debug Adapter Protocol (DAP) messages, enabling any DAP-compatible debugger to be used by any MCP-compatible agent without either side needing awareness of the other.
+This document specifies **Krometrail**, a Model Context Protocol (MCP) server that exposes a language-agnostic debugging interface to AI agents. The server translates MCP tool calls into Debug Adapter Protocol (DAP) messages, enabling any DAP-compatible debugger to be used by any MCP-compatible agent without either side needing awareness of the other.
 
 The design prioritizes three qualities: a **compact default viewport** that minimizes token consumption per debug step, a **drill-down-on-demand** pattern that lets the agent selectively expand its view, and a **pluggable adapter layer** that makes adding new languages a bounded, well-defined task.
 
@@ -90,11 +90,11 @@ A typical interaction follows this sequence:
            │ MCP (stdio / SSE)            │ bash / shell
            ▼                              ▼
 ┌─────────────────────────────────────────────────────────┐
-│                       bugscope                         │
+│                       krometrail                         │
 │  ┌────────────────────┐    ┌─────────────────────────┐  │
 │  │  MCP Server        │    │  CLI                     │  │
-│  │  (tool interface)  │    │  bugscope launch ...   │  │
-│  │                    │    │  bugscope step ...     │  │
+│  │  (tool interface)  │    │  krometrail launch ...   │  │
+│  │                    │    │  krometrail step ...     │  │
 │  └─────────┬──────────┘    └────────────┬────────────┘  │
 │            └──────────┬─────────────────┘               │
 │  ┌────────────────────┴──────────────────────────────┐  │
@@ -451,13 +451,13 @@ Retrieve captured stdout/stderr from the debugee process.
 
 ## 6. CLI Interface
 
-Bugscope provides a complete CLI that mirrors every MCP tool as a shell command. This enables two integration paths: agents that support MCP connect via the MCP server, while agents that are good at bash (or humans who want a better debugging UX) use the CLI directly. Both interfaces share the same core — identical viewport rendering, session management, and adapter layer.
+Krometrail provides a complete CLI that mirrors every MCP tool as a shell command. This enables two integration paths: agents that support MCP connect via the MCP server, while agents that are good at bash (or humans who want a better debugging UX) use the CLI directly. Both interfaces share the same core — identical viewport rendering, session management, and adapter layer.
 
 ### 6.1 Why Both Interfaces
 
 **MCP path:** Install as an MCP server, the agent discovers tools automatically via MCP tool listing. Best for agents with native MCP support (Claude Code with MCP config, Cursor, etc.). Zero prompting needed — the tool descriptions guide the agent.
 
-**CLI path:** Install via `npx bugscope`, `bunx bugscope`, or download the compiled single-file binary from GitHub releases (built with `bun build --compile` — zero runtime dependencies). Load a skill/instruction file that teaches the agent the commands. Best for agents that are already good at bash (Claude Code, Codex), for CI/CD integration, for human debugging, and for environments where MCP setup is inconvenient. No server lifecycle to manage — each command is stateless from the shell's perspective (sessions are managed by a lightweight background daemon).
+**CLI path:** Install via `npx krometrail`, `bunx krometrail`, or download the compiled single-file binary from GitHub releases (built with `bun build --compile` — zero runtime dependencies). Load a skill/instruction file that teaches the agent the commands. Best for agents that are already good at bash (Claude Code, Codex), for CI/CD integration, for human debugging, and for environments where MCP setup is inconvenient. No server lifecycle to manage — each command is stateless from the shell's perspective (sessions are managed by a lightweight background daemon).
 
 The CLI is not a secondary interface. It's a first-class path designed so that an agent with nothing more than bash access and a one-paragraph skill description can debug as effectively as one using MCP.
 
@@ -469,184 +469,184 @@ Every command outputs the viewport to stdout as structured plain text (the same 
 
 ```bash
 # Launch a debug session with initial breakpoints
-bugscope launch "python app.py" \
+krometrail launch "python app.py" \
   --break order.py:147 \
   --break discount.py:23 \
   --stop-on-entry
 
 # Launch with a conditional breakpoint
-bugscope launch "python -m pytest tests/test_order.py -x" \
+krometrail launch "python -m pytest tests/test_order.py -x" \
   --break "order.py:147 when discount < 0"
 
 # Launch with language override
-bugscope launch "cargo test" --language rust
+krometrail launch "cargo test" --language rust
 
 # Check session status
-bugscope status
+krometrail status
 
 # Stop the active session
-bugscope stop
+krometrail stop
 
 # Stop a specific session
-bugscope stop --session abc123
+krometrail stop --session abc123
 ```
 
 #### Execution Control
 
 ```bash
 # Continue to next breakpoint
-bugscope continue
+krometrail continue
 
 # Step over / into / out
-bugscope step over
-bugscope step into
-bugscope step out
+krometrail step over
+krometrail step into
+krometrail step out
 
 # Step multiple times
-bugscope step over --count 5
+krometrail step over --count 5
 
 # Run to a specific line
-bugscope run-to order.py:150
+krometrail run-to order.py:150
 
 # Continue with a timeout
-bugscope continue --timeout 10000
+krometrail continue --timeout 10000
 ```
 
 #### Breakpoint Management
 
 ```bash
 # Set breakpoints (replaces existing in that file)
-bugscope break order.py:147
-bugscope break order.py:147,150,155
+krometrail break order.py:147
+krometrail break order.py:147,150,155
 
 # Conditional breakpoints
-bugscope break "order.py:147 when discount < 0"
-bugscope break "order.py:147 hit >=100"
+krometrail break "order.py:147 when discount < 0"
+krometrail break "order.py:147 hit >=100"
 
 # Log points (log instead of breaking)
-bugscope break "order.py:147 log 'discount={discount}, total={total}'"
+krometrail break "order.py:147 log 'discount={discount}, total={total}'"
 
 # Exception breakpoints
-bugscope break --exceptions uncaught
-bugscope break --exceptions raised    # Python: all raised exceptions
+krometrail break --exceptions uncaught
+krometrail break --exceptions raised    # Python: all raised exceptions
 
 # List all breakpoints
-bugscope breakpoints
+krometrail breakpoints
 
 # Remove breakpoints from a file
-bugscope break --clear order.py
+krometrail break --clear order.py
 ```
 
 #### State Inspection
 
 ```bash
 # Evaluate an expression in current frame
-bugscope eval "cart.items[0].__dict__"
-bugscope eval "len(results)" --depth 3
+krometrail eval "cart.items[0].__dict__"
+krometrail eval "len(results)" --depth 3
 
 # Evaluate in a different stack frame
-bugscope eval "request.headers" --frame 2
+krometrail eval "request.headers" --frame 2
 
 # Show variables (current frame locals by default)
-bugscope vars
-bugscope vars --scope global
-bugscope vars --scope closure
-bugscope vars --filter "^user"
+krometrail vars
+krometrail vars --scope global
+krometrail vars --scope closure
+krometrail vars --filter "^user"
 
 # Full stack trace
-bugscope stack
-bugscope stack --frames 20 --source
+krometrail stack
+krometrail stack --frames 20 --source
 
 # View source for any file
-bugscope source discount.py
-bugscope source discount.py:15-30
+krometrail source discount.py
+krometrail source discount.py:15-30
 ```
 
 #### Session Intelligence
 
 ```bash
 # Add watch expressions
-bugscope watch "len(cart.items)" "user.tier" "total > 0"
+krometrail watch "len(cart.items)" "user.tier" "total > 0"
 
 # View the session investigation log
-bugscope log
-bugscope log --detailed
+krometrail log
+krometrail log --detailed
 
 # View captured program output
-bugscope output
-bugscope output --stderr
-bugscope output --since-action 5
+krometrail output
+krometrail output --stderr
+krometrail output --since-action 5
 ```
 
 #### Utility
 
 ```bash
 # Check which adapters/debuggers are available
-bugscope doctor
+krometrail doctor
 
 # Show version and config
-bugscope --version
+krometrail --version
 
 # JSON output mode (for programmatic consumption)
-bugscope launch "python app.py" --break order.py:147 --json
+krometrail launch "python app.py" --break order.py:147 --json
 
 # Quiet mode (viewport only, no chrome)
-bugscope continue --quiet
+krometrail continue --quiet
 ```
 
 ### 6.3 Session Daemon
 
-The CLI manages sessions via a lightweight background daemon that starts automatically on the first `bugscope launch` and shuts down after the last session ends (or after an idle timeout). This allows sequential commands to operate on a persistent debug session without the user managing server lifecycle:
+The CLI manages sessions via a lightweight background daemon that starts automatically on the first `krometrail launch` and shuts down after the last session ends (or after an idle timeout). This allows sequential commands to operate on a persistent debug session without the user managing server lifecycle:
 
 ```bash
 # These are separate shell commands that share a session:
-bugscope launch "python app.py" --break order.py:147
+krometrail launch "python app.py" --break order.py:147
 # daemon starts, session created, viewport printed
 
-bugscope continue
+krometrail continue
 # daemon already running, continues the existing session
 
-bugscope eval "discount"
+krometrail eval "discount"
 # evaluates in the stopped session
 
-bugscope stop
+krometrail stop
 # session ends, daemon idles then shuts down
 ```
 
-The daemon listens on a Unix domain socket at `$XDG_RUNTIME_DIR/bugscope.sock` (or `~/.bugscope/bugscope.sock` as fallback). Multiple concurrent sessions are supported — when more than one session is active, commands require `--session <id>` to disambiguate.
+The daemon listens on a Unix domain socket at `$XDG_RUNTIME_DIR/krometrail.sock` (or `~/.krometrail/krometrail.sock` as fallback). Multiple concurrent sessions are supported — when more than one session is active, commands require `--session <id>` to disambiguate.
 
 ### 6.4 Agent Skill File
 
-For agents that use the CLI path, a skill file teaches the agent how to use Bugscope. This can be loaded as a Claude Code skill, a Codex system prompt addition, or any agent's instruction set:
+For agents that use the CLI path, a skill file teaches the agent how to use Krometrail. This can be loaded as a Claude Code skill, a Codex system prompt addition, or any agent's instruction set:
 
 ```markdown
-# Bugscope — Debugging Skill
+# Krometrail — Debugging Skill
 
-You have access to `bugscope`, a CLI debugger. Use it when you need to
+You have access to `krometrail`, a CLI debugger. Use it when you need to
 inspect runtime state to diagnose a bug — especially when static code
 reading and test output aren't enough to identify the root cause.
 
 ## Quick start
-  bugscope launch "<command>" --break <file>:<line>
-  bugscope continue          # run to next breakpoint
-  bugscope step into|over|out
-  bugscope eval "<expr>"     # evaluate expression at current stop
-  bugscope vars              # show local variables
-  bugscope stop              # end session
+  krometrail launch "<command>" --break <file>:<line>
+  krometrail continue          # run to next breakpoint
+  krometrail step into|over|out
+  krometrail eval "<expr>"     # evaluate expression at current stop
+  krometrail vars              # show local variables
+  krometrail stop              # end session
 
 ## Conditional breakpoints
-  bugscope break "<file>:<line> when <condition>"
+  krometrail break "<file>:<line> when <condition>"
 
 ## Strategy
 1. Start by setting a breakpoint where you expect the bug to manifest.
 2. Inspect locals. Look for unexpected values.
 3. If the bad value came from a function call, set a breakpoint inside
    that function and re-launch.
-4. Use `bugscope eval` to test hypotheses without modifying code.
+4. Use `krometrail eval` to test hypotheses without modifying code.
 5. Once you identify the root cause, stop the session and fix the code.
 
 ## Key rules
-- Always call `bugscope stop` when done to clean up.
+- Always call `krometrail stop` when done to clean up.
 - Prefer conditional breakpoints over stepping through loops.
 - Each command prints a viewport showing source, locals, and stack.
 - If a session times out (5 min default), re-launch.
@@ -1056,7 +1056,7 @@ Total debug actions: 8. Total tokens for viewports: ~2,400. Time to root cause: 
 The same discount bug from Appendix B, diagnosed via the CLI by an agent with bash access and the skill file loaded:
 
 ```bash
-$ bugscope launch "python -m pytest tests/test_order.py::test_gold_discount -x" \
+$ krometrail launch "python -m pytest tests/test_order.py::test_gold_discount -x" \
     --break order.py:147
 
 Session started: abc123
@@ -1096,24 +1096,24 @@ Locals:
 Agent sees `discount = -149.97` and wants to inspect the function that produced it:
 
 ```bash
-$ bugscope stop
-$ bugscope launch "python -m pytest tests/test_order.py::test_gold_discount -x" \
+$ krometrail stop
+$ krometrail launch "python -m pytest tests/test_order.py::test_gold_discount -x" \
     --break order.py:143
 
 ── STOPPED at order.py:143 (process_order) ──
 ...
 
-$ bugscope step into
+$ krometrail step into
 
 ── STOPPED at discount.py:15 (calculate_discount) ──
 Locals:
   user      = <User: tier="gold">
   subtotal  = 149.97
 
-$ bugscope break "discount.py:23 when tier == 'gold'"
+$ krometrail break "discount.py:23 when tier == 'gold'"
 Breakpoint set: discount.py:23 (conditional: tier == 'gold')
 
-$ bugscope continue
+$ krometrail continue
 
 ── STOPPED at discount.py:23 (calculate_discount) ──
 Reason: conditional breakpoint
@@ -1123,10 +1123,10 @@ Locals:
   base_rate         = 1.0
   discount_amount   = 149.97
 
-$ bugscope eval "tier_multipliers"
+$ krometrail eval "tier_multipliers"
 {"bronze": 0.05, "silver": 0.1, "gold": 1.0, "platinum": 0.2}
 
-$ bugscope stop
+$ krometrail stop
 Session abc123 ended. Duration: 12s, Actions: 6
 ```
 

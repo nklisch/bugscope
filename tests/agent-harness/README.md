@@ -25,13 +25,13 @@ TRACE_DIR=./results bun run test:agent
 
 ## Modes
 
-Each scenario runs in three modes to measure the value of bugscope:
+Each scenario runs in three modes to measure the value of krometrail:
 
 | Mode | What the agent gets |
 |------|---------------------|
 | `baseline` | Nothing — code reading, bash only |
-| `cli` | `bugscope` CLI on PATH + skill installed in workspace |
-| `mcp` | bugscope MCP server configured — full `debug_*` tool access |
+| `cli` | `krometrail` CLI on PATH + skill installed in workspace |
+| `mcp` | krometrail MCP server configured — full `debug_*` tool access |
 
 ## Scenarios
 
@@ -81,7 +81,7 @@ scenarios/<name>/
 
 **The prompt is the only source of truth.** The visible test passes before the agent runs — it cannot be used to find the bug. The agent's only evidence is the bug report in `prompt.md`, written in the voice of a customer, engineer, or product team member describing what they observed and what they expected. The agent must investigate the code and runtime state to identify the root cause.
 
-**The skill is installed like a real project.** The bugscope skill is placed at `.claude/skills/bugscope/SKILL.md` in the workspace — the same mechanism a real user would use — not injected via system prompt flags.
+**The skill is installed like a real project.** The krometrail skill is placed at `.claude/skills/krometrail/SKILL.md` in the workspace — the same mechanism a real user would use — not injected via system prompt flags.
 
 **Each scenario has a `CLAUDE.md`.** Just like a real project, the workspace root has a `CLAUDE.md` describing the project structure and how to run things. This is how the agent discovers the project layout, not through hints in the prompt.
 
@@ -134,7 +134,7 @@ Add a new agent by implementing the `AgentDriver` interface in `lib/config.ts` a
 6. Write `prompt.md` — a natural-language bug report in the voice of whoever discovered it (customer, engineer, product). State what was expected and what actually happened with concrete values. No instructions on how to fix it.
 7. Write `scenario.json` with a realistic timeout and level
 
-The harness copies `src/` into a fresh temp directory, installs the skill at `.claude/skills/bugscope/`, git-inits the workspace, runs setup commands, then hands control to the agent. After the agent exits, `hidden/` is copied in and the validation command runs.
+The harness copies `src/` into a fresh temp directory, installs the skill at `.claude/skills/krometrail/`, git-inits the workspace, runs setup commands, then hands control to the agent. After the agent exits, `hidden/` is copied in and the validation command runs.
 
 ## Diagnostics
 
