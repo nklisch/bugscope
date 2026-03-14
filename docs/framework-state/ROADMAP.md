@@ -8,11 +8,13 @@ References to design docs: `→ framework-state/<framework>/DOC.md`
 
 ---
 
-## What Exists Today
+## Current Status
 
-Browser Lens captures: network requests/responses, console output, page errors, navigation, user input (clicks, form submissions, field changes), DOM mutations, storage changes, screenshots, and WebSocket frames. All via CDP event interception and a page-injected input tracker script.
+**Phases 14–17 are complete.** Framework detection, React state observer, Vue state observer, and framework-aware investigation tools are all implemented and tested.
 
-**Not captured:** Framework-specific component trees, reactive state changes, store mutations, framework-level error patterns (stale closures, lost reactivity, infinite re-renders). The agent sees symptoms (DOM changes, console errors) but not causes (which component's state change triggered the error).
+**Phases 18–19 (Solid, Svelte) are not implemented.** Only framework detection exists for Solid and Svelte (in `detector.ts`). No state observers, no bug pattern detectors. These remain future work, pending Solid's bridge script maturity and Svelte 5's devtools hooks (sveltejs/svelte#11389).
+
+Browser Lens captures: network requests/responses, console output, page errors, navigation, user input (clicks, form submissions, field changes), DOM mutations, storage changes, screenshots, WebSocket frames, React component state/diffs/patterns, Vue component state/diffs/store mutations, and framework detection for React, Vue, Solid, and Svelte.
 
 ---
 

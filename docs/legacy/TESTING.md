@@ -1,3 +1,5 @@
+> **LEGACY — This document is outdated.** Test fixture paths and file structure described here are speculative and don't match the actual layout. See `docs/agents.md` for navigation guidance.
+
 # Krometrail — Testing Strategy
 
 ---

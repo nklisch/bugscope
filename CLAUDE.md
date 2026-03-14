@@ -21,8 +21,11 @@ tests/
   fixtures/       Real programs used as debug targets
   agent-harness/  Scenario-based test suite for evaluating agent debugging ability
     scenarios/    Buggy programs at 5 difficulty levels, per-language suites
-docs/             Design docs (VISION, ARCH, UX, SPEC, INTERFACE, TESTING)
-  designs/        Phase design docs — named phase-N-short-description.md
+docs/             Foundation docs (VISION, ARCH, UX, SPEC, ADAPTER-SDK, PRIOR_ART)
+  agents.md       Navigation guide — which docs to trust, which are legacy
+  legacy/         Outdated docs (ROADMAP, INTERFACE, TESTING) — do not use for current state
+  designs/completed/  Historical phase design docs — all implemented
+  .generated/     Auto-generated from Zod schemas (do not edit directly)
 ```
 
 ## Commands

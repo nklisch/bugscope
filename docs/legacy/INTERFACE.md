@@ -1,3 +1,5 @@
+> **LEGACY — This document is outdated.** The CLI was overhauled to use namespaced subcommands (`krometrail debug <cmd>`, `krometrail browser <cmd>`). Browser tools are not documented here. See `docs/agents.md` for navigation guidance.
+
 # Krometrail — Interface Reference
 
 Krometrail exposes two equivalent interface surfaces: MCP tools (for agents with native MCP support) and CLI commands (for agents with bash access). Both share the same core and produce identical viewport output.

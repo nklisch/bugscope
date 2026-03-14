@@ -1,3 +1,5 @@
+> **LEGACY — This document is outdated.** All phases described here are complete. See `docs/agents.md` for navigation guidance.
+
 # Krometrail — Roadmap
 
 Each phase is a self-contained deliverable with a clear "done" state. Phases are ordered by dependency — each builds on the previous. Steps within a phase can often be parallelized.

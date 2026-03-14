@@ -42,60 +42,28 @@ The gap is not in reasoning capability but in tooling. Agents already know how t
 
 ---
 
-## Implementation Roadmap
+## What's Implemented
 
-### Phase 1: Foundation
+All planned phases are complete. The system ships with:
 
-Core server with viewport abstraction and the Python adapter, built in **TypeScript on Bun**. Bun is chosen for direct access to the DAP/MCP TypeScript ecosystem (`@vscode/debugadapter`, `@modelcontextprotocol/sdk`), single-file compiled binaries via `bun build --compile`, and dual distribution via npm and standalone binary. Minimum viable product: an agent can launch a Python script, set breakpoints, step, inspect state, and evaluate expressions.
+- **Runtime debugging** — 10 language adapters (Python, Node.js, Go, Rust, Java, C/C++, Ruby, C#, Swift, Kotlin), viewport abstraction with token-budgeted rendering, context compression, watch expressions, session logging, multi-threaded debugging, attach mode, framework auto-detection
+- **Browser observation** — CDP-based passive recording (network, console, DOM, storage, screenshots, user input), SQLite persistence, investigation tools (search, inspect, diff, replay context), HAR export, marker/screenshot system
+- **Framework state observation** — React and Vue state observers with component tree walking, state diffing, store integration (Pinia/Vuex), and bug pattern detection (infinite re-renders, stale closures, context floods, lost reactivity)
+- **Dual interface** — MCP server and CLI with full parity, namespaced under `debug` and `browser` subcommands, JSON envelope output, semantic exit codes
+- **Testing** — Unit, integration, e2e, and agent harness test suites with real debuggers and real browser fixtures
 
-- MCP server scaffold with tool registration and session management
-- **CLI with full command parity** — every MCP tool available as a shell command
-- DAP client library in TypeScript, leveraging `@vscode/debugadapter` ecosystem
-- Viewport renderer with configurable parameters
-- Python adapter using debugpy
-- Session daemon for CLI state persistence
-- Agent skill file for CLI-based integration
-- Compiled binary distribution via `bun build --compile` (Linux, macOS, Windows)
-- Integration test suite for the full agent-to-debugger path (both MCP and CLI)
-- Tool descriptions optimized for agent discovery and usage
-
-### Phase 2: Multi-Language + Intelligence
-
-- Node.js and Go adapters
-- Session intelligence: watch expressions, session logging, viewport diffing
-- Conditional breakpoint support verified across all adapters
-- Context compression (automatic summarization, diff mode)
-
-### Phase 3: Advanced Capabilities
-
-- Rust, Java, and C/C++ adapters
-- Attach-to-process for debugging running services
-- Multi-threaded debugging with thread selection in viewport
-- Remote debugging via DAP over TCP
-- Progressive compression tied to action count
-
-### Phase 4: Ecosystem
-
-- Community adapter SDK with documentation and templates
-- Adapter contribution guidelines and test harness
-- Performance benchmarking: tokens per session, time to diagnosis, fix rate improvement
-- Integration guides for Claude Code, Codex, and other MCP clients
-- Published tool description patterns for optimal agent behavior
+See `docs/designs/completed/` for historical design documents covering each phase.
 
 ---
 
-## Open Questions
+## Resolved Design Questions
 
-1. **Event delivery model.** Should the server use MCP notifications for async events (breakpoint hit while agent is thinking), or deliver all events synchronously via blocking tool calls? Blocking is simpler but prevents the agent from doing other work while waiting.
+These questions from the original design have all been decided:
 
-2. **Multi-threaded debugging.** How should the viewport handle multiple threads stopped at different locations? Show all threads? Only the active one? A thread selector tool?
-
-3. **Attach vs. launch.** For long-running processes, attach mode is essential. How should the agent discover available processes? PID? Port? Service name?
-
-4. **Security boundaries.** `debug_evaluate` can execute arbitrary code in the debugee's context. Should there be restrictions, or is this acceptable given agents already have code execution capability?
-
-5. **Token budget awareness.** Should the server be aware of the agent's remaining token budget and proactively compress viewports as budget decreases? This would require a non-standard MCP extension.
-
-6. **Integration with existing projects.** Given the active ecosystem (AIDB, mcp-debugger, mcp-dap-server, etc.), should the viewport/compression layer be built as a standalone middleware that wraps any existing MCP debug server, or as contributions to a specific project?
-
-7. **Viewport format.** Should the viewport output be plain text (as shown in this document), structured JSON that the agent parses, or a hybrid? Plain text is more natural for LLMs; JSON is more precise for programmatic consumption.
+1. **Event delivery model** — Synchronous blocking. Every execution control tool returns the viewport on stop. No MCP notifications needed.
+2. **Multi-threaded debugging** — Active thread shown in viewport by default. `debug_threads` tool lists all threads. Thread selection via `thread_id` parameter.
+3. **Attach vs. launch** — Both supported. Attach by PID or port via `debug_attach` / `krometrail debug attach`.
+4. **Security boundaries** — No restrictions on `debug_evaluate`. Agents already have code execution capability.
+5. **Token budget awareness** — Progressive compression based on action count. No MCP extension needed.
+6. **Integration** — Built as a standalone project with its own viewport/compression layer.
+7. **Viewport format** — Plain text by default, JSON via `--json` flag or MCP structured output. Both produce the same information.
