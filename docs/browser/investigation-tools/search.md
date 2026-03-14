@@ -33,6 +33,7 @@ Your agent can search and filter the session in a variety of ways:
 | `framework_state` | Component mount/update/unmount |
 | `framework_error` | Detected bug patterns |
 | `marker` | Named markers placed during recording |
+| `annotation` | Lightweight code-placed annotations (see [Markers & Screenshots](../markers-screenshots)) |
 
 ## Example Workflows
 

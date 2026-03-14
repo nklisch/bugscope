@@ -25,6 +25,7 @@ Browser observation bridges that gap. You browse your app normally, drop markers
 | **Storage** | localStorage/sessionStorage mutations and cross-tab events |
 | **Framework state** | React and Vue component lifecycles, state/prop diffs, store mutations |
 | **Framework errors** | Auto-detected anti-patterns (stale closures, infinite re-renders, missing cleanup) |
+| **Annotations** | Lightweight code-placed timeline markers via `window.__krometrail.mark()` |
 
 ## How It Works
 

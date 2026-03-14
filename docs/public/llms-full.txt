@@ -1333,7 +1333,7 @@ The gap is not in reasoning capability but in tooling. Agents already know how t
 All planned phases are complete. The system ships with:
 
 - **Runtime debugging** — 10 language adapters (Python, Node.js, Go, Rust, Java, C/C++, Ruby, C#, Swift, Kotlin), viewport abstraction with token-budgeted rendering, context compression, watch expressions, session logging, multi-threaded debugging, attach mode, framework auto-detection
-- **Browser observation** — CDP-based passive recording (network, console, DOM, storage, screenshots, user input), SQLite persistence, investigation tools (search, inspect, diff, replay context), HAR export, marker/screenshot system
+- **Browser observation** — CDP-based passive recording (network, console, DOM, storage, screenshots, user input), SQLite persistence, investigation tools (search, inspect, diff, replay context), HAR export, marker/screenshot system, lightweight annotation API (`window.__krometrail.mark()`)
 - **Framework state observation** — React and Vue state observers with component tree walking, state diffing, store integration (Pinia/Vuex), and bug pattern detection (infinite re-renders, stale closures, context floods, lost reactivity)
 - **Dual interface** — MCP server and CLI with full parity, namespaced under `debug` and `browser` subcommands, JSON envelope output, semantic exit codes
 - **Testing** — Unit, integration, e2e, and agent harness test suites with real debuggers and real browser fixtures
@@ -1913,6 +1913,7 @@ Your agent can search and filter the session in a variety of ways:
 | `framework_state` | Component mount/update/unmount |
 | `framework_error` | Detected bug patterns |
 | `marker` | Named markers placed during recording |
+| `annotation` | Lightweight code-placed annotations (see [Markers & Screenshots](../markers-screenshots)) |
 
 ## Example Workflows
 
@@ -1949,6 +1950,46 @@ Markers anchor your agent's investigation to the moments that matter. When you m
 - **Generate reproduction steps** starting from a marker, rather than replaying the entire session
 
 The more precisely you mark key moments, the more targeted your agent's analysis can be. You don't need to understand what went wrong — just mark the moment something looked unexpected.
+
+## Annotations (Lightweight Markers)
+
+Annotations are lightweight markers that your application code can place in the recording timeline. Unlike full markers, annotations do **not** trigger screenshots or persistence snapshots — making them safe to use in hot paths, render loops, or anywhere code runs frequently.
+
+### When to Use Annotations vs Markers
+
+| | Annotations | Markers |
+|---|---|---|
+| **Source** | Application code (`window.__krometrail.mark()`) | Control panel button, keyboard shortcut, or agent tool |
+| **Triggers screenshot** | No | Yes |
+| **Triggers persistence window** | No | Yes |
+| **Safe in loops** | Yes — automatically coalesced | No — each one captures a screenshot |
+| **Use for** | Render cycles, state transitions, API call boundaries | Significant moments you want to investigate later |
+
+### Adding Annotations to Your Code
+
+```javascript
+// Simple annotation
+window.__krometrail?.mark('checkout-started');
+
+// With severity and context data
+window.__krometrail?.mark('payment-failed', {
+  severity: 'high',
+  data: { errorCode: 'card_declined', amount: 42.99 }
+});
+
+// Promote to full marker (triggers screenshot + persistence)
+window.__krometrail?.mark('critical-error', { marker: true });
+```
+
+The `?.` optional chaining means the call does nothing when krometrail isn't recording — safe to leave in production code.
+
+### Coalescing
+
+When the same label fires rapidly (e.g., inside a render loop), annotations are automatically coalesced within a 1-second window. Instead of 100 separate events, you get a single annotation with `count: 100` and the first/last timestamps. A new coalescing window opens automatically after each flush.
+
+### Querying Annotations
+
+Your agent can find annotations using `session_search` with `event_types: ["annotation"]`, or by searching for the label text with `contains_text`.
 
 ## Screenshots
 
@@ -2006,6 +2047,7 @@ Browser observation bridges that gap. You browse your app normally, drop markers
 | **Storage** | localStorage/sessionStorage mutations and cross-tab events |
 | **Framework state** | React and Vue component lifecycles, state/prop diffs, store mutations |
 | **Framework errors** | Auto-detected anti-patterns (stale closures, infinite re-renders, missing cleanup) |
+| **Annotations** | Lightweight code-placed timeline markers via `window.__krometrail.mark()` |
 
 ## How It Works
 
@@ -2118,6 +2160,17 @@ Keyboard shortcuts work even when you're focused inside your app, so you don't h
 ## Stopping a Recording
 
 Your agent handles stopping the recording when it's done. If you need to stop it yourself, you can close Chrome or ask your agent to stop the session. All buffered events are persisted to the database on stop, and the session remains queryable afterward.
+
+## Annotations from Code
+
+If you want to annotate the timeline from your application code (rather than manually clicking the control panel), use the lightweight annotation API:
+
+```javascript
+window.__krometrail?.mark('checkout-started');
+window.__krometrail?.mark('payment-failed', { severity: 'high', data: { errorCode: 'card_declined' } });
+```
+
+Annotations are safe to use in hot paths — they don't trigger screenshots or persistence snapshots, and rapid same-label calls are automatically coalesced. See [Markers & Screenshots](./markers-screenshots) for the full annotation vs marker comparison.
 
 ## Tips
 

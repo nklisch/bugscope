@@ -25,6 +25,46 @@ Markers anchor your agent's investigation to the moments that matter. When you m
 
 The more precisely you mark key moments, the more targeted your agent's analysis can be. You don't need to understand what went wrong — just mark the moment something looked unexpected.
 
+## Annotations (Lightweight Markers)
+
+Annotations are lightweight markers that your application code can place in the recording timeline. Unlike full markers, annotations do **not** trigger screenshots or persistence snapshots — making them safe to use in hot paths, render loops, or anywhere code runs frequently.
+
+### When to Use Annotations vs Markers
+
+| | Annotations | Markers |
+|---|---|---|
+| **Source** | Application code (`window.__krometrail.mark()`) | Control panel button, keyboard shortcut, or agent tool |
+| **Triggers screenshot** | No | Yes |
+| **Triggers persistence window** | No | Yes |
+| **Safe in loops** | Yes — automatically coalesced | No — each one captures a screenshot |
+| **Use for** | Render cycles, state transitions, API call boundaries | Significant moments you want to investigate later |
+
+### Adding Annotations to Your Code
+
+```javascript
+// Simple annotation
+window.__krometrail?.mark('checkout-started');
+
+// With severity and context data
+window.__krometrail?.mark('payment-failed', {
+  severity: 'high',
+  data: { errorCode: 'card_declined', amount: 42.99 }
+});
+
+// Promote to full marker (triggers screenshot + persistence)
+window.__krometrail?.mark('critical-error', { marker: true });
+```
+
+The `?.` optional chaining means the call does nothing when krometrail isn't recording — safe to leave in production code.
+
+### Coalescing
+
+When the same label fires rapidly (e.g., inside a render loop), annotations are automatically coalesced within a 1-second window. Instead of 100 separate events, you get a single annotation with `count: 100` and the first/last timestamps. A new coalescing window opens automatically after each flush.
+
+### Querying Annotations
+
+Your agent can find annotations using `session_search` with `event_types: ["annotation"]`, or by searching for the label text with `contains_text`.
+
 ## Screenshots
 
 Screenshots are captured automatically during recording and can also be taken manually at any time.

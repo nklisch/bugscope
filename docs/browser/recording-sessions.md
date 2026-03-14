@@ -80,6 +80,17 @@ Keyboard shortcuts work even when you're focused inside your app, so you don't h
 
 Your agent handles stopping the recording when it's done. If you need to stop it yourself, you can close Chrome or ask your agent to stop the session. All buffered events are persisted to the database on stop, and the session remains queryable afterward.
 
+## Annotations from Code
+
+If you want to annotate the timeline from your application code (rather than manually clicking the control panel), use the lightweight annotation API:
+
+```javascript
+window.__krometrail?.mark('checkout-started');
+window.__krometrail?.mark('payment-failed', { severity: 'high', data: { errorCode: 'card_declined' } });
+```
+
+Annotations are safe to use in hot paths — they don't trigger screenshots or persistence snapshots, and rapid same-label calls are automatically coalesced. See [Markers & Screenshots](./markers-screenshots) for the full annotation vs marker comparison.
+
 ## Tips
 
 - **Mark before and after the bug** — "before form submit" and "after error appeared" gives your agent a precise window to diff

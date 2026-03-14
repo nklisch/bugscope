@@ -47,7 +47,7 @@ The gap is not in reasoning capability but in tooling. Agents already know how t
 All planned phases are complete. The system ships with:
 
 - **Runtime debugging** — 10 language adapters (Python, Node.js, Go, Rust, Java, C/C++, Ruby, C#, Swift, Kotlin), viewport abstraction with token-budgeted rendering, context compression, watch expressions, session logging, multi-threaded debugging, attach mode, framework auto-detection
-- **Browser observation** — CDP-based passive recording (network, console, DOM, storage, screenshots, user input), SQLite persistence, investigation tools (search, inspect, diff, replay context), HAR export, marker/screenshot system
+- **Browser observation** — CDP-based passive recording (network, console, DOM, storage, screenshots, user input), SQLite persistence, investigation tools (search, inspect, diff, replay context), HAR export, marker/screenshot system, lightweight annotation API (`window.__krometrail.mark()`)
 - **Framework state observation** — React and Vue state observers with component tree walking, state diffing, store integration (Pinia/Vuex), and bug pattern detection (infinite re-renders, stale closures, context floods, lost reactivity)
 - **Dual interface** — MCP server and CLI with full parity, namespaced under `debug` and `browser` subcommands, JSON envelope output, semantic exit codes
 - **Testing** — Unit, integration, e2e, and agent harness test suites with real debuggers and real browser fixtures
