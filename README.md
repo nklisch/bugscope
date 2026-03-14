@@ -2,6 +2,10 @@
 
 **Browser observation and runtime debugging for AI coding agents.**
 
+```bash
+curl -fsSL https://krometrail.dev/install.sh | sh
+```
+
 Krometrail is an MCP server and CLI that gives AI coding agents eyes into running applications. It records browser activity — network requests, console output, DOM mutations, framework state, storage changes, and screenshots — then lets agents search, inspect, and diff that recorded session to diagnose bugs. It also bridges the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) for breakpoint-level debugging across 6 languages.
 
 ## Browser Observation

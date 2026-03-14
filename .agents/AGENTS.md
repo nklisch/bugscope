@@ -50,15 +50,23 @@ bun run lint             # Biome check
 bun run lint:fix         # Biome auto-fix
 ```
 
-## Release checklist
+## Releasing
 
-After tagging a release, run the install script to update the local CLI binary:
+Use the bump script to create and push a release:
 
 ```bash
-bash scripts/install.sh
+bun scripts/bump-version.ts minor   # or patch | major | x.y.z
 ```
 
-This builds `dist/krometrail` and copies it to `~/.local/bin/krometrail`. Run this whenever you push a release so your system has the latest CLI.
+This updates `package.json`, commits, tags, and pushes. The `v*` tag triggers CI which builds platform binaries, creates a GitHub Release, and publishes to npm.
+
+After the release, update your local binary:
+
+```bash
+bash scripts/dev-install.sh
+```
+
+The user-facing installer lives at `scripts/install.sh` and is served via the docs site at `https://krometrail.dev/install.sh`.
 
 ## Stack
 
