@@ -19,8 +19,6 @@ export interface LaunchJsonConfig {
 	host?: string;
 	/** Python-specific: run as module */
 	module?: string;
-	/** Python-specific */
-	justMyCode?: boolean;
 	/** Go-specific: debug mode */
 	mode?: string;
 	/** Node-specific */
@@ -53,7 +51,6 @@ export const LaunchJsonConfigSchema: z.ZodType<LaunchJsonConfig> = z
 		port: z.number().optional(),
 		host: z.string().optional(),
 		module: z.string().optional(),
-		justMyCode: z.boolean().optional(),
 		mode: z.string().optional(),
 		runtimeExecutable: z.string().optional(),
 		runtimeArgs: z.array(z.string()).optional(),

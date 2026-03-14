@@ -157,8 +157,6 @@ export class CppAdapter implements DebugAdapter {
 		// Determine which debugger to use
 		const gdbVersion = await checkGdbVersion();
 		const useGdb = gdbVersion >= MIN_GDB_VERSION;
-		this.useLldb = !useGdb;
-
 		let debuggerCmd: string;
 		let debuggerArgs: string[];
 

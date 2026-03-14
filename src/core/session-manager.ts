@@ -100,15 +100,6 @@ export interface SessionCapabilities {
 
 // --- Session State Machine ---
 
-// --- Action Log Entry (kept for backward compat; EnrichedActionLogEntry is now used internally) ---
-
-export interface ActionLogEntry {
-	actionNumber: number;
-	tool: string;
-	summary: string;
-	timestamp: number;
-}
-
 // --- Output Buffer ---
 
 export interface OutputBuffer {
