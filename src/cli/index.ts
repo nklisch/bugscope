@@ -1,15 +1,16 @@
 #!/usr/bin/env bun
 import { defineCommand, runMain } from "citty";
+import pkg from "../../package.json";
+import { sendPing } from "../telemetry.js";
 import { browserCommand } from "./commands/browser.js";
 import { commandsCommand } from "./commands/commands.js";
 import { debugCommand } from "./commands/debug.js";
 import { doctorCommand } from "./commands/doctor.js";
-import { sendPing } from "../telemetry.js";
 
 const main = defineCommand({
 	meta: {
 		name: "krometrail",
-		version: "0.1.0",
+		version: pkg.version,
 		description: "Runtime debugging viewport for AI coding agents",
 	},
 	args: {

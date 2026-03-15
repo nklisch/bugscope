@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import pkg from "../../package.json";
 import { registerAllAdapters } from "../adapters/registry.js";
 import { QueryEngine } from "../browser/investigation/query-engine.js";
 import { BrowserDatabase } from "../browser/storage/database.js";
@@ -29,7 +30,7 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<vo
 
 	const server = new McpServer({
 		name: "krometrail",
-		version: "0.1.0",
+		version: pkg.version,
 	});
 
 	let sessionManager: ReturnType<typeof createSessionManager> | undefined;
