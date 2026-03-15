@@ -31,6 +31,9 @@ export default defineConfig({
 	],
 
 	themeConfig: {
+		logo: "/favicon.svg",
+		siteTitle: "Krometrail",
+
 		nav: [
 			{ text: "Guide", link: "/guide/getting-started" },
 			{ text: "Browser", link: "/browser/overview" },
