@@ -102,6 +102,7 @@ export class AdapterPrerequisiteError extends KrometrailError {
 		public readonly adapterId: string,
 		public readonly missing: string[],
 		public readonly installHint?: string,
+		public readonly fixCommand?: string,
 	) {
 		super(`Adapter '${adapterId}' prerequisites not met: ${missing.join(", ")}. ${installHint ? `Install: ${installHint}` : ""}`, "ADAPTER_PREREQUISITES");
 		this.name = "AdapterPrerequisiteError";
@@ -113,10 +114,12 @@ export class AdapterPrerequisiteError extends KrometrailError {
  */
 export class AdapterNotFoundError extends KrometrailError {
 	constructor(public readonly languageOrExt: string) {
-		super(`No debug adapter found for '${languageOrExt}'. Available adapters can be checked with debug_status.`, "ADAPTER_NOT_FOUND");
+		super(`No debug adapter found for '${languageOrExt}'. Run 'krometrail doctor' to see available adapters.`, "ADAPTER_NOT_FOUND");
 		this.name = "AdapterNotFoundError";
 	}
 }
+
+export type LaunchErrorCause = "spawn_failed" | "connection_timeout" | "port_conflict" | "early_exit" | "unknown";
 
 /**
  * Debugee process launch failed.
@@ -125,6 +128,7 @@ export class LaunchError extends KrometrailError {
 	constructor(
 		message: string,
 		public readonly stderr?: string,
+		public readonly cause_type: LaunchErrorCause = "unknown",
 	) {
 		super(message, "LAUNCH_FAILED");
 		this.name = "LaunchError";
@@ -136,7 +140,14 @@ export class LaunchError extends KrometrailError {
  */
 export class ChromeNotFoundError extends KrometrailError {
 	constructor() {
-		super("Chrome not found. Install Chrome or use --attach to connect to an existing instance.", "CHROME_NOT_FOUND");
+		const platform = process.platform;
+		const hint =
+			platform === "darwin"
+				? "Chrome not found. Install from https://google.com/chrome, or use --attach to connect to an existing instance."
+				: platform === "linux"
+					? "Chrome not found. Install: apt install google-chrome-stable, or use --attach to connect to an existing instance."
+					: "Chrome not found. Install from https://google.com/chrome, or use --attach to connect to an existing instance.";
+		super(hint, "CHROME_NOT_FOUND");
 		this.name = "ChromeNotFoundError";
 	}
 }

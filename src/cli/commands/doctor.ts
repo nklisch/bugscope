@@ -32,27 +32,6 @@ export interface DoctorResult {
 }
 
 /**
- * Map known adapter IDs and install hints to a concrete fix command.
- * Returns undefined if no known command exists.
- */
-function deriveFixCommand(adapterId: string, installHint?: string): string | undefined {
-	// Map by adapter id first for well-known adapters
-	const knownFixCommands: Record<string, string> = {
-		python: "pip install debugpy",
-		go: "go install github.com/go-delve/delve/cmd/dlv@latest",
-		ruby: "gem install debug",
-		rust: "cargo install --locked codelldb",
-		kotlin: "brew install kotlin || sdk install kotlin",
-	};
-	if (knownFixCommands[adapterId]) return knownFixCommands[adapterId];
-	// Fall back to the install hint itself if it looks like a runnable command
-	if (installHint && !installHint.includes(" ") === false && /^[a-z]/.test(installHint)) {
-		return installHint;
-	}
-	return undefined;
-}
-
-/**
  * Run all doctor checks and return structured results.
  */
 export async function runDoctorChecks(): Promise<DoctorResult> {
@@ -104,7 +83,7 @@ export async function runDoctorChecks(): Promise<DoctorResult> {
 				displayName: adapter.displayName,
 				status: "missing",
 				installHint: prereq.installHint,
-				fixCommand: deriveFixCommand(adapter.id, prereq.installHint),
+				fixCommand: prereq.fixCommand,
 			});
 		}
 	}
@@ -438,6 +417,11 @@ export const doctorCommand = defineCommand({
 			description: "Minimal output",
 			default: false,
 		},
+		fix: {
+			type: "boolean",
+			description: "Print fix commands for missing adapters",
+			default: false,
+		},
 	},
 	async run({ args }) {
 		const mode = resolveOutputMode(args);
@@ -446,6 +430,20 @@ export const doctorCommand = defineCommand({
 		registerAllAdapters();
 
 		const result = await runDoctorChecks();
+
+		if (args.fix) {
+			const missing = result.adapters.filter((a) => a.status === "missing" && a.fixCommand);
+			if (missing.length === 0) {
+				process.stdout.write("All adapters are available — nothing to fix.\n");
+				process.exit(0);
+			}
+			process.stdout.write("# Run these commands to install missing debuggers:\n\n");
+			for (const adapter of missing) {
+				process.stdout.write(`# ${adapter.displayName}\n${adapter.fixCommand}\n\n`);
+			}
+			process.exit(0);
+		}
+
 		process.stdout.write(`${formatDoctor(result, mode)}\n`);
 
 		// Exit code: 0 if at least one adapter available, 1 if none

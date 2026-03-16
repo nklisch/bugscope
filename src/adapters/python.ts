@@ -19,13 +19,15 @@ export class PythonAdapter implements DebugAdapter {
 	 * Check for python3 and debugpy availability.
 	 * Spawns `python3 -m debugpy --version` and checks exit code.
 	 */
-	checkPrerequisites(): Promise<PrerequisiteResult> {
-		return checkCommand({
+	async checkPrerequisites(): Promise<PrerequisiteResult> {
+		const result = await checkCommand({
 			cmd: "python3",
 			args: ["-m", "debugpy", "--version"],
 			missing: ["python3", "debugpy"],
 			installHint: "Install python3 and pip install debugpy",
 		});
+		if (!result.satisfied) return { ...result, fixCommand: "pip install debugpy" };
+		return result;
 	}
 
 	/**

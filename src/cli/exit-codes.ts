@@ -1,5 +1,15 @@
-import { AdapterNotFoundError, BrowserRecorderStateError, DAPTimeoutError, KrometrailError, SessionLimitError, SessionNotFoundError, SessionStateError, TabNotFoundError } from "../core/errors.js";
-import { RPC_SESSION_NOT_FOUND, RPC_SESSION_STATE_ERROR } from "../daemon/protocol.js";
+import {
+	AdapterNotFoundError,
+	AdapterPrerequisiteError,
+	BrowserRecorderStateError,
+	DAPTimeoutError,
+	KrometrailError,
+	SessionLimitError,
+	SessionNotFoundError,
+	SessionStateError,
+	TabNotFoundError,
+} from "../core/errors.js";
+import { RPC_ADAPTER_ERROR, RPC_SESSION_NOT_FOUND, RPC_SESSION_STATE_ERROR } from "../daemon/protocol.js";
 
 /** Process exited normally. */
 export const EXIT_SUCCESS = 0;
@@ -19,6 +29,9 @@ export const EXIT_TIMEOUT = 4;
 /** Resource is in wrong state for the requested operation. */
 export const EXIT_STATE = 5;
 
+/** Adapter prerequisites not satisfied (debugger missing or too old). */
+export const EXIT_PREREQUISITES = 6;
+
 /**
  * Classify an error into the appropriate exit code.
  *
@@ -29,6 +42,9 @@ export const EXIT_STATE = 5;
  */
 export function exitCodeFromError(err: unknown): number {
 	// instanceof hierarchy — most specific first
+	if (err instanceof AdapterPrerequisiteError) {
+		return EXIT_PREREQUISITES;
+	}
 	if (err instanceof SessionNotFoundError || err instanceof AdapterNotFoundError || err instanceof TabNotFoundError) {
 		return EXIT_NOT_FOUND;
 	}
@@ -45,6 +61,7 @@ export function exitCodeFromError(err: unknown): number {
 		if (!Number.isNaN(numericCode)) {
 			if (numericCode === RPC_SESSION_NOT_FOUND) return EXIT_NOT_FOUND;
 			if (numericCode === RPC_SESSION_STATE_ERROR) return EXIT_STATE;
+			if (numericCode === RPC_ADAPTER_ERROR) return EXIT_PREREQUISITES;
 		}
 		return EXIT_ERROR;
 	}
@@ -55,6 +72,7 @@ export function exitCodeFromError(err: unknown): number {
 		if (typeof code === "number") {
 			if (code === RPC_SESSION_NOT_FOUND) return EXIT_NOT_FOUND;
 			if (code === RPC_SESSION_STATE_ERROR) return EXIT_STATE;
+			if (code === RPC_ADAPTER_ERROR) return EXIT_PREREQUISITES;
 		}
 	}
 

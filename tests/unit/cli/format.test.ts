@@ -23,7 +23,7 @@ import {
 	formatViewport,
 	resolveOutputMode,
 } from "../../../src/cli/format.js";
-import { DAPTimeoutError, SessionNotFoundError } from "../../../src/core/errors.js";
+import { AdapterPrerequisiteError, DAPTimeoutError, LaunchError, SessionNotFoundError } from "../../../src/core/errors.js";
 import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload, ThreadInfoPayload } from "../../../src/daemon/protocol.js";
 
 describe("resolveOutputMode", () => {
@@ -349,6 +349,33 @@ describe("formatError", () => {
 		expect(parsed.ok).toBe(false);
 		expect(parsed.error.code).toBe("UNKNOWN_ERROR");
 		expect(parsed.error.message).toBe("Simple error");
+	});
+
+	it("text mode shows install hint and doctor reference for AdapterPrerequisiteError", () => {
+		const err = new AdapterPrerequisiteError("python", ["debugpy"], "pip install debugpy", "pip install debugpy");
+		const out = formatError(err, "text");
+		expect(out).toContain("pip install debugpy");
+		expect(out).toContain("krometrail doctor");
+	});
+
+	it("text mode shows connection hint for LaunchError with connection_timeout", () => {
+		const err = new LaunchError("Could not connect to debugpy on port 5678", "output", "connection_timeout");
+		const out = formatError(err, "text");
+		expect(out).toContain("could not connect");
+		expect(out).toContain("debug port");
+	});
+
+	it("text mode shows PATH hint for LaunchError with spawn_failed", () => {
+		const err = new LaunchError("Failed to spawn debugpy", "output", "spawn_failed");
+		const out = formatError(err, "text");
+		expect(out).toContain("could not be started");
+		expect(out).toContain("PATH");
+	});
+
+	it("text mode shows timeout guidance for DAPTimeoutError", () => {
+		const err = new DAPTimeoutError("step", 30000);
+		const out = formatError(err, "text");
+		expect(out).toContain("did not respond in time");
 	});
 });
 

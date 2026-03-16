@@ -100,6 +100,7 @@ export class RustAdapter implements DebugAdapter {
 				satisfied: false,
 				missing: ["codelldb"],
 				installHint: `Run: krometrail doctor --install-codelldb, or download from https://github.com/vadimcn/codelldb/releases/v${CODELLDB_VERSION}`,
+				fixCommand: "cargo install --locked codelldb",
 			};
 		}
 

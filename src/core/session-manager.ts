@@ -202,7 +202,7 @@ export class SessionManager {
 		// Check prerequisites
 		const prereqs = await adapter.checkPrerequisites();
 		if (!prereqs.satisfied) {
-			throw new AdapterPrerequisiteError(adapter.id, prereqs.missing ?? [], prereqs.installHint);
+			throw new AdapterPrerequisiteError(adapter.id, prereqs.missing ?? [], prereqs.installHint, prereqs.fixCommand);
 		}
 
 		// 2.5. Framework detection — may modify command and env
@@ -412,7 +412,7 @@ export class SessionManager {
 
 		const prereqs = await adapter.checkPrerequisites();
 		if (!prereqs.satisfied) {
-			throw new AdapterPrerequisiteError(adapter.id, prereqs.missing ?? [], prereqs.installHint);
+			throw new AdapterPrerequisiteError(adapter.id, prereqs.missing ?? [], prereqs.installHint, prereqs.fixCommand);
 		}
 
 		// 3. Call adapter.attach()

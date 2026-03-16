@@ -141,6 +141,11 @@ describe("AdapterPrerequisiteError", () => {
 		const err = new AdapterPrerequisiteError("go", ["dlv"]);
 		expect(err.installHint).toBeUndefined();
 	});
+
+	it("stores fixCommand when provided", () => {
+		const err = new AdapterPrerequisiteError("python", ["debugpy"], "pip install debugpy", "pip install debugpy");
+		expect(err.fixCommand).toBe("pip install debugpy");
+	});
 });
 
 describe("AdapterNotFoundError", () => {
@@ -149,6 +154,7 @@ describe("AdapterNotFoundError", () => {
 		expect(err.languageOrExt).toBe(".rs");
 		expect(err.code).toBe("ADAPTER_NOT_FOUND");
 		expect(err.message).toContain(".rs");
+		expect(err.message).toContain("krometrail doctor");
 	});
 });
 
@@ -163,6 +169,17 @@ describe("LaunchError", () => {
 		const err = new LaunchError("Failed to launch");
 		expect(err.stderr).toBeUndefined();
 	});
+
+	it("defaults cause_type to unknown", () => {
+		const err = new LaunchError("Failed to launch");
+		expect(err.cause_type).toBe("unknown");
+	});
+
+	it("stores cause_type when provided", () => {
+		const err = new LaunchError("timeout", "stderr output", "connection_timeout");
+		expect(err.cause_type).toBe("connection_timeout");
+		expect(err.stderr).toBe("stderr output");
+	});
 });
 
 describe("ChromeNotFoundError", () => {
@@ -170,6 +187,7 @@ describe("ChromeNotFoundError", () => {
 		const err = new ChromeNotFoundError();
 		expect(err.code).toBe("CHROME_NOT_FOUND");
 		expect(err.message).toContain("Chrome");
+		expect(err.message).toContain("--attach");
 	});
 });
 

@@ -1,4 +1,4 @@
-import { KrometrailError, SessionLimitError, SessionNotFoundError, SessionStateError } from "../../core/errors.js";
+import { AdapterNotFoundError, AdapterPrerequisiteError, KrometrailError, SessionLimitError, SessionNotFoundError, SessionStateError } from "../../core/errors.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
 import { getDaemonSocketPath, RPC_ADAPTER_ERROR, RPC_LAUNCH_ERROR, RPC_SESSION_LIMIT_ERROR, RPC_SESSION_NOT_FOUND, RPC_SESSION_STATE_ERROR } from "../../daemon/protocol.js";
 import { exitCodeFromError } from "../exit-codes.js";
@@ -85,8 +85,13 @@ export function classifyError(err: unknown): unknown {
 			return new SessionStateError("", "unknown", []);
 		case RPC_SESSION_LIMIT_ERROR:
 			return new SessionLimitError("sessions", 0, 0);
-		case RPC_ADAPTER_ERROR:
-			return new KrometrailError(err.message, "ADAPTER_ERROR");
+		case RPC_ADAPTER_ERROR: {
+			if (err.message.includes("prerequisites not met")) {
+				const data = (err as KrometrailError & { data?: { installHint?: string; missing?: string[]; adapterId?: string; fixCommand?: string } }).data;
+				return new AdapterPrerequisiteError(data?.adapterId ?? "unknown", data?.missing ?? [], data?.installHint, data?.fixCommand);
+			}
+			return new AdapterNotFoundError(err.message);
+		}
 		case RPC_LAUNCH_ERROR:
 			return new KrometrailError(err.message, "LAUNCH_FAILED");
 		default:

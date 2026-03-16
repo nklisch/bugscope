@@ -91,6 +91,7 @@ export class CppAdapter implements DebugAdapter {
 				satisfied: false,
 				missing: [`gdb ${MIN_GDB_VERSION}+`],
 				installHint: `GDB ${gdbVersion} is too old. Install GDB 14+ or lldb-dap. On Ubuntu: apt-get install gdb`,
+				fixCommand: process.platform === "linux" ? "apt-get install gdb" : process.platform === "darwin" ? "xcode-select --install" : undefined,
 			};
 		}
 
@@ -98,6 +99,7 @@ export class CppAdapter implements DebugAdapter {
 			satisfied: false,
 			missing: ["gdb", "lldb-dap"],
 			installHint: "Install GDB 14+ or LLDB DAP. On Ubuntu: apt-get install gdb. On macOS: xcode-select --install",
+			fixCommand: process.platform === "linux" ? "apt-get install gdb" : process.platform === "darwin" ? "xcode-select --install" : undefined,
 		};
 	}
 

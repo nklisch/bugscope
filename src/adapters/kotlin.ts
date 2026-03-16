@@ -87,7 +87,7 @@ export class KotlinAdapter implements DebugAdapter {
 			missing: ["kotlinc"],
 			installHint: "Install Kotlin from https://kotlinlang.org/docs/command-line.html or via SDKMAN: sdk install kotlin",
 		});
-		if (!kotlinResult.satisfied) return kotlinResult;
+		if (!kotlinResult.satisfied) return { ...kotlinResult, fixCommand: "sdk install kotlin" };
 
 		// Check JDK 17+
 		const javacResult = await checkCommandVersioned({

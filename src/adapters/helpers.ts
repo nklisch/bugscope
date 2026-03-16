@@ -149,7 +149,7 @@ export function spawnAndWait(options: SpawnAndWaitOptions): Promise<SpawnResult>
 
 		const timeout = setTimeout(() => {
 			child.kill();
-			reject(new LaunchError(`${label} did not start within ${timeoutMs}ms. output: ${getOutput()}`, getOutput()));
+			reject(new LaunchError(`${label} did not start within ${timeoutMs}ms. output: ${getOutput()}`, getOutput(), "connection_timeout"));
 		}, timeoutMs);
 
 		const onData = (data: Buffer) => {
@@ -167,13 +167,13 @@ export function spawnAndWait(options: SpawnAndWaitOptions): Promise<SpawnResult>
 
 		child.on("error", (err) => {
 			clearTimeout(timeout);
-			reject(new LaunchError(`Failed to spawn ${label}: ${err.message}`, getOutput()));
+			reject(new LaunchError(`Failed to spawn ${label}: ${err.message}`, getOutput(), "spawn_failed"));
 		});
 
 		child.on("close", (code) => {
 			clearTimeout(timeout);
 			if (!resolved && code !== null && code !== 0) {
-				reject(new LaunchError(`${label} exited with code ${code}. output: ${getOutput()}`, getOutput()));
+				reject(new LaunchError(`${label} exited with code ${code}. output: ${getOutput()}`, getOutput(), "early_exit"));
 			}
 		});
 	});
@@ -190,12 +190,12 @@ export function detectEarlySpawnFailure(child: ChildProcess, label: string, stde
 		const timer = setTimeout(resolve, timeoutMs);
 		child.on("error", (err) => {
 			clearTimeout(timer);
-			reject(new LaunchError(`Failed to spawn ${label}: ${err.message}`, stderrBuffer.join("")));
+			reject(new LaunchError(`Failed to spawn ${label}: ${err.message}`, stderrBuffer.join(""), "spawn_failed"));
 		});
 		child.on("close", (code) => {
 			clearTimeout(timer);
 			if (code !== null && code !== 0) {
-				reject(new LaunchError(`${label} exited with code ${code}. stderr: ${stderrBuffer.join("")}`, stderrBuffer.join("")));
+				reject(new LaunchError(`${label} exited with code ${code}. stderr: ${stderrBuffer.join("")}`, stderrBuffer.join(""), "early_exit"));
 			} else {
 				resolve();
 			}
@@ -271,7 +271,7 @@ export function connectTCP(host: string, port: number, maxRetries = 3, retryDela
 export async function connectOrKill(proc: ChildProcess, host: string, port: number, retryConfig: { maxRetries: number; retryDelayMs: number }, label: string): Promise<Socket> {
 	return connectTCP(host, port, retryConfig.maxRetries, retryConfig.retryDelayMs).catch((err) => {
 		proc.kill();
-		throw new LaunchError(`Could not connect to ${label} on port ${port}: ${(err as Error).message}`);
+		throw new LaunchError(`Could not connect to ${label} on port ${port}: ${(err as Error).message}`, undefined, "connection_timeout");
 	});
 }
 

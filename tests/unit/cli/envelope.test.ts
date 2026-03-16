@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { errorEnvelope, RETRYABLE_CODES, successEnvelope } from "../../../src/cli/envelope.js";
-import { DAPTimeoutError, KrometrailError, SessionNotFoundError } from "../../../src/core/errors.js";
+import { AdapterPrerequisiteError, DAPTimeoutError, KrometrailError, SessionNotFoundError } from "../../../src/core/errors.js";
 
 describe("successEnvelope", () => {
 	it("wraps data in { ok: true, data }", () => {
@@ -82,6 +82,20 @@ describe("errorEnvelope", () => {
 		const parsed = JSON.parse(out);
 		expect(parsed.ok).toBe(false);
 		expect(parsed.error.code).toBe("UNKNOWN_ERROR");
+	});
+
+	it("includes fixCommand for AdapterPrerequisiteError", () => {
+		const err = new AdapterPrerequisiteError("python", ["debugpy"], "pip install debugpy", "pip install debugpy");
+		const out = errorEnvelope(err);
+		const parsed = JSON.parse(out);
+		expect(parsed.error.fixCommand).toBe("pip install debugpy");
+	});
+
+	it("omits fixCommand for errors without it", () => {
+		const err = new Error("generic");
+		const out = errorEnvelope(err);
+		const parsed = JSON.parse(out);
+		expect(parsed.error.fixCommand).toBeUndefined();
 	});
 });
 

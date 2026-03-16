@@ -34,7 +34,8 @@ export class RubyAdapter implements DebugAdapter {
 			missing: ["ruby", "rdbg"],
 			installHint: "Install Ruby 3.1+ from https://www.ruby-lang.org, then: gem install debug",
 		});
-		return ruby.satisfied ? rdbg : ruby;
+		const base = ruby.satisfied ? rdbg : ruby;
+		return { ...base, fixCommand: "gem install debug" };
 	}
 
 	/**

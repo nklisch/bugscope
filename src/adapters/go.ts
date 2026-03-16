@@ -29,14 +29,16 @@ export class GoAdapter implements DebugAdapter {
 	/**
 	 * Check for Delve (dlv) availability.
 	 */
-	checkPrerequisites(): Promise<PrerequisiteResult> {
-		return checkCommand({
+	async checkPrerequisites(): Promise<PrerequisiteResult> {
+		const result = await checkCommand({
 			cmd: "dlv",
 			args: ["version"],
 			env: goEnv(),
 			missing: ["dlv"],
 			installHint: "go install github.com/go-delve/delve/cmd/dlv@latest",
 		});
+		if (!result.satisfied) return { ...result, fixCommand: "go install github.com/go-delve/delve/cmd/dlv@latest" };
+		return result;
 	}
 
 	/**

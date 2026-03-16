@@ -5,6 +5,8 @@ export interface PrerequisiteResult {
 	satisfied: boolean;
 	missing?: string[];
 	installHint?: string;
+	/** A concrete shell command the user can run to fix the issue. */
+	fixCommand?: string;
 }
 
 export interface DAPConnection {

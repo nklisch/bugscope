@@ -1,4 +1,4 @@
-import { getErrorMessage, KrometrailError } from "../core/errors.js";
+import { AdapterPrerequisiteError, getErrorMessage, KrometrailError } from "../core/errors.js";
 
 /**
  * Uniform JSON response envelope for all CLI --json output.
@@ -15,6 +15,7 @@ export interface CliErrorEnvelope {
 		code: string;
 		message: string;
 		retryable: boolean;
+		fixCommand?: string;
 	};
 }
 
@@ -38,10 +39,14 @@ export function successEnvelope<T>(data: T): string {
  */
 export function errorEnvelope(err: unknown): string {
 	let code = "UNKNOWN_ERROR";
+	let fixCommand: string | undefined;
 	const message = getErrorMessage(err);
 
 	if (err instanceof KrometrailError) {
 		code = err.code;
+	}
+	if (err instanceof AdapterPrerequisiteError) {
+		fixCommand = err.fixCommand;
 	}
 
 	const retryable = RETRYABLE_CODES.has(code);
@@ -49,7 +54,7 @@ export function errorEnvelope(err: unknown): string {
 	return JSON.stringify(
 		{
 			ok: false,
-			error: { code, message, retryable },
+			error: { code, message, retryable, ...(fixCommand ? { fixCommand } : {}) },
 		} satisfies CliErrorEnvelope,
 		null,
 		2,

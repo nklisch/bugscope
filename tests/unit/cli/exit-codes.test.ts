@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { EXIT_ERROR, EXIT_NOT_FOUND, EXIT_STATE, EXIT_TIMEOUT, exitCodeFromError } from "../../../src/cli/exit-codes.js";
+import { EXIT_ERROR, EXIT_NOT_FOUND, EXIT_PREREQUISITES, EXIT_STATE, EXIT_TIMEOUT, exitCodeFromError } from "../../../src/cli/exit-codes.js";
 import {
 	AdapterNotFoundError,
+	AdapterPrerequisiteError,
 	BrowserRecorderStateError,
 	DAPTimeoutError,
 	KrometrailError,
@@ -58,9 +59,14 @@ describe("exitCodeFromError", () => {
 		expect(exitCodeFromError(rpcWrapped)).toBe(EXIT_STATE);
 	});
 
-	it("returns EXIT_ERROR for unknown KrometrailError codes", () => {
+	it("returns EXIT_PREREQUISITES for AdapterPrerequisiteError", () => {
+		expect(exitCodeFromError(new AdapterPrerequisiteError("python", ["debugpy"]))).toBe(EXIT_PREREQUISITES);
+		expect(exitCodeFromError(new AdapterPrerequisiteError("python", ["debugpy"]))).toBe(6);
+	});
+
+	it("returns EXIT_PREREQUISITES for KrometrailError with RPC code -32003 (ADAPTER_ERROR)", () => {
 		const err = new KrometrailError("Adapter failed", "-32003");
-		expect(exitCodeFromError(err)).toBe(EXIT_ERROR);
+		expect(exitCodeFromError(err)).toBe(EXIT_PREREQUISITES);
 	});
 
 	it("returns EXIT_ERROR for plain objects without known codes", () => {

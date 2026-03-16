@@ -1,5 +1,6 @@
 import type { SessionSummary } from "../browser/investigation/query-engine.js";
 import type { BrowserSessionInfo } from "../browser/types.js";
+import { AdapterPrerequisiteError, DAPTimeoutError, LaunchError } from "../core/errors.js";
 import type { BreakpointsListPayload, BreakpointsResultPayload, LaunchResultPayload, StatusResultPayload, StopResultPayload, ThreadInfoPayload } from "../daemon/protocol.js";
 import { errorEnvelope, successEnvelope } from "./envelope.js";
 
@@ -383,12 +384,43 @@ export function formatInvestigation(result: string, command: string, mode: Outpu
 /**
  * Format an error for CLI output.
  * In json mode: errorEnvelope wrapping { ok: false, error: { code, message, retryable } }
- * In text/quiet mode: "Error: <message>"
+ * In text/quiet mode: human-readable with contextual hints for known error types.
  */
 export function formatError(err: unknown, mode: OutputMode): string {
 	if (mode === "json") {
 		return errorEnvelope(err);
 	}
+
 	const message = err instanceof Error ? err.message : String(err);
+
+	if (err instanceof AdapterPrerequisiteError) {
+		const lines = [`Error: ${message}`];
+		if (err.installHint) {
+			lines.push("");
+			lines.push(`  Fix: ${err.installHint}`);
+		}
+		lines.push("");
+		lines.push("  Run 'krometrail doctor' to check all adapters.");
+		return lines.join("\n");
+	}
+
+	if (err instanceof DAPTimeoutError) {
+		return `Error: ${message}\n\n  The debugger did not respond in time. This can happen if the program is compute-heavy or the debugger is slow to start.`;
+	}
+
+	if (err instanceof LaunchError) {
+		const lines = [`Error: ${message}`];
+		if (err.cause_type === "connection_timeout") {
+			lines.push("");
+			lines.push("  The debugger process started but krometrail could not connect to it.");
+			lines.push("  Check if another process is using the debug port, or increase the timeout.");
+		} else if (err.cause_type === "spawn_failed") {
+			lines.push("");
+			lines.push("  The debugger process could not be started. Check that the command is correct");
+			lines.push("  and the debugger binary is on your PATH.");
+		}
+		return lines.join("\n");
+	}
+
 	return `Error: ${message}`;
 }

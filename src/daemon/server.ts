@@ -247,8 +247,15 @@ export class DaemonServer {
 		if (err instanceof SessionLimitError) {
 			return { code: RPC_SESSION_LIMIT_ERROR, message: err.message };
 		}
-		if (err instanceof AdapterPrerequisiteError || err instanceof AdapterNotFoundError) {
-			return { code: RPC_ADAPTER_ERROR, message: (err as KrometrailError).message };
+		if (err instanceof AdapterPrerequisiteError) {
+			return {
+				code: RPC_ADAPTER_ERROR,
+				message: err.message,
+				data: { installHint: err.installHint, missing: err.missing, adapterId: err.adapterId, fixCommand: err.fixCommand },
+			};
+		}
+		if (err instanceof AdapterNotFoundError) {
+			return { code: RPC_ADAPTER_ERROR, message: err.message };
 		}
 		if (err instanceof LaunchError) {
 			return { code: RPC_LAUNCH_ERROR, message: err.message };

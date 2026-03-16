@@ -59,8 +59,11 @@ export class DaemonClient {
 					try {
 						const response = JSON.parse(line) as JsonRpcResponse;
 						if (response.error) {
-							const err = new KrometrailError(response.error.message, String(response.error.code));
-							reject(err);
+							const errObj = new KrometrailError(response.error.message, String(response.error.code));
+							if (response.error.data) {
+								(errObj as KrometrailError & { data?: unknown }).data = response.error.data;
+							}
+							reject(errObj);
 						} else {
 							resolve(response.result as T);
 						}

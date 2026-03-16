@@ -62,7 +62,9 @@ export class SwiftAdapter implements DebugAdapter {
 			missing: ["swiftc"],
 			installHint: "macOS: xcode-select --install. Linux: install from https://swift.org/download",
 		});
-		if (!swiftc.satisfied) return swiftc;
+		if (!swiftc.satisfied) {
+			return { ...swiftc, fixCommand: process.platform === "darwin" ? "xcode-select --install" : undefined };
+		}
 
 		const lldbDap = await findLldbDap();
 		if (!lldbDap) {
@@ -70,6 +72,7 @@ export class SwiftAdapter implements DebugAdapter {
 				satisfied: false,
 				missing: ["lldb-dap"],
 				installHint: "Install Xcode (macOS) or Swift toolchain (Linux) from https://swift.org",
+				fixCommand: process.platform === "darwin" ? "xcode-select --install" : undefined,
 			};
 		}
 
