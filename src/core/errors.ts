@@ -166,6 +166,25 @@ export class CDPConnectionError extends KrometrailError {
 }
 
 /**
+ * Chrome process exited early — typically because an existing Chrome instance
+ * absorbed the launch (common on macOS when no --user-data-dir is specified).
+ */
+export class ChromeEarlyExitError extends KrometrailError {
+	constructor(
+		public readonly exitCode: number | null,
+		public readonly signal: string | null,
+	) {
+		super(
+			`Chrome exited immediately (code=${exitCode}, signal=${signal}). ` +
+				"This usually means an existing Chrome instance is running and absorbed the launch. " +
+				"Use profile to launch an isolated instance: chrome_start(profile: 'krometrail')",
+			"CHROME_EARLY_EXIT",
+		);
+		this.name = "ChromeEarlyExitError";
+	}
+}
+
+/**
  * Browser tab not found by targetId.
  */
 export class TabNotFoundError extends KrometrailError {

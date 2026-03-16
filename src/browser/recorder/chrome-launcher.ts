@@ -1,9 +1,12 @@
 import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
-import { CDPConnectionError, ChromeNotFoundError } from "../../core/errors.js";
+import { CDPConnectionError, ChromeEarlyExitError, ChromeNotFoundError } from "../../core/errors.js";
 import { getKrometrailSubdir } from "../../core/paths.js";
 import { CDPClient, type CDPClientOptions, fetchBrowserWsUrl } from "./cdp-client.js";
+
+/** Binary search order for Chrome/Chromium. */
+const CHROME_BINARIES = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"];
 
 export interface ChromeLaunchOptions {
 	/** CDP port Chrome is listening on. */
@@ -14,6 +17,22 @@ export interface ChromeLaunchOptions {
 	profile?: string;
 	/** URL to open when launching Chrome (ignored in attach mode). */
 	url?: string;
+}
+
+/**
+ * Find the first available Chrome binary by spawning each candidate with --version.
+ * Returns the binary path, or null if none found.
+ */
+export async function findChromeBinary(): Promise<string | null> {
+	for (const binary of CHROME_BINARIES) {
+		const ok = await new Promise<boolean>((resolve) => {
+			const proc = spawn(binary, ["--version"], { stdio: "pipe" });
+			proc.on("close", (code) => resolve(code === 0));
+			proc.on("error", () => resolve(false));
+		});
+		if (ok) return binary;
+	}
+	return null;
 }
 
 /**
@@ -33,8 +52,13 @@ export class ChromeLauncher {
 		if (options.attach) {
 			wsUrl = await fetchBrowserWsUrl(options.port);
 		} else {
-			this.chromeProcess = this.launchChrome(options.port, options.profile, options.url);
-			wsUrl = await this.waitForChrome(options.port);
+			// Always use a profile to ensure an isolated user-data-dir.
+			// Without one, macOS Chrome detects the existing instance, delegates
+			// the URL to it, and the spawned process exits immediately — causing
+			// a CDP timeout.
+			const profile = options.profile ?? "default";
+			this.chromeProcess = await this.launchChrome(options.port, profile, options.url);
+			wsUrl = await this.waitForChrome(options.port, this.chromeProcess);
 		}
 
 		const cdpOptions: CDPClientOptions = {
@@ -48,8 +72,9 @@ export class ChromeLauncher {
 		return { cdpClient, process: this.chromeProcess ?? undefined };
 	}
 
-	private launchChrome(port: number, profile?: string, url?: string): ChildProcess {
-		const chromePaths = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"];
+	private async launchChrome(port: number, profile?: string, url?: string): Promise<ChildProcess> {
+		const chromePath = await findChromeBinary();
+		if (!chromePath) throw new ChromeNotFoundError();
 
 		const args = [`--remote-debugging-port=${port}`, "--no-first-run", "--no-default-browser-check"];
 
@@ -61,28 +86,37 @@ export class ChromeLauncher {
 			args.push(url);
 		}
 
-		for (const chromePath of chromePaths) {
-			try {
-				return spawn(chromePath, args, { detached: true, stdio: "ignore" });
-			} catch {}
-		}
-
-		throw new ChromeNotFoundError();
+		return spawn(chromePath, args, { detached: true, stdio: "ignore" });
 	}
 
-	private async waitForChrome(port: number, timeoutMs = 10_000): Promise<string> {
+	private async waitForChrome(port: number, chromeProcess: ChildProcess, timeoutMs = 10_000): Promise<string> {
 		const deadline = Date.now() + timeoutMs;
 		let lastError: Error | undefined;
 
-		while (Date.now() < deadline) {
-			try {
-				return await fetchBrowserWsUrl(port);
-			} catch (err) {
-				lastError = err as Error;
-				await new Promise<void>((r) => setTimeout(r, 500));
-			}
-		}
+		// Track early exit — on macOS, Chrome exits immediately when an
+		// existing instance with the same user-data-dir absorbs the launch.
+		let earlyExit: { code: number | null; signal: string | null } | null = null;
+		const exitHandler = (code: number | null, signal: string | null) => {
+			earlyExit = { code, signal };
+		};
+		chromeProcess.on("exit", exitHandler);
 
-		throw new CDPConnectionError(`Chrome CDP not available after ${timeoutMs}ms: ${lastError?.message}`, lastError);
+		try {
+			while (Date.now() < deadline) {
+				if (earlyExit) {
+					throw new ChromeEarlyExitError(earlyExit.code, earlyExit.signal);
+				}
+				try {
+					return await fetchBrowserWsUrl(port);
+				} catch (err) {
+					lastError = err as Error;
+					await new Promise<void>((r) => setTimeout(r, 500));
+				}
+			}
+
+			throw new CDPConnectionError(`Chrome CDP not available after ${timeoutMs}ms: ${lastError?.message}`, lastError);
+		} finally {
+			chromeProcess.removeListener("exit", exitHandler);
+		}
 	}
 }
