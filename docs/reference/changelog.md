@@ -5,6 +5,18 @@ description: Release history for Krometrail.
 
 # Changelog
 
+## v0.2.8
+
+### Fixes
+
+- MCP install docs now default to binary (one-liner install) with npx/bunx as tabbed alternatives
+- Fixed `--tools browser` → `--tools=browser` syntax in all docs and one-liners (prevents citty misparse)
+- Fixed `--help` test to check for `chrome` subcommand after CLI rename
+
+### Internal
+
+- Added regression tests for `--tools=X` syntax and one-liner flag validation
+
 ## v0.2.7
 
 ### Features

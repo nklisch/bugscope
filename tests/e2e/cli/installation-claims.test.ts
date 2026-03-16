@@ -149,12 +149,11 @@ describe("E2E: installation claims", () => {
 		});
 	});
 
-	const docFiles = ["docs/guide/mcp-configuration.md", "docs/guide/getting-started.md", "docs/guides/claude-code.md", "docs/guides/cursor-windsurf.md", "docs/guides/codex.md", "README.md"].map(
-		(f) => resolve(PROJECT_ROOT, f),
+	const docFiles = ["docs/guide/mcp-configuration.md", "docs/guide/getting-started.md", "docs/guides/claude-code.md", "docs/guides/cursor-windsurf.md", "docs/guides/codex.md", "README.md"].map((f) =>
+		resolve(PROJECT_ROOT, f),
 	);
 
 	describe("documentation config validity", () => {
-
 		/**
 		 * Extract fenced JSON blocks from markdown content.
 		 */
