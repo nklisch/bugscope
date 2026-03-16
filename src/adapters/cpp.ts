@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { extname, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";

@@ -32,6 +32,16 @@ export async function isSwiftDebugAvailable(): Promise<boolean> {
 		}
 	}
 
+	// Linux fallback: check /usr/libexec/swift (matches swift adapter's findLldbDap)
+	if (process.platform === "linux") {
+		try {
+			const { stdout } = await execAsync("find /usr/libexec/swift -name lldb-dap -type f 2>/dev/null | head -1");
+			if (stdout.trim()) return true;
+		} catch {
+			// ignore
+		}
+	}
+
 	return false;
 }
 
