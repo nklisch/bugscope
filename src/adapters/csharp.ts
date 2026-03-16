@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { Socket } from "node:net";
 import { tmpdir } from "node:os";
@@ -7,7 +7,7 @@ import { basename, extname, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { getErrorMessage, LaunchError } from "../core/errors.js";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { allocatePort, CONNECT_SLOW, checkCommand, connectOrKill, gracefulDispose, spawnAndWait } from "./helpers.js";
+import { allocatePort, CONNECT_SLOW, checkCommand, connectOrKill, detectEarlySpawnFailure, gracefulDispose } from "./helpers.js";
 import { downloadAndCacheNetcoredbg, getNetcoredbgBinaryPath, isNetcoredbgCached } from "./netcoredbg.js";
 
 const execAsync = promisify(exec);
@@ -96,15 +96,16 @@ export class CSharpAdapter implements DebugAdapter {
 		const netcoredbg = await resolveNetcoredbgBinary();
 		const port = config.port ?? (await allocatePort());
 
-		const { process: adapterProc } = await spawnAndWait({
-			cmd: netcoredbg,
-			args: ["--interpreter=vscode", "--server", `--server-port=${port}`],
+		// netcoredbg 3.1.3+ does not print a ready message to stdout/stderr,
+		// so we spawn directly and use connectOrKill to wait for the TCP port.
+		const stderrBuf: string[] = [];
+		const adapterProc = spawn(netcoredbg, ["--interpreter=vscode", `--server=${port}`], {
 			cwd,
 			env: { ...process.env, ...config.env },
-			readyPattern: /waiting for connection|started|listening/i,
-			timeoutMs: 15_000,
-			label: "netcoredbg",
+			stdio: ["pipe", "pipe", "pipe"],
 		});
+		adapterProc.stderr?.on("data", (d: Buffer) => stderrBuf.push(d.toString()));
+		await detectEarlySpawnFailure(adapterProc, "netcoredbg", stderrBuf);
 
 		this.adapterProcess = adapterProc;
 
@@ -134,13 +135,12 @@ export class CSharpAdapter implements DebugAdapter {
 		const netcoredbg = await resolveNetcoredbgBinary();
 		const port = config.port ?? (await allocatePort());
 
-		const { process: adapterProc } = await spawnAndWait({
-			cmd: netcoredbg,
-			args: ["--interpreter=vscode", "--server", `--server-port=${port}`],
-			readyPattern: /waiting for connection|started|listening/i,
-			timeoutMs: 15_000,
-			label: "netcoredbg",
+		const stderrBuf: string[] = [];
+		const adapterProc = spawn(netcoredbg, ["--interpreter=vscode", `--server=${port}`], {
+			stdio: ["pipe", "pipe", "pipe"],
 		});
+		adapterProc.stderr?.on("data", (d: Buffer) => stderrBuf.push(d.toString()));
+		await detectEarlySpawnFailure(adapterProc, "netcoredbg", stderrBuf);
 
 		this.adapterProcess = adapterProc;
 
