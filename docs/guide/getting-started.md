@@ -43,7 +43,31 @@ npx krometrail --version
 
 Add Krometrail to your agent's MCP config to expose all tools automatically:
 
-```json
+::: code-group
+
+```json [binary]
+{
+	"mcpServers": {
+		"krometrail": {
+			"command": "krometrail",
+			"args": ["--mcp"]
+		}
+	}
+}
+```
+
+```json [npx]
+{
+	"mcpServers": {
+		"krometrail": {
+			"command": "npx",
+			"args": ["krometrail@latest", "--mcp"]
+		}
+	}
+}
+```
+
+```json [bunx]
 {
 	"mcpServers": {
 		"krometrail": {
@@ -53,6 +77,8 @@ Add Krometrail to your agent's MCP config to expose all tools automatically:
 	}
 }
 ```
+
+:::
 
 The agent will discover `debug_*`, `chrome_*`, and `session_*` tools automatically — no further setup needed.
 

@@ -11,7 +11,20 @@ Both Cursor and Windsurf support MCP servers. Krometrail integrates via MCP to g
 
 Add to your Cursor MCP configuration at `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` in your project root (per-project):
 
-```json
+::: code-group
+
+```json [binary]
+{
+  "mcpServers": {
+    "krometrail": {
+      "command": "krometrail",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+```json [npx]
 {
   "mcpServers": {
     "krometrail": {
@@ -22,18 +35,18 @@ Add to your Cursor MCP configuration at `~/.cursor/mcp.json` (global) or `.curso
 }
 ```
 
-Or with a compiled binary:
-
-```json
+```json [bunx]
 {
   "mcpServers": {
     "krometrail": {
-      "command": "/usr/local/bin/krometrail",
-      "args": ["--mcp"]
+      "command": "bunx",
+      "args": ["krometrail@latest", "--mcp"]
     }
   }
 }
 ```
+
+:::
 
 Restart Cursor after saving the config. The `debug_*` tools will appear in the AI's tool list.
 
@@ -41,7 +54,21 @@ Restart Cursor after saving the config. The `debug_*` tools will appear in the A
 
 Add to your Windsurf MCP configuration at `~/.codeium/windsurf/mcp_config.json` (or click the MCPs icon in the Cascade panel and select "Configure"):
 
-```json
+::: code-group
+
+```json [binary]
+{
+  "mcpServers": {
+    "krometrail": {
+      "command": "krometrail",
+      "args": ["--mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+```json [npx]
 {
   "mcpServers": {
     "krometrail": {
@@ -52,6 +79,20 @@ Add to your Windsurf MCP configuration at `~/.codeium/windsurf/mcp_config.json` 
   }
 }
 ```
+
+```json [bunx]
+{
+  "mcpServers": {
+    "krometrail": {
+      "command": "bunx",
+      "args": ["krometrail@latest", "--mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+:::
 
 ## Verification
 
@@ -73,8 +114,8 @@ For team setups, add a `.mcp.json` file to your project root:
 {
   "mcpServers": {
     "krometrail": {
-      "command": "npx",
-      "args": ["krometrail@latest", "--mcp"]
+      "command": "krometrail",
+      "args": ["--mcp"]
     }
   }
 }

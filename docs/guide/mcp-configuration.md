@@ -9,20 +9,22 @@ Krometrail exposes all its capabilities as MCP tools. Once configured, agents di
 
 ## Claude Code
 
-Add to `.mcp.json` in your project root (shared with your team), or use the CLI:
+If you installed via the one-liner (`curl -fsSL https://krometrail.dev/install.sh | sh`):
 
 ```bash
-claude mcp add --transport stdio --scope project krometrail -- npx krometrail@latest --mcp
+claude mcp add --transport stdio --scope project krometrail -- krometrail --mcp
 ```
+
+Or add to `.mcp.json` in your project root (shared with your team):
 
 ::: code-group
 
-```json [bunx]
+```json [binary]
 {
 	"mcpServers": {
 		"krometrail": {
-			"command": "bunx",
-			"args": ["krometrail@latest", "--mcp"]
+			"command": "krometrail",
+			"args": ["--mcp"]
 		}
 	}
 }
@@ -39,12 +41,12 @@ claude mcp add --transport stdio --scope project krometrail -- npx krometrail@la
 }
 ```
 
-```json [binary]
+```json [bunx]
 {
 	"mcpServers": {
 		"krometrail": {
-			"command": "/path/to/krometrail",
-			"args": ["--mcp"]
+			"command": "bunx",
+			"args": ["krometrail@latest", "--mcp"]
 		}
 	}
 }
@@ -58,7 +60,20 @@ Claude discovers the `debug_*` tools automatically. No CLAUDE.md changes needed.
 
 Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` in your project root:
 
-```json
+::: code-group
+
+```json [binary]
+{
+	"mcpServers": {
+		"krometrail": {
+			"command": "krometrail",
+			"args": ["--mcp"]
+		}
+	}
+}
+```
+
+```json [npx]
 {
 	"mcpServers": {
 		"krometrail": {
@@ -69,13 +84,40 @@ Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` in your project root:
 }
 ```
 
+```json [bunx]
+{
+	"mcpServers": {
+		"krometrail": {
+			"command": "bunx",
+			"args": ["krometrail@latest", "--mcp"]
+		}
+	}
+}
+```
+
+:::
+
 Restart Cursor after saving. The `debug_*` tools will appear in the AI's tool list.
 
 ## Windsurf
 
 Add to `~/.codeium/windsurf/mcp_config.json` or click the MCPs icon in Cascade and select "Configure":
 
-```json
+::: code-group
+
+```json [binary]
+{
+	"mcpServers": {
+		"krometrail": {
+			"command": "krometrail",
+			"args": ["--mcp"],
+			"env": {}
+		}
+	}
+}
+```
+
+```json [npx]
 {
 	"mcpServers": {
 		"krometrail": {
@@ -87,20 +129,34 @@ Add to `~/.codeium/windsurf/mcp_config.json` or click the MCPs icon in Cascade a
 }
 ```
 
+```json [bunx]
+{
+	"mcpServers": {
+		"krometrail": {
+			"command": "bunx",
+			"args": ["krometrail@latest", "--mcp"],
+			"env": {}
+		}
+	}
+}
+```
+
+:::
+
 ## OpenAI Codex
 
 Add to `~/.codex/config.toml` (global) or `.codex/config.toml` in your project:
 
 ```toml
 [mcp_servers.krometrail]
-command = "npx"
-args = ["krometrail@latest", "--mcp"]
+command = "krometrail"
+args = ["--mcp"]
 ```
 
 Or add via the CLI:
 
 ```bash
-codex mcp add krometrail -- npx krometrail@latest --mcp
+codex mcp add krometrail -- krometrail --mcp
 ```
 
 Codex also supports the CLI path — install the krometrail skill:
@@ -117,37 +173,71 @@ Expose only the tool groups you need, reducing the agent's tool list:
 
 ```bash
 # Debug tools only
-claude mcp add --transport stdio --scope project krometrail-debug -- npx krometrail@latest --mcp --tools debug
+claude mcp add --transport stdio --scope project krometrail-debug -- krometrail --mcp --tools=debug
 
 # Browser tools only
-claude mcp add --transport stdio --scope project krometrail-browser -- npx krometrail@latest --mcp --tools browser
+claude mcp add --transport stdio --scope project krometrail-browser -- krometrail --mcp --tools=browser
 ```
 
 ### Cursor / Windsurf / manual `.mcp.json`
 
-```json
+::: code-group
+
+```json [binary]
 {
 	"mcpServers": {
 		"krometrail-debug": {
-			"command": "npx",
-			"args": ["krometrail@latest", "--mcp", "--tools", "debug"]
+			"command": "krometrail",
+			"args": ["--mcp", "--tools=debug"]
 		},
 		"krometrail-browser": {
-			"command": "npx",
-			"args": ["krometrail@latest", "--mcp", "--tools", "browser"]
+			"command": "krometrail",
+			"args": ["--mcp", "--tools=browser"]
 		}
 	}
 }
 ```
 
+```json [npx]
+{
+	"mcpServers": {
+		"krometrail-debug": {
+			"command": "npx",
+			"args": ["krometrail@latest", "--mcp", "--tools=debug"]
+		},
+		"krometrail-browser": {
+			"command": "npx",
+			"args": ["krometrail@latest", "--mcp", "--tools=browser"]
+		}
+	}
+}
+```
+
+```json [bunx]
+{
+	"mcpServers": {
+		"krometrail-debug": {
+			"command": "bunx",
+			"args": ["krometrail@latest", "--mcp", "--tools=debug"]
+		},
+		"krometrail-browser": {
+			"command": "bunx",
+			"args": ["krometrail@latest", "--mcp", "--tools=browser"]
+		}
+	}
+}
+```
+
+:::
+
 ### OpenAI Codex
 
 ```bash
 # Debug tools only
-codex mcp add krometrail-debug -- npx krometrail@latest --mcp --tools debug
+codex mcp add krometrail-debug -- krometrail --mcp --tools=debug
 
 # Browser tools only
-codex mcp add krometrail-browser -- npx krometrail@latest --mcp --tools browser
+codex mcp add krometrail-browser -- krometrail --mcp --tools=browser
 ```
 
 Available tool groups: `debug`, `browser`, `session`, `all` (default).

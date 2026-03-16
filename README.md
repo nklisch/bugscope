@@ -31,8 +31,8 @@ Add to your agent's MCP config (`.mcp.json` in your project root):
 {
   "mcpServers": {
     "krometrail": {
-      "command": "bunx",
-      "args": ["krometrail", "--mcp"]
+      "command": "krometrail",
+      "args": ["--mcp"]
     }
   }
 }

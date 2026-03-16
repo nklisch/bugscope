@@ -87,11 +87,11 @@ describe("E2E: installation claims", () => {
 			expect(result.stdout).toContain("Adapters:");
 		});
 
-		it("krometrail --help mentions debug, browser, and doctor", async () => {
+		it("krometrail --help mentions debug, chrome, and doctor", async () => {
 			const result = await runCli(["--help"]);
 			const output = (result.stdout + result.stderr).toLowerCase();
 			expect(output).toContain("debug");
-			expect(output).toContain("browser");
+			expect(output).toContain("chrome");
 			expect(output).toContain("doctor");
 		});
 
@@ -100,7 +100,7 @@ describe("E2E: installation claims", () => {
 			expect(result.exitCode).toBe(0);
 			const output = (result.stdout + result.stderr).toLowerCase();
 			expect(output).toContain("debug");
-			expect(output).toContain("browser");
+			expect(output).toContain("chrome");
 			expect(output).toContain("doctor");
 			expect(output).toContain("usage");
 		});
@@ -149,10 +149,11 @@ describe("E2E: installation claims", () => {
 		});
 	});
 
+	const docFiles = ["docs/guide/mcp-configuration.md", "docs/guide/getting-started.md", "docs/guides/claude-code.md", "docs/guides/cursor-windsurf.md", "docs/guides/codex.md", "README.md"].map(
+		(f) => resolve(PROJECT_ROOT, f),
+	);
+
 	describe("documentation config validity", () => {
-		const docFiles = ["docs/guide/mcp-configuration.md", "docs/guide/getting-started.md", "docs/guides/claude-code.md", "docs/guides/cursor-windsurf.md", "docs/guides/codex.md", "README.md"].map(
-			(f) => resolve(PROJECT_ROOT, f),
-		);
 
 		/**
 		 * Extract fenced JSON blocks from markdown content.
@@ -216,6 +217,33 @@ describe("E2E: installation claims", () => {
 			expect(configBlocks).toBeGreaterThan(0);
 		});
 
+		it("JSON mcpServers configs use --tools=X syntax (not --tools X)", () => {
+			for (const filePath of docFiles) {
+				if (!existsSync(filePath)) continue;
+				const content = readFileSync(filePath, "utf-8");
+				const blocks = extractJsonBlocks(content);
+				for (const block of blocks) {
+					const { parsed, valid } = tryParseJson(block);
+					if (!valid) continue;
+					if (parsed && typeof parsed === "object" && "mcpServers" in (parsed as Record<string, unknown>)) {
+						const servers = (parsed as Record<string, unknown>).mcpServers as Record<string, unknown>;
+						for (const [serverName, config] of Object.entries(servers)) {
+							if (!config || typeof config !== "object") continue;
+							const serverConfig = config as Record<string, unknown>;
+							if (Array.isArray(serverConfig.args)) {
+								const args = serverConfig.args as string[];
+								// --tools should not appear as a standalone arg (next arg would be the value)
+								const toolsIndex = args.indexOf("--tools");
+								if (toolsIndex !== -1) {
+									throw new Error(`Config for "${serverName}" in ${filePath} uses "--tools" as separate arg. Use "--tools=<value>" instead: ${JSON.stringify(args)}`);
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+
 		it("JSON mcpServers configs use --mcp in args (not bare mcp)", () => {
 			for (const filePath of docFiles) {
 				if (!existsSync(filePath)) continue;
@@ -253,19 +281,18 @@ describe("E2E: installation claims", () => {
 				const content = readFileSync(filePath, "utf-8");
 				const blocks = extractTomlBlocks(content);
 				for (const block of blocks) {
-					// Look for args lines that reference krometrail (MCP config)
+					// Check if this is a krometrail MCP config block (header or command references krometrail)
+					const isKrometrailBlock = block.includes("krometrail");
+					if (!isKrometrailBlock) continue;
+
 					const argsLines = block.split("\n").filter((line) => /^\s*args\s*=/.test(line));
 					for (const line of argsLines) {
-						// Only check lines that are krometrail-related
-						if (line.includes("krometrail")) {
-							checked++;
-							// Extract the individual arg strings from the TOML array
-							const argStrings = [...line.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-							const hasBareMcp = argStrings.some((a) => a === "mcp");
-							const hasDashMcp = argStrings.some((a) => a === "--mcp");
-							expect(hasDashMcp, `TOML args in ${filePath} should include "--mcp": ${line.trim()}`).toBe(true);
-							expect(hasBareMcp, `TOML args in ${filePath} should NOT include bare "mcp": ${line.trim()}`).toBe(false);
-						}
+						checked++;
+						const argStrings = [...line.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+						const hasBareMcp = argStrings.some((a) => a === "mcp");
+						const hasDashMcp = argStrings.some((a) => a === "--mcp");
+						expect(hasDashMcp, `TOML args in ${filePath} should include "--mcp": ${line.trim()}`).toBe(true);
+						expect(hasBareMcp, `TOML args in ${filePath} should NOT include bare "mcp": ${line.trim()}`).toBe(false);
 					}
 				}
 			}
@@ -310,5 +337,84 @@ describe("E2E: installation claims", () => {
 				}
 			}
 		});
+
+		it("one-liner commands use --tools=X syntax (not --tools X)", () => {
+			for (const filePath of docFiles) {
+				if (!existsSync(filePath)) continue;
+				const content = readFileSync(filePath, "utf-8");
+				const lines = content.split("\n");
+				for (const line of lines) {
+					// Match one-liner commands that reference --tools with krometrail
+					if (line.includes("krometrail") && line.includes("--tools")) {
+						// --tools should be followed by = not a space-separated value
+						const toolsMatch = line.match(/--tools\s+(\w+)/);
+						if (toolsMatch) {
+							throw new Error(`One-liner in ${filePath} uses "--tools ${toolsMatch[1]}" — should be "--tools=${toolsMatch[1]}": ${line.trim()}`);
+						}
+					}
+				}
+			}
+		});
+	});
+
+	describe("documented one-liner commands", () => {
+		/**
+		 * Extract krometrail CLI args from documented one-liner commands.
+		 * Looks for patterns like:
+		 *   claude mcp add ... -- krometrail --mcp [--tools=X]
+		 *   codex mcp add ... -- krometrail --mcp [--tools=X]
+		 * Returns the args after the command name (e.g. ["--mcp", "--tools=debug"]).
+		 */
+		function extractOneLiners(content: string): { line: string; args: string[] }[] {
+			const results: { line: string; args: string[] }[] = [];
+			for (const line of content.split("\n")) {
+				// Match "-- krometrail ..." or "-- npx krometrail ..."
+				const dashMatch = line.match(/--\s+(?:npx\s+|bunx\s+)?(?:krometrail\S*)\s+(.*)/);
+				if (dashMatch) {
+					const args = dashMatch[1].trim().split(/\s+/).filter(Boolean);
+					results.push({ line: line.trim(), args });
+				}
+			}
+			return results;
+		}
+
+		it("all documented one-liner args are valid CLI flags", () => {
+			const validFlags = ["--mcp", /^--tools=\w+$/, /^--scope$/, /^--transport$/];
+			let checked = 0;
+
+			for (const filePath of docFiles) {
+				if (!existsSync(filePath)) continue;
+				const content = readFileSync(filePath, "utf-8");
+				const oneLiners = extractOneLiners(content);
+				for (const { line, args } of oneLiners) {
+					checked++;
+					for (const arg of args) {
+						const isValid = validFlags.some((f) => (f instanceof RegExp ? f.test(arg) : f === arg));
+						expect(isValid, `Unknown flag "${arg}" in one-liner: ${line}`).toBe(true);
+					}
+				}
+			}
+			expect(checked).toBeGreaterThan(0);
+		});
+
+		it("all documented --tools=X values are valid tool groups", async () => {
+			let checked = 0;
+			for (const filePath of docFiles) {
+				if (!existsSync(filePath)) continue;
+				const content = readFileSync(filePath, "utf-8");
+				const lines = content.split("\n");
+				for (const line of lines) {
+					const match = line.match(/--tools=(\w+)/);
+					if (match && line.includes("krometrail")) {
+						checked++;
+						const group = match[1];
+						// Validate by spawning the CLI with this flag
+						const result = await spawnAndCheck(["--mcp", `--tools=${group}`]);
+						expect(result.alive, `--tools=${group} should start successfully (from: ${line.trim()})`).toBe(true);
+					}
+				}
+			}
+			expect(checked).toBeGreaterThan(0);
+		}, 30_000);
 	});
 });
