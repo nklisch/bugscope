@@ -352,11 +352,18 @@ export class BrowserRecorder {
 		return this.screenshotCapture;
 	}
 
-	/** Get the session screenshot directory. */
+	/** Get the session screenshot directory (returns null if session dir not yet created). */
 	getScreenshotDir(): string | null {
 		if (!this.persistence) return null;
 		const sessDir = this.persistence.getSessionDir(this.sessionId);
 		return sessDir ? `${sessDir}/screenshots` : null;
+	}
+
+	/** Get or create the session screenshot directory (eagerly initializes persistence). */
+	getOrCreateScreenshotDir(): string | null {
+		if (!this.persistence) return null;
+		const sessDir = this.persistence.getOrCreateSessionDir(this.buildSessionInfo());
+		return `${sessDir}/screenshots`;
 	}
 
 	private getPrimaryTabSessionId(): string | null {

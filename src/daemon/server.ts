@@ -569,7 +569,7 @@ export class DaemonServer {
 			tabSessionId,
 			recorder,
 			screenshotCapture: recorder.getScreenshotCapture(),
-			screenshotDir: recorder.getScreenshotDir(),
+			screenshotDir: recorder.getOrCreateScreenshotDir(),
 		});
 	}
 

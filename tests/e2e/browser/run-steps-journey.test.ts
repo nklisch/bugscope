@@ -20,15 +20,16 @@ const SKIP = !(await isChromeAvailable());
 // ---------------------------------------------------------------------------
 // Helper: build a StepExecutor from a live BrowserTestContext.
 //
-// IMPORTANT: call ctx.placeMarker() BEFORE this to ensure the persistence
-// pipeline has created the session directory (needed for screenshots).
+// NOTE: The daemon's buildStepExecutorAdapter() uses getOrCreateScreenshotDir()
+// which eagerly creates the session dir. In tests we call placeMarker() before
+// this for investigation landmarks, but it's no longer required for screenshots.
 // ---------------------------------------------------------------------------
 
 function buildExecutor(ctx: BrowserTestContext): StepExecutor {
 	const cdpClient = ctx.recorder.getCDPClient()!;
 	const tabSessionId = ctx.recorder.getPrimaryTabSession()!;
 	const screenshotCapture = ctx.recorder.getScreenshotCapture();
-	const screenshotDir = ctx.recorder.getScreenshotDir();
+	const screenshotDir = ctx.recorder.getOrCreateScreenshotDir();
 
 	const adapter = new CDPPortAdapter({
 		cdpClient,
