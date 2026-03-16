@@ -1,58 +1,42 @@
 import type { ChildProcess } from "node:child_process";
-import { exec, spawn } from "node:child_process";
+import { exec } from "node:child_process";
 import { tmpdir } from "node:os";
 import { extname, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { getErrorMessage, LaunchError } from "../core/errors.js";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { detectEarlySpawnFailure, gracefulDispose } from "./helpers.js";
+import { checkCommand, checkCommandVersioned, detectEarlySpawnFailure, gracefulDispose } from "./helpers.js";
 
 const execAsync = promisify(exec);
 
 const MIN_GDB_VERSION = 14;
 
 /**
- * Parse GDB version string like "GNU gdb (Ubuntu 14.1-0ubuntu1) 14.1" and
- * extract the major version number.
- */
-function parseGdbVersion(output: string): number {
-	const match = output.match(/GNU gdb[^\d]*(\d+)\./);
-	return match ? parseInt(match[1], 10) : 0;
-}
-
-/**
- * Check GDB version and return major version, or 0 if not found.
+ * Check GDB version and return major version, or 0 if not found/too old.
+ * Uses checkCommandVersioned under the hood.
  */
 async function checkGdbVersion(): Promise<number> {
-	return new Promise((resolve) => {
-		const proc = spawn("gdb", ["--version"], { stdio: "pipe" });
-		let output = "";
-		proc.stdout?.on("data", (d: Buffer) => {
-			output += d.toString();
-		});
-		proc.stderr?.on("data", (d: Buffer) => {
-			output += d.toString();
-		});
-		proc.on("close", (code) => {
-			if (code !== 0) {
-				resolve(0);
-				return;
-			}
-			resolve(parseGdbVersion(output));
-		});
-		proc.on("error", () => resolve(0));
+	const result = await checkCommandVersioned({
+		cmd: "gdb",
+		args: ["--version"],
+		versionRegex: /GNU gdb[^\d]*(\d+)\./,
+		missing: ["gdb"],
+		installHint: "",
 	});
+	return result.version ?? 0;
 }
 
 /**
  * Check if lldb-dap is available as an alternative to GDB DAP.
  */
 async function checkLldbDap(): Promise<boolean> {
-	return new Promise((resolve) => {
-		const proc = spawn("lldb-dap", ["--version"], { stdio: "pipe" });
-		proc.on("close", (code) => resolve(code === 0));
-		proc.on("error", () => resolve(false));
+	const result = await checkCommand({
+		cmd: "lldb-dap",
+		args: ["--version"],
+		missing: ["lldb-dap"],
+		installHint: "",
 	});
+	return result.satisfied;
 }
 
 /**

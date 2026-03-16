@@ -1,12 +1,12 @@
 import type { ChildProcess } from "node:child_process";
-import { exec, spawn } from "node:child_process";
+import { exec } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { getErrorMessage, LaunchError } from "../core/errors.js";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { downloadError, downloadToFile, getAdapterCacheDir, gracefulDispose } from "./helpers.js";
+import { checkCommandVersioned, downloadError, downloadToFile, getAdapterCacheDir, gracefulDispose } from "./helpers.js";
 
 const execAsync = promisify(exec);
 
@@ -67,23 +67,6 @@ async function downloadAndCacheKda(): Promise<void> {
 	}
 }
 
-/**
- * Parse the kotlinc -version output (goes to stderr).
- * Format: "info: kotlinc-jvm 2.0.0 (JRE 21.0.1+12)" — extract major version.
- */
-function parseKotlincVersion(output: string): number {
-	const match = output.match(/kotlinc-jvm\s+(\d+)/);
-	return match ? parseInt(match[1], 10) : 0;
-}
-
-/**
- * Parse the javac -version output to extract the major version number.
- */
-function parseJavacVersion(output: string): number {
-	const match = output.match(/javac\s+(\d+)/);
-	return match ? parseInt(match[1], 10) : 0;
-}
-
 export class KotlinAdapter implements DebugAdapter {
 	id = "kotlin";
 	fileExtensions = [".kt"];
@@ -96,71 +79,26 @@ export class KotlinAdapter implements DebugAdapter {
 	 * Check for kotlinc and JDK 17+ availability, and the cached KDA.
 	 */
 	async checkPrerequisites(): Promise<PrerequisiteResult> {
-		// Check kotlinc (outputs to stderr)
-		const kotlinResult = await new Promise<{ ok: boolean; version: number }>((resolve) => {
-			const proc = spawn("kotlinc", ["-version"], { stdio: "pipe" });
-			let output = "";
-			proc.stdout?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.stderr?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.on("close", (code) => {
-				if (code !== 0) {
-					resolve({ ok: false, version: 0 });
-					return;
-				}
-				const version = parseKotlincVersion(output);
-				resolve({ ok: true, version });
-			});
-			proc.on("error", () => resolve({ ok: false, version: 0 }));
+		// Check kotlinc (outputs version to stderr)
+		const kotlinResult = await checkCommandVersioned({
+			cmd: "kotlinc",
+			args: ["-version"],
+			versionRegex: /kotlinc-jvm\s+(\d+)/,
+			missing: ["kotlinc"],
+			installHint: "Install Kotlin from https://kotlinlang.org/docs/command-line.html or via SDKMAN: sdk install kotlin",
 		});
-
-		if (!kotlinResult.ok) {
-			return {
-				satisfied: false,
-				missing: ["kotlinc"],
-				installHint: "Install Kotlin from https://kotlinlang.org/docs/command-line.html or via SDKMAN: sdk install kotlin",
-			};
-		}
+		if (!kotlinResult.satisfied) return kotlinResult;
 
 		// Check JDK 17+
-		const javacResult = await new Promise<{ ok: boolean; version: number }>((resolve) => {
-			const proc = spawn("javac", ["-version"], { stdio: "pipe" });
-			let output = "";
-			proc.stdout?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.stderr?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.on("close", (code) => {
-				if (code !== 0) {
-					resolve({ ok: false, version: 0 });
-					return;
-				}
-				const version = parseJavacVersion(output);
-				resolve({ ok: true, version });
-			});
-			proc.on("error", () => resolve({ ok: false, version: 0 }));
+		const javacResult = await checkCommandVersioned({
+			cmd: "javac",
+			args: ["-version"],
+			versionRegex: /javac\s+(\d+)/,
+			minVersion: 17,
+			missing: ["javac (17+)"],
+			installHint: (v) => (v === 0 ? "Install JDK 17+ from https://adoptium.net" : `JDK ${v} is too old. Install JDK 17+ from https://adoptium.net`),
 		});
-
-		if (!javacResult.ok) {
-			return {
-				satisfied: false,
-				missing: ["javac"],
-				installHint: "Install JDK 17+ from https://adoptium.net",
-			};
-		}
-
-		if (javacResult.version < 17) {
-			return {
-				satisfied: false,
-				missing: ["javac (17+)"],
-				installHint: `JDK ${javacResult.version} is too old. Install JDK 17+ from https://adoptium.net`,
-			};
-		}
+		if (!javacResult.satisfied) return javacResult;
 
 		// Check kotlin-debug-adapter (downloaded automatically on first use)
 		if (!isKdaCached()) {

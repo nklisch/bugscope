@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import type { Socket } from "node:net";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
@@ -101,4 +102,128 @@ export async function getJsDebugAdapterPath(): Promise<string> {
 
 	await downloadJsDebugAdapter();
 	return getDapServerPath();
+}
+
+/**
+ * Run a js-debug "parent" DAP session, handling both `launch` and `attach` flows.
+ *
+ * js-debug uses a two-session model: the parent session handles the initial
+ * launch/attach and emits a `startDebugging` reverse request with the child
+ * session configuration. We run the parent session here and return that config.
+ *
+ * Flow differences:
+ * - `"launch"`: trigger is `type === "response" && command === "initialize"`;
+ *   sends `configurationDone` then `launch`.
+ * - `"attach"`: trigger is `type === "event" && event === "initialized"`;
+ *   sends `configurationDone` then `attach`.
+ *
+ * @param socket  An already-connected socket to js-debug's DAP server.
+ * @param options.flow  Whether to use the launch or attach path.
+ * @param options.args  The DAP launch/attach arguments to send.
+ * @param options.timeoutMs  How long to wait for `startDebugging` (default 10 000 ms).
+ * @returns  The child session configuration from `startDebugging.arguments.configuration`.
+ */
+export function runJsDebugParentSession(
+	socket: Socket,
+	options: {
+		flow: "launch" | "attach";
+		args: Record<string, unknown>;
+		timeoutMs?: number;
+	},
+): Promise<Record<string, unknown>> {
+	const { flow, args, timeoutMs = 10_000 } = options;
+
+	return new Promise((resolve, reject) => {
+		let buf = Buffer.alloc(0);
+		let seq = 1;
+		let settled = false;
+
+		const timer = setTimeout(() => {
+			if (!settled) {
+				settled = true;
+				socket.removeListener("data", onData);
+				reject(new Error(`js-debug: startDebugging not received within ${timeoutMs}ms (flow: ${flow})`));
+			}
+		}, timeoutMs);
+
+		function sendRequest(cmd: string, cmdArgs?: Record<string, unknown>): void {
+			const json = JSON.stringify({ seq: seq++, type: "request", command: cmd, arguments: cmdArgs });
+			socket.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}`);
+		}
+
+		function sendResponse(requestSeq: number, cmd: string): void {
+			const json = JSON.stringify({ seq: seq++, type: "response", request_seq: requestSeq, success: true, command: cmd, body: {} });
+			socket.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}`);
+		}
+
+		function handleMessage(msg: Record<string, unknown>): void {
+			const type = msg.type as string;
+			const cmd = (msg.command ?? msg.event) as string;
+
+			const isLaunchTrigger = flow === "launch" && type === "response" && cmd === "initialize";
+			const isAttachTrigger = flow === "attach" && type === "event" && cmd === "initialized";
+
+			if (isLaunchTrigger) {
+				sendRequest("configurationDone");
+				sendRequest("launch", args);
+			} else if (isAttachTrigger) {
+				sendRequest("configurationDone");
+				sendRequest("attach", args);
+			} else if (type === "request") {
+				if (cmd === "startDebugging" && !settled) {
+					settled = true;
+					clearTimeout(timer);
+					socket.removeListener("data", onData);
+					sendResponse(msg.seq as number, "startDebugging");
+					const config = (msg.arguments as Record<string, unknown>).configuration as Record<string, unknown>;
+					resolve(config);
+				} else {
+					sendResponse(msg.seq as number, cmd);
+				}
+			}
+		}
+
+		function onData(chunk: Buffer): void {
+			buf = Buffer.concat([buf, chunk]);
+			while (true) {
+				const headerEnd = buf.indexOf("\r\n\r\n");
+				if (headerEnd === -1) break;
+				const header = buf.subarray(0, headerEnd).toString();
+				const match = header.match(/Content-Length:\s*(\d+)/i);
+				if (!match) {
+					buf = buf.subarray(headerEnd + 4);
+					continue;
+				}
+				const len = Number.parseInt(match[1], 10);
+				const start = headerEnd + 4;
+				if (buf.length < start + len) break;
+				const bodyStr = buf.subarray(start, start + len).toString();
+				buf = buf.subarray(start + len);
+				try {
+					handleMessage(JSON.parse(bodyStr) as Record<string, unknown>);
+				} catch {
+					// ignore malformed JSON
+				}
+			}
+		}
+
+		socket.on("data", onData);
+		socket.once("error", (err) => {
+			if (!settled) {
+				settled = true;
+				clearTimeout(timer);
+				reject(err);
+			}
+		});
+
+		// Start the parent session.
+		sendRequest("initialize", {
+			clientID: "krometrail",
+			adapterID: "krometrail",
+			supportsVariableType: true,
+			linesStartAt1: true,
+			columnsStartAt1: true,
+			supportsStartDebuggingRequest: true,
+		});
+	});
 }

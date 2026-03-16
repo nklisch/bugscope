@@ -1,104 +1,14 @@
 import type { ChildProcess } from "node:child_process";
-import { exec, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { access } from "node:fs/promises";
+import { exec } from "node:child_process";
 import type { Socket } from "node:net";
-import { platform } from "node:os";
 import { basename, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { getErrorMessage, LaunchError } from "../core/errors.js";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { allocatePort, CONNECT_SLOW, connectTCP, downloadError, downloadToFile, ensureAdapterCacheDir, getAdapterCacheDir, gracefulDispose, spawnAndWait } from "./helpers.js";
+import { CODELLDB_VERSION, downloadAndCacheCodeLLDB, getAdapterBinaryPath, isCodeLLDBCached } from "./codelldb.js";
+import { allocatePort, CONNECT_SLOW, checkCommand, connectOrKill, gracefulDispose, spawnAndWait } from "./helpers.js";
 
 const execAsync = promisify(exec);
-
-/**
- * Pinned CodeLLDB version to use.
- */
-const CODELLDB_VERSION = "1.12.1";
-
-/**
- * Returns the path to the CodeLLDB adapter cache directory.
- */
-export function getCodeLLDBCachePath(): string {
-	return getAdapterCacheDir("codelldb");
-}
-
-/**
- * Returns the platform-specific adapter binary path.
- */
-function getAdapterBinaryPath(): string {
-	const base = getCodeLLDBCachePath();
-	const ext = platform() === "win32" ? ".exe" : "";
-	return join(base, "adapter", `codelldb${ext}`);
-}
-
-/**
- * Check if CodeLLDB is already cached.
- */
-export async function isCodeLLDBCached(): Promise<boolean> {
-	try {
-		await access(getAdapterBinaryPath());
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Returns the VSIX download URL for the current platform.
- */
-function getVsixUrl(): string {
-	const os = platform();
-	let platformStr: string;
-	if (os === "darwin") {
-		platformStr = process.arch === "arm64" ? "darwin-arm64" : "darwin-x64";
-	} else if (os === "win32") {
-		platformStr = "win32-x64";
-	} else {
-		platformStr = process.arch === "arm64" ? "linux-arm64" : "linux-x64";
-	}
-	return `https://github.com/vadimcn/codelldb/releases/download/v${CODELLDB_VERSION}/codelldb-${platformStr}.vsix`;
-}
-
-/**
- * Download and cache the CodeLLDB DAP adapter binary.
- * Downloads the VSIX from GitHub releases and extracts the adapter binary.
- * Returns the path to the adapter binary.
- */
-export async function downloadAndCacheCodeLLDB(): Promise<string> {
-	const cacheDir = ensureAdapterCacheDir("codelldb");
-
-	const vsixUrl = getVsixUrl();
-	const vsixPath = join(cacheDir, "codelldb.vsix");
-
-	try {
-		await downloadToFile(vsixUrl, vsixPath, "CodeLLDB");
-	} catch (err) {
-		throw downloadError("CodeLLDB", CODELLDB_VERSION, vsixUrl, cacheDir, err, `To install manually, download the VSIX and extract the adapter/ directory to: ${cacheDir}`);
-	}
-
-	// Extract the VSIX (it's a zip file) and pull out the adapter binary
-	try {
-		await execAsync(`unzip -o "${vsixPath}" "extension/adapter/*" -d "${cacheDir}"`);
-		// Rename extension/adapter/ to adapter/
-		await execAsync(`mv -f "${join(cacheDir, "extension", "adapter")}" "${join(cacheDir, "adapter")}" 2>/dev/null || true`);
-	} catch (err) {
-		throw new Error(`Failed to extract CodeLLDB VSIX.\nError: ${getErrorMessage(err)}\nEnsure 'unzip' is installed on your system.`);
-	}
-
-	const binaryPath = getAdapterBinaryPath();
-	if (!existsSync(binaryPath)) {
-		throw new Error(`CodeLLDB extracted but binary not found at: ${binaryPath}\nThe VSIX structure may have changed.`);
-	}
-
-	// Make binary executable on Unix
-	if (platform() !== "win32") {
-		await execAsync(`chmod +x "${binaryPath}"`);
-	}
-
-	return binaryPath;
-}
 
 /**
  * Parse a cargo/rust command and extract the target binary path.
@@ -153,6 +63,16 @@ async function resolveRustBinary(command: string, cwd: string): Promise<{ binary
 	return { binaryPath: resolvePath(cwd, first ?? ""), buildFirst: false };
 }
 
+/**
+ * Resolve the CodeLLDB adapter binary, downloading it if necessary.
+ */
+async function resolveCodeLLDB(): Promise<string> {
+	if (await isCodeLLDBCached()) {
+		return getAdapterBinaryPath();
+	}
+	return downloadAndCacheCodeLLDB();
+}
+
 export class RustAdapter implements DebugAdapter {
 	id = "rust";
 	fileExtensions = [".rs"];
@@ -165,20 +85,13 @@ export class RustAdapter implements DebugAdapter {
 	 * Check for cargo and CodeLLDB availability.
 	 */
 	async checkPrerequisites(): Promise<PrerequisiteResult> {
-		// Check cargo
-		const cargoOk = await new Promise<boolean>((resolve) => {
-			const proc = spawn("cargo", ["--version"], { stdio: "pipe" });
-			proc.on("close", (code) => resolve(code === 0));
-			proc.on("error", () => resolve(false));
+		const cargo = await checkCommand({
+			cmd: "cargo",
+			args: ["--version"],
+			missing: ["cargo"],
+			installHint: "Install Rust from https://rustup.rs",
 		});
-
-		if (!cargoOk) {
-			return {
-				satisfied: false,
-				missing: ["cargo"],
-				installHint: "Install Rust from https://rustup.rs",
-			};
-		}
+		if (!cargo.satisfied) return cargo;
 
 		// Check CodeLLDB cache
 		const cached = await isCodeLLDBCached();
@@ -199,11 +112,7 @@ export class RustAdapter implements DebugAdapter {
 	async launch(config: LaunchConfig): Promise<DAPConnection> {
 		const cwd = config.cwd ?? process.cwd();
 
-		// Ensure CodeLLDB is available
-		let adapterBinary = getAdapterBinaryPath();
-		if (!(await isCodeLLDBCached())) {
-			adapterBinary = await downloadAndCacheCodeLLDB();
-		}
+		const adapterBinary = await resolveCodeLLDB();
 
 		const { binaryPath, buildFirst } = await resolveRustBinary(config.command, cwd);
 
@@ -231,11 +140,7 @@ export class RustAdapter implements DebugAdapter {
 
 		this.adapterProcess = adapterProc;
 
-		const socket = await connectTCP("127.0.0.1", port, CONNECT_SLOW.maxRetries, CONNECT_SLOW.retryDelayMs).catch((err) => {
-			adapterProc.kill();
-			throw new LaunchError(`Could not connect to CodeLLDB on port ${port}: ${err.message}`);
-		});
-
+		const socket = await connectOrKill(adapterProc, "127.0.0.1", port, CONNECT_SLOW, "CodeLLDB");
 		this.socket = socket;
 
 		return {
@@ -255,10 +160,7 @@ export class RustAdapter implements DebugAdapter {
 	 * Attach to a running process via CodeLLDB.
 	 */
 	async attach(config: AttachConfig): Promise<DAPConnection> {
-		let adapterBinary = getAdapterBinaryPath();
-		if (!(await isCodeLLDBCached())) {
-			adapterBinary = await downloadAndCacheCodeLLDB();
-		}
+		const adapterBinary = await resolveCodeLLDB();
 
 		const port = config.port ?? (await allocatePort());
 
@@ -272,11 +174,7 @@ export class RustAdapter implements DebugAdapter {
 
 		this.adapterProcess = adapterProc;
 
-		const socket = await connectTCP("127.0.0.1", port, CONNECT_SLOW.maxRetries, CONNECT_SLOW.retryDelayMs).catch((err) => {
-			adapterProc.kill();
-			throw new LaunchError(`Could not connect to CodeLLDB on port ${port}: ${err.message}`);
-		});
-
+		const socket = await connectOrKill(adapterProc, "127.0.0.1", port, CONNECT_SLOW, "CodeLLDB");
 		this.socket = socket;
 
 		return {

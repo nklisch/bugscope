@@ -34,6 +34,58 @@ export function checkCommand(opts: {
 }
 
 /**
+ * Spawn a command, collect its stdout+stderr, parse a version number from the output,
+ * and optionally enforce a minimum version.
+ *
+ * Returns `{ satisfied: true, version }` when the command runs successfully and
+ * (if `minVersion` is set) the parsed version meets the requirement.
+ * Returns `{ satisfied: false, missing, installHint }` on spawn error, non-zero exit,
+ * or a version below `minVersion`.
+ */
+export function checkCommandVersioned(opts: {
+	cmd: string;
+	args: string[];
+	env?: NodeJS.ProcessEnv;
+	/** Regex whose first capture group is the version integer to extract. */
+	versionRegex: RegExp;
+	/** If provided, the parsed version must be >= minVersion. */
+	minVersion?: number;
+	missing: string[];
+	installHint: string | ((version: number) => string);
+}): Promise<PrerequisiteResult & { version?: number }> {
+	return new Promise((resolve) => {
+		const spawnEnv = opts.env !== undefined ? { ...process.env, ...opts.env } : undefined;
+		const proc = spawn(opts.cmd, opts.args, { stdio: "pipe", env: spawnEnv });
+		let output = "";
+		proc.stdout?.on("data", (d: Buffer) => {
+			output += d.toString();
+		});
+		proc.stderr?.on("data", (d: Buffer) => {
+			output += d.toString();
+		});
+
+		const fail = (): void => resolve({ satisfied: false, missing: opts.missing, installHint: typeof opts.installHint === "string" ? opts.installHint : opts.installHint(0) });
+
+		proc.on("close", (code) => {
+			if (code !== 0) {
+				fail();
+				return;
+			}
+			const match = output.match(opts.versionRegex);
+			const version = match ? parseInt(match[1], 10) : 0;
+			if (opts.minVersion !== undefined && version < opts.minVersion) {
+				const hint = typeof opts.installHint === "function" ? opts.installHint(version) : opts.installHint;
+				resolve({ satisfied: false, missing: opts.missing, installHint: hint });
+				return;
+			}
+			resolve({ satisfied: true, version });
+		});
+
+		proc.on("error", fail);
+	});
+}
+
+/**
  * Allocate a free TCP port by binding to port 0, reading the
  * assigned port, and immediately closing the server.
  */
@@ -210,6 +262,17 @@ export function connectTCP(host: string, port: number, maxRetries = 3, retryDela
 		};
 
 		tryConnect();
+	});
+}
+
+/**
+ * Connect a TCP socket to host:port, killing the process and throwing LaunchError on failure.
+ * Convenience wrapper around `connectTCP` for the common adapter pattern.
+ */
+export async function connectOrKill(proc: ChildProcess, host: string, port: number, retryConfig: { maxRetries: number; retryDelayMs: number }, label: string): Promise<Socket> {
+	return connectTCP(host, port, retryConfig.maxRetries, retryConfig.retryDelayMs).catch((err) => {
+		proc.kill();
+		throw new LaunchError(`Could not connect to ${label} on port ${port}: ${(err as Error).message}`);
 	});
 }
 

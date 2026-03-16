@@ -1,10 +1,9 @@
 import type { ChildProcess } from "node:child_process";
-import { spawn } from "node:child_process";
 import type { Socket } from "node:net";
 import { resolve as resolvePath } from "node:path";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { allocatePort, CONNECT_FAST, connectTCP, gracefulDispose, spawnAndWait } from "./helpers.js";
-import { getJsDebugAdapterPath } from "./js-debug-adapter.js";
+import { allocatePort, CONNECT_FAST, checkCommandVersioned, connectTCP, gracefulDispose, spawnAndWait } from "./helpers.js";
+import { getJsDebugAdapterPath, runJsDebugParentSession } from "./js-debug-adapter.js";
 
 export class NodeAdapter implements DebugAdapter {
 	id = "node";
@@ -20,42 +19,14 @@ export class NodeAdapter implements DebugAdapter {
 	/**
 	 * Check for Node.js 18+ availability.
 	 */
-	async checkPrerequisites(): Promise<PrerequisiteResult> {
-		return new Promise((resolve) => {
-			const proc = spawn("node", ["--version"], { stdio: "pipe" });
-			let output = "";
-			proc.stdout?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.on("close", (code) => {
-				if (code !== 0) {
-					resolve({
-						satisfied: false,
-						missing: ["node"],
-						installHint: "Install Node.js 18+ from https://nodejs.org",
-					});
-					return;
-				}
-				// Parse version: "v20.11.0" => 20
-				const match = output.trim().match(/^v(\d+)/);
-				const major = match ? parseInt(match[1], 10) : 0;
-				if (major < 18) {
-					resolve({
-						satisfied: false,
-						missing: ["node"],
-						installHint: `Node.js ${major} is too old. Install Node.js 18+ from https://nodejs.org`,
-					});
-				} else {
-					resolve({ satisfied: true });
-				}
-			});
-			proc.on("error", () => {
-				resolve({
-					satisfied: false,
-					missing: ["node"],
-					installHint: "Install Node.js 18+ from https://nodejs.org",
-				});
-			});
+	checkPrerequisites(): Promise<PrerequisiteResult> {
+		return checkCommandVersioned({
+			cmd: "node",
+			args: ["--version"],
+			versionRegex: /^v(\d+)/,
+			minVersion: 18,
+			missing: ["node"],
+			installHint: (v) => (v === 0 ? "Install Node.js 18+ from https://nodejs.org" : `Node.js ${v} is too old. Install Node.js 18+ from https://nodejs.org`),
 		});
 	}
 
@@ -92,14 +63,17 @@ export class NodeAdapter implements DebugAdapter {
 		this.parentSocket = parentSocket;
 
 		const childConfig = await runJsDebugParentSession(parentSocket, {
-			type: "pwa-node",
-			program: absScript,
-			args,
-			cwd,
-			sourceMaps: true,
-			noDebug: false,
-			stopOnEntry: false,
-			env: config.env ?? {},
+			flow: "launch",
+			args: {
+				type: "pwa-node",
+				program: absScript,
+				args,
+				cwd,
+				sourceMaps: true,
+				noDebug: false,
+				stopOnEntry: false,
+				env: config.env ?? {},
+			},
 		});
 
 		// Connect the child session — this is what the session manager will use.
@@ -178,99 +152,6 @@ export class NodeAdapter implements DebugAdapter {
  * @param launchArgs  The DAP launch arguments to send to the parent session.
  * @returns  The child session configuration from `startDebugging.arguments.configuration`.
  */
-async function runJsDebugParentSession(socket: Socket, launchArgs: Record<string, unknown>): Promise<Record<string, unknown>> {
-	return new Promise((resolve, reject) => {
-		let buf = Buffer.alloc(0);
-		let seq = 1;
-		let settled = false;
-
-		const timer = setTimeout(() => {
-			if (!settled) {
-				settled = true;
-				socket.removeListener("data", onData);
-				reject(new Error("js-debug: startDebugging not received within 10s"));
-			}
-		}, 10_000);
-
-		function sendRequest(cmd: string, args?: Record<string, unknown>): void {
-			const json = JSON.stringify({ seq: seq++, type: "request", command: cmd, arguments: args });
-			socket.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}`);
-		}
-
-		function sendResponse(requestSeq: number, cmd: string): void {
-			const json = JSON.stringify({ seq: seq++, type: "response", request_seq: requestSeq, success: true, command: cmd, body: {} });
-			socket.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}`);
-		}
-
-		function handleMessage(msg: Record<string, unknown>): void {
-			const type = msg.type as string;
-			const cmd = (msg.command ?? msg.event) as string;
-
-			if (type === "response" && cmd === "initialize") {
-				// Initialize complete — send configurationDone and launch.
-				sendRequest("configurationDone");
-				sendRequest("launch", launchArgs);
-			} else if (type === "request") {
-				if (cmd === "startDebugging" && !settled) {
-					settled = true;
-					clearTimeout(timer);
-					socket.removeListener("data", onData);
-					sendResponse(msg.seq as number, "startDebugging");
-					const config = (msg.arguments as Record<string, unknown>).configuration as Record<string, unknown>;
-					resolve(config);
-				} else {
-					// Respond with success to any other reverse requests (e.g., future extensions).
-					sendResponse(msg.seq as number, cmd);
-				}
-			}
-			// Events (initialized, output, telemetry) are intentionally ignored.
-		}
-
-		function onData(chunk: Buffer): void {
-			buf = Buffer.concat([buf, chunk]);
-			while (true) {
-				const headerEnd = buf.indexOf("\r\n\r\n");
-				if (headerEnd === -1) break;
-				const header = buf.subarray(0, headerEnd).toString();
-				const match = header.match(/Content-Length:\s*(\d+)/i);
-				if (!match) {
-					buf = buf.subarray(headerEnd + 4);
-					continue;
-				}
-				const len = Number.parseInt(match[1], 10);
-				const start = headerEnd + 4;
-				if (buf.length < start + len) break;
-				const bodyStr = buf.subarray(start, start + len).toString();
-				buf = buf.subarray(start + len);
-				try {
-					handleMessage(JSON.parse(bodyStr) as Record<string, unknown>);
-				} catch {
-					// ignore malformed JSON
-				}
-			}
-		}
-
-		socket.on("data", onData);
-		socket.once("error", (err) => {
-			if (!settled) {
-				settled = true;
-				clearTimeout(timer);
-				reject(err);
-			}
-		});
-
-		// Start the parent session.
-		sendRequest("initialize", {
-			clientID: "krometrail",
-			adapterID: "krometrail",
-			supportsVariableType: true,
-			linesStartAt1: true,
-			columnsStartAt1: true,
-			supportsStartDebuggingRequest: true,
-		});
-	});
-}
-
 /**
  * Parse a Node.js command string, stripping "node" prefix if present.
  * E.g., "node app.js --verbose" => { script: "app.js", args: ["--verbose"] }

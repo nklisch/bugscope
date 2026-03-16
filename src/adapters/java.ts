@@ -1,11 +1,20 @@
 import type { ChildProcess } from "node:child_process";
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import type { Socket } from "node:net";
 import { join } from "node:path";
-import { LaunchError } from "../core/errors.js";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { allocatePort, CONNECT_PATIENT, connectTCP, downloadError, downloadToFile, ensureAdapterCacheDir, getAdapterCacheDir, gracefulDispose, spawnAndWait } from "./helpers.js";
+import {
+	allocatePort,
+	CONNECT_PATIENT,
+	checkCommandVersioned,
+	connectOrKill,
+	downloadError,
+	downloadToFile,
+	ensureAdapterCacheDir,
+	getAdapterCacheDir,
+	gracefulDispose,
+	spawnAndWait,
+} from "./helpers.js";
 
 /**
  * Pinned java-debug-adapter version.
@@ -51,14 +60,6 @@ export async function downloadAndCacheJavaDebugAdapter(): Promise<string> {
 }
 
 /**
- * Parse a JDK version string like "javac 17.0.8" and extract major version.
- */
-function parseJavacVersion(output: string): number {
-	const match = output.match(/javac\s+(\d+)/);
-	return match ? parseInt(match[1], 10) : 0;
-}
-
-/**
  * Parse a java command to extract main class and classpaths.
  * Handles: "java Main", "java -jar app.jar", "java -cp classes Main"
  */
@@ -101,6 +102,16 @@ function parseJavaCommand(command: string): { mainClass: string; classPaths: str
 	return { mainClass, classPaths, jarMode };
 }
 
+/**
+ * Resolve the java-debug-adapter JAR, downloading it if necessary.
+ */
+async function resolveJavaDebugJar(): Promise<string> {
+	if (isJavaDebugAdapterCached()) {
+		return getJavaDebugAdapterCachePath();
+	}
+	return downloadAndCacheJavaDebugAdapter();
+}
+
 export class JavaAdapter implements DebugAdapter {
 	id = "java";
 	fileExtensions = [".java"];
@@ -113,42 +124,15 @@ export class JavaAdapter implements DebugAdapter {
 	 * Check for JDK 17+ and java-debug-adapter JAR.
 	 */
 	async checkPrerequisites(): Promise<PrerequisiteResult> {
-		// Check javac
-		const javacResult = await new Promise<{ ok: boolean; version: number }>((resolve) => {
-			const proc = spawn("javac", ["-version"], { stdio: "pipe" });
-			let output = "";
-			proc.stdout?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.stderr?.on("data", (d: Buffer) => {
-				output += d.toString();
-			});
-			proc.on("close", (code) => {
-				if (code !== 0) {
-					resolve({ ok: false, version: 0 });
-					return;
-				}
-				const version = parseJavacVersion(output);
-				resolve({ ok: true, version });
-			});
-			proc.on("error", () => resolve({ ok: false, version: 0 }));
+		const javacResult = await checkCommandVersioned({
+			cmd: "javac",
+			args: ["-version"],
+			versionRegex: /javac\s+(\d+)/,
+			minVersion: 17,
+			missing: ["javac (17+)"],
+			installHint: (v) => (v === 0 ? "Install JDK 17+ from https://adoptium.net" : `JDK ${v} is too old. Install JDK 17+ from https://adoptium.net`),
 		});
-
-		if (!javacResult.ok) {
-			return {
-				satisfied: false,
-				missing: ["javac"],
-				installHint: "Install JDK 17+ from https://adoptium.net",
-			};
-		}
-
-		if (javacResult.version < 17) {
-			return {
-				satisfied: false,
-				missing: ["javac (17+)"],
-				installHint: `JDK ${javacResult.version} is too old. Install JDK 17+ from https://adoptium.net`,
-			};
-		}
+		if (!javacResult.satisfied) return javacResult;
 
 		// Check java-debug-adapter JAR
 		if (!isJavaDebugAdapterCached()) {
@@ -168,12 +152,7 @@ export class JavaAdapter implements DebugAdapter {
 	async launch(config: LaunchConfig): Promise<DAPConnection> {
 		const cwd = config.cwd ?? process.cwd();
 
-		// Ensure JAR is cached
-		let jarPath = getJavaDebugAdapterCachePath();
-		if (!isJavaDebugAdapterCached()) {
-			jarPath = await downloadAndCacheJavaDebugAdapter();
-		}
-
+		const jarPath = await resolveJavaDebugJar();
 		const port = config.port ?? (await allocatePort());
 
 		// Spawn java-debug-adapter server
@@ -189,11 +168,7 @@ export class JavaAdapter implements DebugAdapter {
 
 		this.adapterProcess = adapterProc;
 
-		const socket = await connectTCP("127.0.0.1", port, CONNECT_PATIENT.maxRetries, CONNECT_PATIENT.retryDelayMs).catch((err) => {
-			adapterProc.kill();
-			throw new LaunchError(`Could not connect to java-debug-adapter on port ${port}: ${err.message}`);
-		});
-
+		const socket = await connectOrKill(adapterProc, "127.0.0.1", port, CONNECT_PATIENT, "java-debug-adapter");
 		this.socket = socket;
 
 		const { mainClass, classPaths, jarMode } = parseJavaCommand(config.command);
@@ -224,12 +199,7 @@ export class JavaAdapter implements DebugAdapter {
 		const host = config.host ?? "127.0.0.1";
 		const jdwpPort = config.port ?? 5005;
 
-		// Ensure JAR is cached
-		let jarPath = getJavaDebugAdapterCachePath();
-		if (!isJavaDebugAdapterCached()) {
-			jarPath = await downloadAndCacheJavaDebugAdapter();
-		}
-
+		const jarPath = await resolveJavaDebugJar();
 		const dapPort = await allocatePort();
 
 		const { process: adapterProc } = await spawnAndWait({
@@ -242,11 +212,7 @@ export class JavaAdapter implements DebugAdapter {
 
 		this.adapterProcess = adapterProc;
 
-		const socket = await connectTCP("127.0.0.1", dapPort, CONNECT_PATIENT.maxRetries, CONNECT_PATIENT.retryDelayMs).catch((err) => {
-			adapterProc.kill();
-			throw new LaunchError(`Could not connect to java-debug-adapter on port ${dapPort}: ${err.message}`);
-		});
-
+		const socket = await connectOrKill(adapterProc, "127.0.0.1", dapPort, CONNECT_PATIENT, "java-debug-adapter");
 		this.socket = socket;
 
 		return {

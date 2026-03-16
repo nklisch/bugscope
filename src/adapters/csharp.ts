@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { exec, spawn } from "node:child_process";
+import { exec } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { Socket } from "node:net";
 import { tmpdir } from "node:os";
@@ -7,10 +7,23 @@ import { basename, extname, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { getErrorMessage, LaunchError } from "../core/errors.js";
 import type { AttachConfig, DAPConnection, DebugAdapter, LaunchConfig, PrerequisiteResult } from "./base.js";
-import { allocatePort, CONNECT_SLOW, checkCommand, connectTCP, gracefulDispose, spawnAndWait } from "./helpers.js";
+import { allocatePort, CONNECT_SLOW, checkCommand, connectOrKill, gracefulDispose, spawnAndWait } from "./helpers.js";
 import { downloadAndCacheNetcoredbg, getNetcoredbgBinaryPath, isNetcoredbgCached } from "./netcoredbg.js";
 
 const execAsync = promisify(exec);
+
+/**
+ * Resolve the netcoredbg binary path — checking PATH first, then falling back to
+ * the cached download. Downloads automatically if not yet cached.
+ */
+async function resolveNetcoredbgBinary(): Promise<string> {
+	const onPath = await checkCommand({ cmd: "netcoredbg", args: ["--version"], missing: ["netcoredbg"], installHint: "" });
+	if (onPath.satisfied) return "netcoredbg";
+	if (!isNetcoredbgCached()) {
+		await downloadAndCacheNetcoredbg();
+	}
+	return getNetcoredbgBinaryPath();
+}
 
 export class CSharpAdapter implements DebugAdapter {
 	id = "csharp";
@@ -80,20 +93,7 @@ export class CSharpAdapter implements DebugAdapter {
 			dllPath = resolvePath(cwd, parsed.path);
 		}
 
-		// Ensure netcoredbg is available
-		let netcoredbg = "netcoredbg";
-		const onPath = await new Promise<boolean>((resolve) => {
-			const proc = spawn("netcoredbg", ["--version"], { stdio: "pipe" });
-			proc.on("close", (code) => resolve(code === 0));
-			proc.on("error", () => resolve(false));
-		});
-		if (!onPath) {
-			if (!isNetcoredbgCached()) {
-				await downloadAndCacheNetcoredbg();
-			}
-			netcoredbg = getNetcoredbgBinaryPath();
-		}
-
+		const netcoredbg = await resolveNetcoredbgBinary();
 		const port = config.port ?? (await allocatePort());
 
 		const { process: adapterProc } = await spawnAndWait({
@@ -108,11 +108,7 @@ export class CSharpAdapter implements DebugAdapter {
 
 		this.adapterProcess = adapterProc;
 
-		const socket = await connectTCP("127.0.0.1", port, CONNECT_SLOW.maxRetries, CONNECT_SLOW.retryDelayMs).catch((err) => {
-			adapterProc.kill();
-			throw new LaunchError(`Could not connect to netcoredbg on port ${port}: ${err.message}`);
-		});
-
+		const socket = await connectOrKill(adapterProc, "127.0.0.1", port, CONNECT_SLOW, "netcoredbg");
 		this.socket = socket;
 
 		return {
@@ -135,19 +131,7 @@ export class CSharpAdapter implements DebugAdapter {
 	 * Attach to a running .NET process via netcoredbg.
 	 */
 	async attach(config: AttachConfig): Promise<DAPConnection> {
-		let netcoredbg = "netcoredbg";
-		const onPath = await new Promise<boolean>((resolve) => {
-			const proc = spawn("netcoredbg", ["--version"], { stdio: "pipe" });
-			proc.on("close", (code) => resolve(code === 0));
-			proc.on("error", () => resolve(false));
-		});
-		if (!onPath) {
-			if (!isNetcoredbgCached()) {
-				await downloadAndCacheNetcoredbg();
-			}
-			netcoredbg = getNetcoredbgBinaryPath();
-		}
-
+		const netcoredbg = await resolveNetcoredbgBinary();
 		const port = config.port ?? (await allocatePort());
 
 		const { process: adapterProc } = await spawnAndWait({
@@ -160,11 +144,7 @@ export class CSharpAdapter implements DebugAdapter {
 
 		this.adapterProcess = adapterProc;
 
-		const socket = await connectTCP("127.0.0.1", port, CONNECT_SLOW.maxRetries, CONNECT_SLOW.retryDelayMs).catch((err) => {
-			adapterProc.kill();
-			throw new LaunchError(`Could not connect to netcoredbg on port ${port}: ${err.message}`);
-		});
-
+		const socket = await connectOrKill(adapterProc, "127.0.0.1", port, CONNECT_SLOW, "netcoredbg");
 		this.socket = socket;
 
 		return {

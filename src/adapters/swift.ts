@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { exec, spawn } from "node:child_process";
+import { exec } from "node:child_process";
 import { tmpdir } from "node:os";
 import { extname, join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
@@ -17,12 +17,8 @@ const execAsync = promisify(exec);
  */
 export async function findLldbDap(): Promise<string | null> {
 	// Check PATH first
-	const onPath = await new Promise<boolean>((resolve) => {
-		const proc = spawn("lldb-dap", ["--version"], { stdio: "pipe" });
-		proc.on("close", (code) => resolve(code === 0));
-		proc.on("error", () => resolve(false));
-	});
-	if (onPath) return "lldb-dap";
+	const onPath = await checkCommand({ cmd: "lldb-dap", args: ["--version"], missing: ["lldb-dap"], installHint: "" });
+	if (onPath.satisfied) return "lldb-dap";
 
 	// macOS fallback: xcrun -f lldb-dap
 	if (process.platform === "darwin") {
