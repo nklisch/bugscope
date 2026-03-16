@@ -5,6 +5,28 @@ description: Release history for Krometrail.
 
 # Changelog
 
+## v0.2.7
+
+### Features
+
+- **`chrome run-steps` / `chrome_run_steps`** — new batch browser action executor; run click, type, navigate, wait, screenshot, and scroll actions in a single call
+- **CLI `chrome` rename** — the `browser` CLI command group is now `chrome`, matching the MCP tool names
+- **Shell completions** — `krometrail completions [shell]` generates tab-completion scripts for bash, zsh, and fish
+
+### Fixes
+
+- C# breakpoints with netcoredbg 3.1.3 — fixed via PDB PathMap configuration
+- Kotlin and C# adapter bugs resolved
+- Fixed missing spawn imports in Swift and C++ adapters
+- Screenshot directory now eagerly created when step executor starts a session
+
+### Internal
+
+- Typed error hierarchy, injection deduplication, and session-manager cleanup
+- MCP tool handlers standardized with shared helpers and centralized path utilities
+- Consolidated duplicated logic across debug adapter layer
+- E2E and integration tests added for browser step executor
+
 ## v0.2.6
 
 ### Features
