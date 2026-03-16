@@ -1,117 +1,81 @@
 ---
 name: krometrail-mcp
 description: >
-  Krometrail MCP tool reference. LOAD THIS SKILL before invoking any mcp__krometrail__* tool.
+  Krometrail MCP navigation guide. Load this skill first to understand which tool namespace to use.
   Covers the three tool namespaces (debug_*, chrome_*, session_*), when to use each,
-  common workflows, and pitfalls that cause wasted sessions or confusing errors.
+  common pitfalls, and pointers to the detailed skill for each namespace.
 ---
 
-# Krometrail MCP Reference
+# Krometrail MCP — Navigation Guide
 
-**Load this skill before invoking any `mcp__krometrail__*` tool.**
+**Load this skill first.** Then load the detailed skill for what you're doing.
 
-Krometrail provides runtime debugging and browser recording via MCP. There are three distinct tool namespaces — picking the wrong one wastes time.
+Krometrail exposes three MCP tool namespaces. Picking the wrong one wastes sessions and produces confusing errors.
 
 ---
 
 ## Tool Namespaces
 
 ### `debug_*` — Code debugger (DAP)
+
 Steps through source code, inspects variables, evaluates expressions.
 
 **Use when:** Debugging Python, Node.js, Go, TypeScript, Ruby, Java, Rust, C#, C++, Swift.
 
-Tools: `debug_launch`, `debug_attach`, `debug_stop`, `debug_status`, `debug_continue`, `debug_step`, `debug_run_to`, `debug_set_breakpoints`, `debug_set_exception_breakpoints`, `debug_list_breakpoints`, `debug_evaluate`, `debug_variables`, `debug_stack_trace`, `debug_source`, `debug_watch`, `debug_action_log`, `debug_output`, `debug_threads`
+**Load the skill:** Load `krometrail-debug` for the full tool reference, language setup, breakpoint syntax, and debugging strategies.
 
-**Do NOT use for:** Opening URLs in a browser. `debug_launch` runs shell commands — passing a URL will fail.
-
-> **Language-specific setup:** Read the reference for your target language before launching.
-> - Python → `references/python.md`
-> - Node.js / TypeScript → `references/node.md`
-> - Go → `references/go.md`
-> - Chrome / browser JS → `references/chrome.md`
-> - Other languages (Ruby, Java, Rust, C#, C++, Swift) → check `debug_status` for available adapters and prerequisites
+**Pitfall:** `debug_launch` runs a shell command — do NOT pass a URL. It will fail.
 
 ---
 
 ### `chrome_*` — Browser recording & control (CDP)
-Launches Chrome, records browser events, and optionally drives the browser with batch actions.
 
-**Use when:** Observing a web app — reproducing a bug, recording a user flow, capturing network traffic. Also when you need to drive the browser (navigate, click, fill forms) as part of a debugging workflow.
+Launches Chrome, records browser events, and drives the browser with batch actions.
 
-Tools: `chrome_start`, `chrome_status`, `chrome_mark`, `chrome_run_steps`, `chrome_stop`
+**Use when:** Observing a web app — reproducing a bug, recording a user flow, capturing network traffic, or driving the browser (navigate, click, fill forms).
 
-> **Chrome setup:** See `references/chrome.md` for how to handle existing Chrome instances, CDP errors, and headless environments.
+**Load the skill:** Load `krometrail-chrome` for the full tool reference, Chrome setup, step actions, and investigation strategies.
 
-> **Annotations:** When recording, application code can call `window.__krometrail?.mark('label')` to place lightweight annotations in the timeline without triggering screenshots. See `references/chrome.md` — "Annotations" section for details and when to use annotations vs markers.
-
-**Do NOT use for:** Stepping through JavaScript source. For JS debugging, use `debug_attach` (see `references/node.md`).
+**Pitfall:** Always pass `profile: 'krometrail'` to `chrome_start` to avoid conflicts with any existing Chrome instance.
 
 ---
 
 ### `session_*` — Browser session investigation (read-only)
+
 Queries recorded browser sessions from the local database.
 
-**Use when:** Investigating what happened in a recorded browser session.
+**Use when:** Investigating what happened in a browser session recorded with `chrome_*` tools.
 
-Tools: `session_list`, `session_overview`, `session_search`, `session_inspect`, `session_diff`, `session_replay_context`
-
----
-
-## Workflows
-
-### Debug a program
-1. Read the language reference (see branching above)
-2. `debug_launch(command: '...', breakpoints: [...])`
-3. `debug_variables(session_id: '...')` / `debug_evaluate(...)` / `debug_step(...)`
-4. `debug_stop(session_id: '...')`
-
-### Record a browser session and investigate it
-1. See `references/chrome.md` for setup
-2. `chrome_start(url: '...', profile: 'krometrail')`
-3. `chrome_mark(label: '...')` at key moments
-4. `chrome_stop()`
-5. `session_list()` → `session_overview(session_id: 'latest')` → `session_search(...)` → `session_inspect(...)`
-   - All `session_*` tools accept `session_id: "latest"` to target the most recent session
-
-### Drive the browser with batch actions, then investigate
-1. `chrome_start(url: '...', profile: 'krometrail')`
-2. `chrome_run_steps({ steps: [{ action: "navigate", url: "/login" }, { action: "fill", selector: "#email", value: "test@example.com" }, ...] })`
-   - Each step is auto-marked and auto-screenshotted — the recording captures everything
-   - Save with `name` + `save: true`, replay later with just `name`
-3. `chrome_stop()`
-4. Investigate with `session_overview`, `session_search`, etc.
+**Load the skill:** Covered in `krometrail-chrome` — session investigation tools are part of that skill.
 
 ---
 
-## Key Parameters
+## Which skill to load
 
-### `debug_launch`
-| Param | Default | Notes |
-|-------|---------|-------|
-| `command` | required | Shell command — NOT a URL |
-| `language` | auto-detected | `python`, `node`, `go`, `typescript`, `ruby`, `java`, `rust`, `csharp`, `cpp`, `swift` |
-| `breakpoints` | — | `[{file: 'app.py', breakpoints: [{line: 42}]}]` |
-| `stop_on_entry` | `false` | Pause on first line |
-| `launch_config` | — | Use `.vscode/launch.json` instead of a command |
+| Goal | Load skill |
+|------|-----------|
+| Debug Python, JS, Go, Rust, Java, C++, C# | `krometrail-debug` |
+| Record or observe a web app in Chrome | `krometrail-chrome` |
+| Investigate a recorded browser session | `krometrail-chrome` |
+| Drive the browser with clicks/navigation | `krometrail-chrome` |
 
-### `chrome_start`
-| Param | Default | Notes |
-|-------|---------|-------|
-| `url` | — | Open this URL when launching |
-| `profile` | — | Isolated Chrome profile (recommended — avoids conflicts) |
-| `attach` | `false` | Attach to Chrome already running with `--remote-debugging-port` |
-| `port` | `9222` | CDP port |
-| `all_tabs` | `false` | Record all tabs (default: active tab only) |
+---
 
-### `chrome_run_steps`
-| Param | Default | Notes |
-|-------|---------|-------|
-| `steps` | required* | Array of step objects. Each has `action` + action-specific params |
-| `name` | — | Scenario name. With `save: true` stores it; alone replays it |
-| `save` | `false` | Save steps under `name` for later replay |
-| `capture` | `{ screenshot: "all", markers: true }` | Auto-capture config per step |
+## Common pitfalls
 
-*Required unless replaying a named scenario (pass `name` only).
+- **Don't pass URLs to `debug_launch`.** It runs shell commands. Use `chrome_start` for browser tasks.
+- **Chrome conflicts.** If Chrome is already running, `chrome_start` without `profile` may fail with a CDP error. Always use `profile: 'krometrail'` for an isolated instance.
+- **Session IDs.** All `debug_*` tools require a `session_id` returned by `debug_launch`. All `session_*` tools accept `session_id: "latest"` for convenience.
+- **Always call `debug_stop`.** Debug sessions don't self-terminate. Call `debug_stop(session_id: '...')` when done or the debugger process will linger.
+- **Language-specific prerequisites.** Each language needs its debugger binary installed (debugpy for Python, dlv for Go, etc.). See the `krometrail-debug` skill for per-language setup.
 
-**Actions:** `navigate`, `reload`, `click`, `fill`, `select`, `submit`, `type`, `hover`, `scroll_to`, `scroll_by`, `wait`, `wait_for`, `wait_for_navigation`, `wait_for_network_idle`, `screenshot`, `mark`, `evaluate`
+---
+
+## Language references (for `debug_*`)
+
+When using debug tools, read the reference for your target language:
+
+- Python → [`references/python.md`](references/python.md)
+- Node.js / TypeScript → [`references/node.md`](references/node.md)
+- Go → [`references/go.md`](references/go.md)
+- Other languages (Ruby, Java, Rust, C#, C++, Swift) → covered in the `krometrail-debug` skill

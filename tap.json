@@ -3,16 +3,22 @@
 	"description": "Krometrail skills — runtime debugging and browser recording for AI agents.",
 	"skills": [
 		{
-			"name": "krometrail-mcp",
-			"description": "Krometrail MCP tool reference. Load before invoking any mcp__krometrail__* tool. Covers debug_*, chrome_*, and session_* namespaces with per-language references for Python, Node.js, Go, and Chrome.",
+			"name": "krometrail-debug",
+			"description": "Krometrail runtime debugging skill. Load before using debug_* MCP tools or the krometrail CLI for debugging. Covers all 10 supported languages with per-language references, breakpoint syntax, stepping strategies, and server debugging workflows.",
 			"repo": "nklisch/krometrail",
-			"tags": ["krometrail", "mcp", "debugging", "browser", "devtools"]
+			"tags": ["krometrail", "debugging", "mcp", "cli", "breakpoints"]
 		},
 		{
-			"name": "krometrail-cli",
-			"description": "Krometrail CLI reference. Load when invoking the krometrail CLI binary. Covers all debug and browser subcommands, breakpoint syntax, output modes, and per-language setup.",
+			"name": "krometrail-chrome",
+			"description": "Krometrail browser observation skill. Load before using chrome_*/session_* MCP tools or the krometrail browser CLI. Covers session recording, batch browser actions, network/console/DOM capture, framework state, and investigation strategies.",
 			"repo": "nklisch/krometrail",
-			"tags": ["krometrail", "cli", "debugging", "browser", "devtools"]
+			"tags": ["krometrail", "browser", "chrome", "mcp", "cli", "devtools"]
+		},
+		{
+			"name": "krometrail-mcp",
+			"description": "Krometrail MCP navigation guide. Load first to understand which tool namespace to use (debug_*, chrome_*, session_*) and which detailed skill to load next. Covers common pitfalls and per-language references for Python, Node.js, and Go.",
+			"repo": "nklisch/krometrail",
+			"tags": ["krometrail", "mcp", "navigation", "guide"]
 		}
 	]
 }

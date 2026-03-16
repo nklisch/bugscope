@@ -1,1 +1,0 @@
-../../agent-lens-mcp/references/node.md
