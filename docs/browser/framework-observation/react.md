@@ -11,10 +11,10 @@ When enabled, Krometrail injects a DevTools hook script before page code runs an
 
 ```bash
 # CLI
-krometrail browser start http://localhost:3000 --framework-state react
+krometrail chrome start http://localhost:3000 --framework-state react
 
 # Or enable all frameworks
-krometrail browser start http://localhost:3000 --framework-state
+krometrail chrome start http://localhost:3000 --framework-state
 ```
 
 ```json
@@ -85,13 +85,13 @@ After recording, find React events using `session_search`:
 
 ```bash
 # Find all high-severity React errors
-krometrail browser search <session-id> --event-types framework_error --framework react
+krometrail chrome search <session-id> --event-types framework_error --framework react
 
 # Find infinite re-render patterns
-krometrail browser search <session-id> --framework react --pattern infinite_rerender
+krometrail chrome search <session-id> --framework react --pattern infinite_rerender
 
 # Find all re-renders of a specific component
-krometrail browser search <session-id> "UserProfile" --event-types framework_state
+krometrail chrome search <session-id> "UserProfile" --event-types framework_state
 ```
 
 ## React Version Support

@@ -34,7 +34,7 @@ const main = defineCommand({
 		}
 		// Citty always calls the parent run() even when a subcommand is dispatched.
 		// Only show usage when no subcommand was provided.
-		const subCommandNames = ["debug", "browser", "doctor", "commands", "completions", "_daemon"];
+		const subCommandNames = ["debug", "chrome", "doctor", "commands", "completions", "_daemon"];
 		const hasSubCommand = rawArgs.some((a) => subCommandNames.includes(a));
 		if (hasSubCommand) return;
 		sendPing("run"); // fire-and-forget
@@ -42,7 +42,7 @@ const main = defineCommand({
 	},
 	subCommands: {
 		debug: debugCommand,
-		browser: browserCommand,
+		chrome: browserCommand,
 		doctor: doctorCommand,
 		commands: commandsCommand,
 		completions: () => import("./commands/completions.js").then((m) => m.completionsCommand),

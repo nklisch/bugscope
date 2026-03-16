@@ -11,7 +11,7 @@ allowed-tools: Bash(krometrail:*)
 
 # Krometrail — Browser Recording & Control (CLI)
 
-Use the `krometrail browser` commands to record browser sessions, drive Chrome with batch actions, and investigate what happened.
+Use the `krometrail chrome` commands to record browser sessions, drive Chrome with batch actions, and investigate what happened.
 
 ## When to use
 
@@ -24,24 +24,24 @@ Use the `krometrail browser` commands to record browser sessions, drive Chrome w
 
 ```bash
 # Launch Chrome and record at a URL (isolated profile avoids conflicts)
-krometrail browser start --url http://localhost:3000 --profile krometrail
+krometrail chrome start --url http://localhost:3000 --profile krometrail
 
 # With framework state capture (React, Vue)
-krometrail browser start --url http://localhost:3000 --framework-state auto
+krometrail chrome start --url http://localhost:3000 --framework-state auto
 
 # Attach to an already-running Chrome (must have --remote-debugging-port=9222)
-krometrail browser start --attach
+krometrail chrome start --attach
 
 # Place markers at key moments
-krometrail browser mark "submitted form"
-krometrail browser mark "error appeared"
+krometrail chrome mark "submitted form"
+krometrail chrome mark "error appeared"
 
 # Check status
-krometrail browser status
+krometrail chrome status
 
 # Stop recording
-krometrail browser stop
-krometrail browser stop --close-browser
+krometrail chrome stop
+krometrail chrome stop --close-browser
 ```
 
 ## Batch browser actions
@@ -50,22 +50,22 @@ Drive the browser with a sequence of steps in one call. Requires an active recor
 
 ```bash
 # From a JSON file
-krometrail browser run-steps --file steps.json
+krometrail chrome run-steps --file steps.json
 
 # Inline JSON
-krometrail browser run-steps --steps '[{"action":"navigate","url":"/login"},{"action":"fill","selector":"#email","value":"test@example.com"},{"action":"click","selector":"#submit"}]'
+krometrail chrome run-steps --steps '[{"action":"navigate","url":"/login"},{"action":"fill","selector":"#email","value":"test@example.com"},{"action":"click","selector":"#submit"}]'
 
 # Save a named scenario for later replay
-krometrail browser run-steps --file steps.json --name login-flow --save
+krometrail chrome run-steps --file steps.json --name login-flow --save
 
 # Replay a saved scenario (no steps needed)
-krometrail browser run-steps --name login-flow
+krometrail chrome run-steps --name login-flow
 
 # Screenshot only on errors
-krometrail browser run-steps --file steps.json --screenshot on_error
+krometrail chrome run-steps --file steps.json --screenshot on_error
 
 # Disable auto-markers
-krometrail browser run-steps --file steps.json --no-markers
+krometrail chrome run-steps --file steps.json --no-markers
 ```
 
 Each step is auto-marked (`step:1:navigate:/login`, `step:2:fill:#email`, etc.) and auto-screenshotted for investigation.
@@ -89,31 +89,31 @@ Each step is auto-marked (`step:1:navigate:/login`, `step:2:fill:#email`, etc.) 
 
 ```bash
 # List recorded sessions
-krometrail browser sessions
-krometrail browser sessions --has-errors
+krometrail chrome sessions
+krometrail chrome sessions --has-errors
 
 # Overview of a session
-krometrail browser overview <session-id>
-krometrail browser overview <session-id> --around-marker <marker-id>
+krometrail chrome overview <session-id>
+krometrail chrome overview <session-id> --around-marker <marker-id>
 
 # Search events
-krometrail browser search <session-id> --query "payment failed"
-krometrail browser search <session-id> --status-codes 500
-krometrail browser search <session-id> --framework react --pattern stale_closure
+krometrail chrome search <session-id> --query "payment failed"
+krometrail chrome search <session-id> --status-codes 500
+krometrail chrome search <session-id> --framework react --pattern stale_closure
 
 # Inspect a specific event
-krometrail browser inspect <session-id> --event <event-id>
-krometrail browser inspect <session-id> --marker <marker-id>
+krometrail chrome inspect <session-id> --event <event-id>
+krometrail chrome inspect <session-id> --marker <marker-id>
 
 # Compare two moments
-krometrail browser diff <session-id> --from <moment> --to <moment>
+krometrail chrome diff <session-id> --from <moment> --to <moment>
 
 # Generate reproduction steps or test scaffolds
-krometrail browser replay-context <session-id> --format reproduction_steps
-krometrail browser replay-context <session-id> --format test_scaffold --framework playwright
+krometrail chrome replay-context <session-id> --format reproduction_steps
+krometrail chrome replay-context <session-id> --format test_scaffold --framework playwright
 
 # Export as HAR
-krometrail browser export <session-id> --format har --output session.har
+krometrail chrome export <session-id> --format har --output session.har
 ```
 
 See [references/chrome.md](references/chrome.md) for the full reference.

@@ -87,9 +87,9 @@ export async function buildCommandInventory(groupFilter?: string): Promise<Comma
 			commands: extractGroupCommands(debugCommand, "debug"),
 		},
 		{
-			name: "browser",
-			description: "Browser recording commands",
-			commands: extractGroupCommands(browserCommand, "browser"),
+			name: "chrome",
+			description: "Chrome recording commands",
+			commands: extractGroupCommands(browserCommand, "chrome"),
 		},
 		{
 			name: "top-level",
@@ -107,7 +107,7 @@ export async function buildCommandInventory(groupFilter?: string): Promise<Comma
 					group: "top-level",
 					args: [
 						{ name: "json", type: "boolean", required: false, description: "Output as JSON (default: true for this command)", default: true },
-						{ name: "group", type: "string", required: false, description: "Filter by command group: debug, browser, or all" },
+						{ name: "group", type: "string", required: false, description: "Filter by command group: debug, chrome, or all" },
 					],
 				},
 			],
@@ -134,7 +134,7 @@ export const commandsCommand = defineCommand({
 		},
 		group: {
 			type: "string",
-			description: "Filter by command group: debug, browser, or all",
+			description: "Filter by command group: debug, chrome, or all",
 		},
 	},
 	async run({ args }) {

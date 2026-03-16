@@ -12,17 +12,17 @@ A recording session captures everything happening in Chrome from start to stop. 
 Your agent typically starts a recording for you as part of its debugging workflow. If you want to start one yourself, the CLI command is:
 
 ```bash
-krometrail browser start http://localhost:3000
+krometrail chrome start http://localhost:3000
 ```
 
 If your app uses React or Vue and you want component-level state captured, you can enable framework observation:
 
 ```bash
 # Enable all supported frameworks
-krometrail browser start http://localhost:3000 --framework-state
+krometrail chrome start http://localhost:3000 --framework-state
 
 # Enable only React
-krometrail browser start http://localhost:3000 --framework-state react
+krometrail chrome start http://localhost:3000 --framework-state react
 ```
 
 > **Note:** Framework state must be enabled before the page loads. The injection scripts need to run before React or Vue module code executes. Starting the recording and then navigating to the URL ensures the timing is correct.

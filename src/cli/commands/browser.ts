@@ -175,7 +175,7 @@ export const browserStatusCommand = defineCommand({
 				if (mode === "json") {
 					process.stdout.write(`${successEnvelope({ active: false })}\n`);
 				} else {
-					process.stdout.write("No active browser recording. Run `krometrail browser start` to begin.\n");
+					process.stdout.write("No active browser recording. Run `krometrail chrome start` to begin.\n");
 				}
 				return;
 			}
@@ -531,8 +531,8 @@ export const browserRunStepsCommand = defineCommand({
 
 export const browserCommand = defineCommand({
 	meta: {
-		name: "browser",
-		description: "Browser recording and control (CDP recorder for network, console, user input, and batch browser actions)",
+		name: "chrome",
+		description: "Chrome recording and control (CDP recorder for network, console, user input, and batch browser actions)",
 	},
 	subCommands: {
 		start: browserStartCommand,

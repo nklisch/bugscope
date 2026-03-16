@@ -57,12 +57,12 @@ describe("E2E CLI: commands", () => {
 		expect(Array.isArray(result.data.groups)).toBe(true);
 	});
 
-	it("commands lists debug, browser, and top-level groups", async () => {
+	it("commands lists debug, chrome, and top-level groups", async () => {
 		const result = await runCliJson(["commands"]);
 		if (!result.ok) throw new Error("expected ok");
 		const groupNames = result.data.groups.map((g: { name: string }) => g.name);
 		expect(groupNames).toContain("debug");
-		expect(groupNames).toContain("browser");
+		expect(groupNames).toContain("chrome");
 		expect(groupNames).toContain("top-level");
 	});
 
@@ -93,7 +93,7 @@ describe("E2E CLI: commands", () => {
 	});
 
 	it("browser commands include new MCP parity args", async () => {
-		const result = await runCliJson(["commands", "--group", "browser"]);
+		const result = await runCliJson(["commands", "--group", "chrome"]);
 		if (!result.ok) throw new Error("expected ok");
 		const search = result.data.groups[0].commands.find((c: { name: string }) => c.name === "search");
 		expect(search).toBeTruthy();
@@ -123,7 +123,7 @@ describe("E2E CLI: namespace structure", () => {
 	it("top-level krometrail --help shows help", async () => {
 		const result = await runCli(["--help"]);
 		// citty prints help/usage with --help
-		expect(result.stdout + result.stderr).toMatch(/debug|browser|doctor|commands/i);
+		expect(result.stdout + result.stderr).toMatch(/debug|chrome|doctor|commands/i);
 	});
 
 	it("krometrail debug with no subcommand shows debug help", async () => {
@@ -131,8 +131,8 @@ describe("E2E CLI: namespace structure", () => {
 		expect(result.stdout + result.stderr).toMatch(/launch|step|eval|stop/i);
 	});
 
-	it("krometrail browser with no subcommand shows browser help", async () => {
-		const result = await runCli(["browser"]);
+	it("krometrail chrome with no subcommand shows chrome help", async () => {
+		const result = await runCli(["chrome"]);
 		expect(result.stdout + result.stderr).toMatch(/start|mark|status|stop|sessions/i);
 	});
 });

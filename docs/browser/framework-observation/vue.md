@@ -11,10 +11,10 @@ Krometrail observes Vue applications by installing a `__VUE_DEVTOOLS_GLOBAL_HOOK
 
 ```bash
 # CLI
-krometrail browser start http://localhost:3000 --framework-state vue
+krometrail chrome start http://localhost:3000 --framework-state vue
 
 # Or enable all frameworks
-krometrail browser start http://localhost:3000 --framework-state
+krometrail chrome start http://localhost:3000 --framework-state
 ```
 
 ```json
@@ -58,13 +58,13 @@ Krometrail extracts state from both APIs:
 
 ```bash
 # Find all Vue component errors
-krometrail browser search <session-id> --event-types framework_error --framework vue
+krometrail chrome search <session-id> --event-types framework_error --framework vue
 
 # Find all store mutations
-krometrail browser search <session-id> --event-types framework_state "pinia"
+krometrail chrome search <session-id> --event-types framework_state "pinia"
 
 # Find component updates with state changes
-krometrail browser search <session-id> --framework vue --event-types framework_state
+krometrail chrome search <session-id> --framework vue --event-types framework_state
 ```
 
 ## Vue Version Support

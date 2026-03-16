@@ -15,7 +15,7 @@ The CLI uses namespaced subcommands:
 
 ```
 krometrail debug <command>     # Debug session commands
-krometrail browser <command>   # Browser recording commands
+krometrail chrome <command>   # Browser recording commands
 krometrail doctor              # Check installed debuggers
 krometrail commands            # List all commands (machine-readable)
 krometrail completions <shell> # Generate shell completions (bash, zsh, fish)
@@ -236,12 +236,12 @@ krometrail debug threads
 ### `browser start`
 
 ```bash
-krometrail browser start --url http://localhost:3000
-krometrail browser start --url http://localhost:3000 --framework-state auto
-krometrail browser start --url http://localhost:3000 --framework-state react
-krometrail browser start --attach                    # Attach to already-running Chrome
-krometrail browser start --profile myproject          # Use isolated Chrome profile
-krometrail browser start --all-tabs                   # Record all tabs
+krometrail chrome start --url http://localhost:3000
+krometrail chrome start --url http://localhost:3000 --framework-state auto
+krometrail chrome start --url http://localhost:3000 --framework-state react
+krometrail chrome start --attach                    # Attach to already-running Chrome
+krometrail chrome start --profile myproject          # Use isolated Chrome profile
+krometrail chrome start --all-tabs                   # Record all tabs
 ```
 
 <!--@include: ../.generated/cli-browser-start.md-->
@@ -249,13 +249,13 @@ krometrail browser start --all-tabs                   # Record all tabs
 ### `browser status`
 
 ```bash
-krometrail browser status
+krometrail chrome status
 ```
 
 ### `browser mark`
 
 ```bash
-krometrail browser mark "user submitted form"
+krometrail chrome mark "user submitted form"
 ```
 
 <!--@include: ../.generated/cli-browser-mark.md-->
@@ -263,8 +263,8 @@ krometrail browser mark "user submitted form"
 ### `browser stop`
 
 ```bash
-krometrail browser stop
-krometrail browser stop --close-browser
+krometrail chrome stop
+krometrail chrome stop --close-browser
 ```
 
 <!--@include: ../.generated/cli-browser-stop.md-->
@@ -272,7 +272,7 @@ krometrail browser stop --close-browser
 ### `browser export`
 
 ```bash
-krometrail browser export <session-id> --format har --output file.har
+krometrail chrome export <session-id> --format har --output file.har
 ```
 
 <!--@include: ../.generated/cli-browser-export.md-->
@@ -284,9 +284,9 @@ krometrail browser export <session-id> --format har --output file.har
 ### `browser sessions`
 
 ```bash
-krometrail browser sessions
-krometrail browser sessions --has-errors
-krometrail browser sessions --url-contains "localhost:3000"
+krometrail chrome sessions
+krometrail chrome sessions --has-errors
+krometrail chrome sessions --url-contains "localhost:3000"
 ```
 
 <!--@include: ../.generated/cli-browser-sessions.md-->
@@ -294,9 +294,9 @@ krometrail browser sessions --url-contains "localhost:3000"
 ### `browser overview`
 
 ```bash
-krometrail browser overview <session-id>
-krometrail browser overview <session-id> --around-marker <marker-id>
-krometrail browser overview <session-id> --include timeline,markers,errors
+krometrail chrome overview <session-id>
+krometrail chrome overview <session-id> --around-marker <marker-id>
+krometrail chrome overview <session-id> --include timeline,markers,errors
 ```
 
 <!--@include: ../.generated/cli-browser-overview.md-->
@@ -304,9 +304,9 @@ krometrail browser overview <session-id> --include timeline,markers,errors
 ### `browser search`
 
 ```bash
-krometrail browser search <session-id> --query "payment failed"
-krometrail browser search <session-id> --event-types network_response --status-codes 500
-krometrail browser search <session-id> --framework react --pattern stale_closure
+krometrail chrome search <session-id> --query "payment failed"
+krometrail chrome search <session-id> --event-types network_response --status-codes 500
+krometrail chrome search <session-id> --framework react --pattern stale_closure
 ```
 
 <!--@include: ../.generated/cli-browser-search.md-->
@@ -314,9 +314,9 @@ krometrail browser search <session-id> --framework react --pattern stale_closure
 ### `browser inspect`
 
 ```bash
-krometrail browser inspect <session-id> --event <event-id>
-krometrail browser inspect <session-id> --marker <marker-id>
-krometrail browser inspect <session-id> --timestamp "2025-01-15T10:30:00Z"
+krometrail chrome inspect <session-id> --event <event-id>
+krometrail chrome inspect <session-id> --marker <marker-id>
+krometrail chrome inspect <session-id> --timestamp "2025-01-15T10:30:00Z"
 ```
 
 <!--@include: ../.generated/cli-browser-inspect.md-->
@@ -324,7 +324,7 @@ krometrail browser inspect <session-id> --timestamp "2025-01-15T10:30:00Z"
 ### `browser diff`
 
 ```bash
-krometrail browser diff <session-id> --from <timestamp-or-event-id> --to <timestamp-or-event-id>
+krometrail chrome diff <session-id> --from <timestamp-or-event-id> --to <timestamp-or-event-id>
 ```
 
 <!--@include: ../.generated/cli-browser-diff.md-->
@@ -332,9 +332,9 @@ krometrail browser diff <session-id> --from <timestamp-or-event-id> --to <timest
 ### `browser replay-context`
 
 ```bash
-krometrail browser replay-context <session-id>
-krometrail browser replay-context <session-id> --format test_scaffold --framework playwright
-krometrail browser replay-context <session-id> --format test_scaffold --framework cypress
+krometrail chrome replay-context <session-id>
+krometrail chrome replay-context <session-id> --format test_scaffold --framework playwright
+krometrail chrome replay-context <session-id> --format test_scaffold --framework cypress
 ```
 
 <!--@include: ../.generated/cli-browser-replay-context.md-->
