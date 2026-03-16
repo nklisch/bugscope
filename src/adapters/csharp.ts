@@ -175,13 +175,18 @@ async function compileSingleCsFile(srcPath: string, env?: Record<string, string>
 	mkdirSync(projectDir, { recursive: true });
 
 	const projectName = basename(srcPath, ".cs");
+	const { dirname } = await import("node:path");
+	const originalDir = dirname(srcPath);
 
-	// Scaffold minimal .csproj
+	// Scaffold minimal .csproj with PathMap so the PDB references the original
+	// source path. Without this, netcoredbg 3.1.3+ can't match breakpoints set
+	// on the original path to the temp-compiled source.
 	const csproj = `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <PathMap>${projectDir}=${originalDir}</PathMap>
   </PropertyGroup>
 </Project>`;
 	writeFileSync(join(projectDir, `${projectName}.csproj`), csproj);
