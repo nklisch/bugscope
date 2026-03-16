@@ -294,12 +294,7 @@ function renderCliCommandTable(cmd: CliCommandInfo): string {
 		return `| ${flag} | ${type} | ${req} | ${desc} |`;
 	});
 
-	return [
-		"| Flag | Type | Required | Description |",
-		"|------|------|----------|-------------|",
-		...rows,
-		"",
-	].join("\n");
+	return ["| Flag | Type | Required | Description |", "|------|------|----------|-------------|", ...rows, ""].join("\n");
 }
 
 async function generateCliCommandDocs(outDir: string): Promise<number> {
