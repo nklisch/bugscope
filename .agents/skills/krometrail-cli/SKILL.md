@@ -158,6 +158,14 @@ krometrail browser mark "submitted form"
 krometrail browser stop
 krometrail browser stop --close-browser
 
+# Batch browser actions (requires active recording)
+krometrail browser run-steps --file steps.json
+krometrail browser run-steps --steps '[{"action":"navigate","url":"/login"},{"action":"click","selector":"#submit"}]'
+krometrail browser run-steps --name login-flow                          # replay saved scenario
+krometrail browser run-steps --file steps.json --name login-flow --save # save + run
+krometrail browser run-steps --file steps.json --screenshot on_error    # only screenshot failures
+krometrail browser run-steps --file steps.json --no-markers             # disable auto-markers
+
 # Session investigation
 krometrail browser sessions
 krometrail browser sessions --has-errors --limit 5
@@ -221,4 +229,13 @@ krometrail browser stop
 krometrail browser sessions
 krometrail browser overview <id>
 krometrail browser search <id> --status-codes 422,500
+```
+
+### Drive browser with batch steps, then investigate
+```sh
+krometrail browser start --url http://localhost:3000 --profile krometrail
+krometrail browser run-steps --file repro-steps.json
+krometrail browser stop
+krometrail browser overview <id>
+# Step markers (step:1:navigate:/login, etc.) appear in the timeline
 ```

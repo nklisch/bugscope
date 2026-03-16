@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs";
 import { defineCommand } from "citty";
+import { renderStepResults } from "../../browser/executor/renderer.js";
+import type { RunStepsResult, Step } from "../../browser/executor/types.js";
 import type { SessionSummary } from "../../browser/investigation/query-engine.js";
 import type { BrowserSessionInfo, Marker } from "../../browser/types.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
@@ -449,14 +452,92 @@ export const browserExportCommand = defineCommand({
 	},
 });
 
+export const browserRunStepsCommand = defineCommand({
+	meta: {
+		name: "run-steps",
+		description: "Execute a sequence of browser actions (navigate, click, fill, wait, etc.)",
+	},
+	args: {
+		file: {
+			type: "string",
+			description: "Path to a JSON file containing a steps array",
+		},
+		steps: {
+			type: "string",
+			description: "Inline JSON array of steps",
+		},
+		name: {
+			type: "string",
+			description: "Scenario name — use with --save to store, or alone to replay a saved scenario",
+		},
+		save: {
+			type: "boolean",
+			description: "Save the steps as a named scenario for later replay",
+			default: false,
+		},
+		screenshot: {
+			type: "string",
+			description: "Screenshot capture mode: all (default), none, on_error",
+		},
+		"no-markers": {
+			type: "boolean",
+			description: "Disable auto-markers on each step",
+			default: false,
+		},
+		json: { type: "boolean", default: false, description: "Output as JSON envelope" },
+		quiet: { type: "boolean", default: false, description: "Minimal output" },
+	},
+	async run({ args }) {
+		// Resolve steps from --file, --steps, or --name (replay)
+		let steps: Step[] | undefined;
+		if (args.file) {
+			const raw = readFileSync(args.file, "utf-8");
+			const parsed = JSON.parse(raw);
+			steps = Array.isArray(parsed) ? parsed : parsed.steps;
+		} else if (args.steps) {
+			steps = JSON.parse(args.steps) as Step[];
+		}
+
+		if (!steps && !args.name) {
+			process.stderr.write("Error: provide --file, --steps, or --name to replay a saved scenario.\n");
+			process.exit(1);
+		}
+
+		const capture = {
+			screenshot: (args.screenshot as "all" | "none" | "on_error") ?? "all",
+			markers: !args["no-markers"],
+		};
+
+		await runBrowserCommand(
+			args,
+			async (client) => {
+				const mode = resolveOutputMode(args);
+				const result = await client.call<RunStepsResult>("browser.run-steps", {
+					steps,
+					name: args.name,
+					save: args.save || undefined,
+					capture,
+				});
+				if (mode === "json") {
+					process.stdout.write(`${successEnvelope(result)}\n`);
+				} else {
+					process.stdout.write(`${renderStepResults(result)}\n`);
+				}
+			},
+			120_000,
+		);
+	},
+});
+
 export const browserCommand = defineCommand({
 	meta: {
 		name: "browser",
-		description: "Browser recording (CDP recorder — passive observer for network, console, and user input events)",
+		description: "Browser recording and control (CDP recorder for network, console, user input, and batch browser actions)",
 	},
 	subCommands: {
 		start: browserStartCommand,
 		mark: browserMarkCommand,
+		"run-steps": browserRunStepsCommand,
 		status: browserStatusCommand,
 		stop: browserStopCommand,
 		sessions: browserSessionsCommand,
