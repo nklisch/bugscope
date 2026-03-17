@@ -28,20 +28,20 @@ describe("mapViewportConfig", () => {
 	it("maps partial config — omitted fields become undefined", () => {
 		const result = mapViewportConfig({ stack_depth: 2 });
 		expect(result).toBeDefined();
-		expect(result!.stackDepth).toBe(2);
-		expect(result!.sourceContextLines).toBeUndefined();
-		expect(result!.localsMaxDepth).toBeUndefined();
+		expect(result?.stackDepth).toBe(2);
+		expect(result?.sourceContextLines).toBeUndefined();
+		expect(result?.localsMaxDepth).toBeUndefined();
 	});
 
 	it("maps empty object to object with all undefined values", () => {
 		const result = mapViewportConfig({});
 		expect(result).toBeDefined();
-		expect(result!.stackDepth).toBeUndefined();
+		expect(result?.stackDepth).toBeUndefined();
 	});
 
 	it("preserves zero values (boundary)", () => {
 		const result = mapViewportConfig({ stack_depth: 0, locals_max_items: 0 });
-		expect(result!.stackDepth).toBe(0);
-		expect(result!.localsMaxItems).toBe(0);
+		expect(result?.stackDepth).toBe(0);
+		expect(result?.localsMaxItems).toBe(0);
 	});
 });

@@ -88,7 +88,7 @@ describe("SessionDiffer — framework_state diff", () => {
 		});
 
 		const qe = makeQueryEngine({
-			search: (sid, params) => {
+			search: (_sid, params) => {
 				if (params.filters?.eventTypes?.includes("framework_state")) return [mountEvent];
 				if (params.filters?.eventTypes?.includes("framework_error")) return [];
 				return [];
@@ -99,9 +99,9 @@ describe("SessionDiffer — framework_state diff", () => {
 		differ = new SessionDiffer(qe);
 		const diff = differ.diff({ sessionId: SID, before: t(0), after: t(5000), include: ["framework_state"] });
 		expect(diff.frameworkChanges).toBeDefined();
-		expect(diff.frameworkChanges!.length).toBe(1);
-		expect(diff.frameworkChanges![0].componentName).toBe("Dashboard");
-		expect(diff.frameworkChanges![0].changeType).toBe("mounted");
+		expect(diff.frameworkChanges?.length).toBe(1);
+		expect(diff.frameworkChanges?.[0].componentName).toBe("Dashboard");
+		expect(diff.frameworkChanges?.[0].changeType).toBe("mounted");
 	});
 
 	it("groups mount/unmount/update correctly", () => {
@@ -117,7 +117,7 @@ describe("SessionDiffer — framework_state diff", () => {
 		};
 
 		const qe = makeQueryEngine({
-			search: (sid, params) => {
+			search: (_sid, params) => {
 				if (params.filters?.eventTypes?.includes("framework_state")) return stateRows;
 				return [];
 			},
@@ -128,9 +128,9 @@ describe("SessionDiffer — framework_state diff", () => {
 		const diff = differ.diff({ sessionId: SID, before: t(0), after: t(5000), include: ["framework_state"] });
 
 		expect(diff.frameworkChanges).toBeDefined();
-		const mounted = diff.frameworkChanges!.filter((c) => c.changeType === "mounted");
-		const unmounted = diff.frameworkChanges!.filter((c) => c.changeType === "unmounted");
-		const updated = diff.frameworkChanges!.filter((c) => c.changeType === "updated");
+		const mounted = diff.frameworkChanges?.filter((c) => c.changeType === "mounted");
+		const unmounted = diff.frameworkChanges?.filter((c) => c.changeType === "unmounted");
+		const updated = diff.frameworkChanges?.filter((c) => c.changeType === "updated");
 		expect(mounted.length).toBe(1);
 		expect(mounted[0].componentName).toBe("Dashboard");
 		expect(unmounted.length).toBe(1);
@@ -148,7 +148,7 @@ describe("SessionDiffer — framework_state diff", () => {
 		});
 
 		const qe = makeQueryEngine({
-			search: (sid, params) => {
+			search: (_sid, params) => {
 				if (params.filters?.eventTypes?.includes("framework_state")) return [storeRow];
 				return [];
 			},
@@ -159,8 +159,8 @@ describe("SessionDiffer — framework_state diff", () => {
 		const diff = differ.diff({ sessionId: SID, before: t(0), after: t(5000), include: ["framework_state"] });
 
 		expect(diff.storeMutations).toBeDefined();
-		expect(diff.storeMutations![0].storeId).toBe("cart");
-		expect(diff.storeMutations![0].actionName).toBe("addItem");
+		expect(diff.storeMutations?.[0].storeId).toBe("cart");
+		expect(diff.storeMutations?.[0].actionName).toBe("addItem");
 		// Store mutations should NOT appear in frameworkChanges
 		expect(diff.frameworkChanges).toBeUndefined();
 	});
@@ -175,7 +175,7 @@ describe("SessionDiffer — framework_state diff", () => {
 		});
 
 		const qe = makeQueryEngine({
-			search: (sid, params) => {
+			search: (_sid, params) => {
 				if (params.filters?.eventTypes?.includes("framework_state")) return [];
 				if (params.filters?.eventTypes?.includes("framework_error")) return [errorRow];
 				return [];
@@ -187,9 +187,9 @@ describe("SessionDiffer — framework_state diff", () => {
 		const diff = differ.diff({ sessionId: SID, before: t(0), after: t(5000), include: ["framework_state"] });
 
 		expect(diff.frameworkErrors).toBeDefined();
-		expect(diff.frameworkErrors![0].pattern).toBe("stale_closure");
-		expect(diff.frameworkErrors![0].componentName).toBe("SearchBar");
-		expect(diff.frameworkErrors![0].severity).toBe("medium");
+		expect(diff.frameworkErrors?.[0].pattern).toBe("stale_closure");
+		expect(diff.frameworkErrors?.[0].componentName).toBe("SearchBar");
+		expect(diff.frameworkErrors?.[0].severity).toBe("medium");
 	});
 
 	it("multiple updates to same component collapse to latest", () => {
@@ -208,7 +208,7 @@ describe("SessionDiffer — framework_state diff", () => {
 		};
 
 		const qe = makeQueryEngine({
-			search: (sid, params) => {
+			search: (_sid, params) => {
 				if (params.filters?.eventTypes?.includes("framework_state")) return updateRows;
 				return [];
 			},
@@ -219,9 +219,9 @@ describe("SessionDiffer — framework_state diff", () => {
 		const diff = differ.diff({ sessionId: SID, before: t(0), after: t(5000), include: ["framework_state"] });
 
 		// Only one entry for Counter
-		const counterChanges = diff.frameworkChanges!.filter((c) => c.componentName === "Counter");
+		const counterChanges = diff.frameworkChanges?.filter((c) => c.componentName === "Counter");
 		expect(counterChanges.length).toBe(1);
 		// Latest changes (from u2)
-		expect(counterChanges[0].changes![0].next).toBe(2);
+		expect(counterChanges[0].changes?.[0].next).toBe(2);
 	});
 });

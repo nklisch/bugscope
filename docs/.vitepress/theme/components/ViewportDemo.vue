@@ -38,10 +38,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-const mode = ref<"full" | "diff">("full");
-const hoveredAnn = ref<string | null>(null);
+const _mode = ref<"full" | "diff">("full");
+const _hoveredAnn = ref<string | null>(null);
 
-const fullViewport = `── STOPPED at app/services/order.py:147 ──
+const _fullViewport = `── STOPPED at app/services/order.py:147 ──
 
 Call Stack (3 frames)
   → order.py:147  apply_discount
@@ -60,7 +60,7 @@ Locals
   discount  = -0.15  ← expected 0.85
   code      = "SAVE15"`;
 
-const diffViewport = `── STEP: order.py:147 → order.py:148 ──
+const _diffViewport = `── STEP: order.py:147 → order.py:148 ──
 
 Changed locals:
   final     (new) = -11.997  ← subtotal * negative discount
@@ -74,7 +74,7 @@ Next line:
 Watch expressions:
   subtotal * 0.85  = 67.983  ← what it should be`;
 
-const annotations = [
+const _annotations = [
 	{ id: "location", label: "①", top: "4px", tooltip: "Current stop location — file:line shown in header" },
 	{ id: "stack", label: "②", top: "52px", tooltip: "Compressed call stack — only relevant frames shown" },
 	{ id: "source", label: "③", top: "112px", tooltip: "Source context window — 2 lines before/after current" },

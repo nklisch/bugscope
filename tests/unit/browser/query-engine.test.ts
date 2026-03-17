@@ -29,7 +29,7 @@ function makeEvent(id: string, type: string, summary: string, ts: number, data: 
 }
 
 beforeEach(() => {
-	tmpDir = resolve(tmpdir(), "krometrail-qe-test-" + crypto.randomUUID());
+	tmpDir = resolve(tmpdir(), `krometrail-qe-test-${crypto.randomUUID()}`);
 	recordingDir = resolve(tmpDir, "recordings", SESSION_ID);
 	mkdirSync(resolve(recordingDir, "network"), { recursive: true });
 	mkdirSync(resolve(recordingDir, "screenshots"), { recursive: true });
@@ -149,15 +149,15 @@ describe("QueryEngine.getOverview", () => {
 
 	it("summarizes network requests", () => {
 		const overview = engine.getOverview(SESSION_ID);
-		expect(overview.networkSummary!.total).toBe(2);
-		expect(overview.networkSummary!.succeeded).toBe(1);
-		expect(overview.networkSummary!.failed).toBe(1);
-		expect(overview.networkSummary!.notable).toHaveLength(1);
+		expect(overview.networkSummary?.total).toBe(2);
+		expect(overview.networkSummary?.succeeded).toBe(1);
+		expect(overview.networkSummary?.failed).toBe(1);
+		expect(overview.networkSummary?.notable).toHaveLength(1);
 	});
 
 	it("identifies error events", () => {
 		const overview = engine.getOverview(SESSION_ID);
-		const errorTypes = overview.errorSummary!.map((e) => e.type);
+		const errorTypes = overview.errorSummary?.map((e) => e.type);
 		expect(errorTypes).toContain("page_error");
 	});
 
@@ -242,8 +242,8 @@ describe("QueryEngine.inspect", () => {
 	it("loads network response body", () => {
 		const result = engine.inspect(SESSION_ID, { eventId: "evt-net-2", include: ["network_body"] });
 		expect(result.networkBody).not.toBeNull();
-		expect(result.networkBody!.response).toContain("validation failed");
-		expect(result.networkBody!.contentType).toBe("application/json");
+		expect(result.networkBody?.response).toContain("validation failed");
+		expect(result.networkBody?.contentType).toBe("application/json");
 	});
 
 	it("finds nearest screenshot", () => {

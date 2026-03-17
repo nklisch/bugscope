@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { BrowserRecorder, type BrowserRecorderConfig } from "../../src/browser/recorder/index.js";
-import { findChromeBinary, isChromeAvailable } from "./chrome-check.js";
+import { findChromeBinary } from "./chrome-check.js";
 
 const TEST_APP_DIR = resolve(import.meta.dirname, "../fixtures/browser/test-app");
 
@@ -266,7 +266,7 @@ async function startFixtureServer(fixtureDir: string): Promise<{ port: number; p
 	const proc = spawn("bun", ["run", join(fixtureDir, "server.ts"), "0"], { stdio: ["ignore", "pipe", "pipe"] });
 	const port = await new Promise<number>((resolve, reject) => {
 		let output = "";
-		proc.stdout!.on("data", (chunk: Buffer) => {
+		proc.stdout?.on("data", (chunk: Buffer) => {
 			output += chunk.toString();
 			const match = output.match(/READY:(\d+)/);
 			if (match) resolve(Number.parseInt(match[1], 10));

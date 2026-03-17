@@ -33,7 +33,7 @@ describe.skipIf(SKIP_NO_DEBUGPY)("Agent integration: MCP discovery", () => {
 		// Each tool has a non-empty description
 		for (const tool of result.tools) {
 			expect(tool.description, `Tool ${tool.name} should have a description`).toBeTruthy();
-			expect(tool.description!.length, `Tool ${tool.name} description too short`).toBeGreaterThan(20);
+			expect(tool.description?.length, `Tool ${tool.name} description too short`).toBeGreaterThan(20);
 		}
 	});
 
@@ -61,7 +61,7 @@ describe.skipIf(SKIP_NO_DEBUGPY)("Agent integration: MCP discovery", () => {
 		});
 		const sessionIdMatch = launchResult.match(/Session:\s+([a-f0-9-]+)/i);
 		expect(sessionIdMatch, "Launch should return session ID").toBeTruthy();
-		const sessionId = sessionIdMatch![1];
+		const sessionId = sessionIdMatch?.[1];
 
 		try {
 			// Continue to breakpoint

@@ -45,13 +45,13 @@ console.log(`Bumping ${current} → ${nextVersion}`);
 
 // Update package.json
 pkg.version = nextVersion;
-await Bun.write("package.json", JSON.stringify(pkg, null, "\t") + "\n");
+await Bun.write("package.json", `${JSON.stringify(pkg, null, "\t")}\n`);
 
 // Commit, tag, push
 await Bun.$`git add package.json`;
-await Bun.$`git commit -m ${"Release v" + nextVersion}`;
-await Bun.$`git tag ${"v" + nextVersion}`;
+await Bun.$`git commit -m ${`Release v${nextVersion}`}`;
+await Bun.$`git tag ${`v${nextVersion}`}`;
 await Bun.$`git push`;
-await Bun.$`git push origin ${"v" + nextVersion}`;
+await Bun.$`git push origin ${`v${nextVersion}`}`;
 
 console.log(`Released v${nextVersion}`);

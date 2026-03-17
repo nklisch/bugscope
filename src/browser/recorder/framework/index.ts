@@ -101,7 +101,7 @@ export class FrameworkTracker {
 
 		switch (event.type) {
 			case "framework_detect":
-				return `[${fw}] ${fw.charAt(0).toUpperCase() + fw.slice(1)} ${d.version ?? "?"} detected` + (d.rootCount != null ? ` (${d.rootCount} root${(d.rootCount as number) !== 1 ? "s" : ""})` : "");
+				return `[${fw}] ${fw.charAt(0).toUpperCase() + fw.slice(1)} ${d.version ?? "?"} detected${d.rootCount != null ? ` (${d.rootCount} root${(d.rootCount as number) !== 1 ? "s" : ""})` : ""}`;
 
 			case "framework_state": {
 				const name = (d.componentName as string) ?? "?";

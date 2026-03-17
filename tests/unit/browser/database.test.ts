@@ -10,7 +10,7 @@ let db: BrowserDatabase;
 let tmpDir: string;
 
 beforeEach(() => {
-	tmpDir = resolve(tmpdir(), "krometrail-db-test-" + crypto.randomUUID());
+	tmpDir = resolve(tmpdir(), `krometrail-db-test-${crypto.randomUUID()}`);
 	mkdirSync(tmpDir, { recursive: true });
 	db = new BrowserDatabase(resolve(tmpDir, "test.db"));
 });
@@ -191,7 +191,7 @@ describe("marker insertion and query", () => {
 		db.createSession({ ...makeSession("b"), tabUrl: "https://b.com" });
 		db.insertMarker({ id: "m1", sessionId: "sess1", timestamp: Date.now(), autoDetected: false });
 
-		const result = db.listSessions({ hasMarkers: true });
+		const _result = db.listSessions({ hasMarkers: true });
 		// Note: updateSessionCounts needed for marker_count to be accurate
 		db.updateSessionCounts("sess1");
 		db.updateSessionCounts("b");

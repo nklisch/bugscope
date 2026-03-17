@@ -10,7 +10,7 @@ let db: BrowserDatabase;
 let retention: RetentionManager;
 
 beforeEach(() => {
-	tmpDir = resolve(tmpdir(), "krometrail-retention-test-" + crypto.randomUUID());
+	tmpDir = resolve(tmpdir(), `krometrail-retention-test-${crypto.randomUUID()}`);
 	mkdirSync(tmpDir, { recursive: true });
 	db = new BrowserDatabase(resolve(tmpDir, "index.db"));
 	retention = new RetentionManager({ maxAgeDays: 7, cleanupOnStartup: false });

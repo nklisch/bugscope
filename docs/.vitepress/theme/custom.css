@@ -100,13 +100,13 @@ kbd {
 
 /* Code block styling */
 div[class*="language-"] {
-	background-color: var(--vp-c-bg-soft) !important;
+	background-color: var(--vp-c-bg-soft);
 	border-radius: var(--kt-radius-code);
 	border-left: 3px solid var(--vp-c-brand-1);
 }
 
 .dark div[class*="language-"] {
-	background-color: #1a1a1e !important;
+	background-color: #1a1a1e;
 }
 
 /* Violet accent border utility */
@@ -190,7 +190,7 @@ div[class*="language-"] {
 /* VitePress nav overrides */
 .VPNav {
 	border-bottom: 1px solid var(--vp-c-divider);
-	background-color: var(--vp-c-bg) !important;
+	background-color: var(--vp-c-bg);
 }
 
 /* Landing page: remove default page layout padding so content is full-width */

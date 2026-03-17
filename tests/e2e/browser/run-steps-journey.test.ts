@@ -270,7 +270,7 @@ describe.skipIf(SKIP)("RunSteps Journey: per-step screenshot override", () => {
 		if (screenshotDirWasAvailable) {
 			const path = stepResult.results[1].screenshotPath;
 			expect(typeof path).toBe("string");
-			expect(path!.length).toBeGreaterThan(0);
+			expect(path?.length).toBeGreaterThan(0);
 		} else {
 			// screenshotDir was unavailable at executor build time → path is empty or undefined
 			const path = stepResult.results[1].screenshotPath ?? "";

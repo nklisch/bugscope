@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ScenarioStore } from "../../../../src/browser/executor/scenario-store.js";
 import type { Step } from "../../../../src/browser/executor/types.js";
 
-function makeStep(action = "navigate", url = "/login"): Step {
+function makeStep(_action = "navigate", url = "/login"): Step {
 	return { action: "navigate", url } as Step;
 }
 

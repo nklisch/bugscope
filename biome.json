@@ -15,10 +15,14 @@
 			},
 			"style": {
 				"noNonNullAssertion": "warn"
+			},
+			"suspicious": {
+				"noTemplateCurlyInString": "warn",
+				"noAssignInExpressions": "warn"
 			}
 		}
 	},
 	"files": {
-		"includes": ["**", "!**/node_modules", "!**/dist", "!**/*.md"]
+		"includes": ["**", "!**/node_modules", "!**/dist", "!**/*.md", "!docs/.vitepress/cache", "!tests/agent-harness/scenarios/_archive", "!tests/fixtures"]
 	}
 }

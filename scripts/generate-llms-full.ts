@@ -52,7 +52,7 @@ async function main(): Promise<void> {
 		}
 	}
 
-	const output = HEADER + sections.join("\n\n---\n\n") + "\n";
+	const output = `${HEADER + sections.join("\n\n---\n\n")}\n`;
 
 	await Bun.write(outPath, output);
 

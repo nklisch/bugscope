@@ -35,7 +35,7 @@ const copied = ref(false);
 
 const activeTab = computed(() => props.tabs[activeIndex.value]);
 
-async function copyCode() {
+async function _copyCode() {
 	await navigator.clipboard.writeText(activeTab.value.code);
 	copied.value = true;
 	setTimeout(() => {

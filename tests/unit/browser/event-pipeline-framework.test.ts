@@ -4,7 +4,7 @@ import { EventPipeline } from "../../../src/browser/recorder/event-pipeline.js";
 import { FrameworkTracker } from "../../../src/browser/recorder/framework/index.js";
 import { InputTracker } from "../../../src/browser/recorder/input-tracker.js";
 import { RollingBuffer } from "../../../src/browser/recorder/rolling-buffer.js";
-import type { BrowserSessionInfo, RecordedEvent } from "../../../src/browser/types.js";
+import type { BrowserSessionInfo } from "../../../src/browser/types.js";
 
 function makeSessionInfo(): BrowserSessionInfo {
 	return { id: "session-1", startedAt: Date.now(), tabs: [], eventCount: 0, markerCount: 0, bufferAgeMs: 0 };
@@ -15,7 +15,7 @@ function makePipeline(frameworkTracker?: FrameworkTracker) {
 	const inputTracker = new InputTracker();
 	const autoDetector = new AutoDetector(DEFAULT_DETECTION_RULES);
 	const onNewEvent = vi.fn();
-	const onMarkerPlaced = vi.fn();
+	const _onMarkerPlaced = vi.fn();
 	const invalidateSessionCache = vi.fn();
 	const placeMarker = vi.fn().mockResolvedValue({ id: "m1", timestamp: Date.now(), autoDetected: false });
 

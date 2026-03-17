@@ -1,7 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { DebugAdapter } from "../../src/adapters/base.js";
 import type { SessionManager } from "../../src/core/session-manager.js";
-import { createSessionManager } from "../../src/core/session-manager.js";
 
 /**
  * Fixture definition for adapter conformance testing.

@@ -47,9 +47,9 @@ describe("launch-json parser", () => {
 		it("parses a valid launch.json file", async () => {
 			const result = await parseLaunchJson(resolve(FIXTURES_DIR, "python-basic.json"));
 			expect(result).not.toBeNull();
-			expect(result!.version).toBe("0.2.0");
-			expect(result!.configurations).toHaveLength(1);
-			expect(result!.configurations[0].name).toBe("Python: Current File");
+			expect(result?.version).toBe("0.2.0");
+			expect(result?.configurations).toHaveLength(1);
+			expect(result?.configurations[0].name).toBe("Python: Current File");
 		});
 
 		it("returns null for non-existent file", async () => {
@@ -60,14 +60,14 @@ describe("launch-json parser", () => {
 		it("handles JSONC with comments and trailing commas", async () => {
 			const result = await parseLaunchJson(resolve(FIXTURES_DIR, "with-comments.jsonc"));
 			expect(result).not.toBeNull();
-			expect(result!.configurations).toHaveLength(1);
-			expect(result!.configurations[0].name).toBe("Python: Current File");
+			expect(result?.configurations).toHaveLength(1);
+			expect(result?.configurations[0].name).toBe("Python: Current File");
 		});
 
 		it("parses multi-config file", async () => {
 			const result = await parseLaunchJson(resolve(FIXTURES_DIR, "multi-config.json"));
 			expect(result).not.toBeNull();
-			expect(result!.configurations).toHaveLength(3);
+			expect(result?.configurations).toHaveLength(3);
 		});
 	});
 

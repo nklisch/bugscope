@@ -20,7 +20,7 @@ let filePath: string;
 let writer: EventWriter;
 
 beforeEach(() => {
-	const dir = resolve(tmpdir(), "krometrail-test-" + crypto.randomUUID());
+	const dir = resolve(tmpdir(), `krometrail-test-${crypto.randomUUID()}`);
 	mkdirSync(dir, { recursive: true });
 	filePath = resolve(dir, "events.jsonl");
 	writer = new EventWriter(filePath);
