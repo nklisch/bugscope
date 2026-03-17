@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { CDPConnectionError, ChromeEarlyExitError, ChromeNotFoundError } from "../../core/errors.js";
 import { getKrometrailSubdir } from "../../core/paths.js";
@@ -123,12 +123,30 @@ export class ChromeLauncher {
 	}
 
 	/**
-	 * Patch the Chrome profile Preferences to clear crashed-session state.
-	 * Without this, a SIGTERM-killed Chrome leaves exit_type:"Crashed" and the
-	 * next launch restores old tabs — producing the "two tabs on start" bug.
+	 * Patch the Chrome profile Preferences to clear crashed-session state,
+	 * and delete session restore files so Chrome doesn't reopen old tabs.
+	 *
+	 * Without this, a SIGTERM-killed Chrome leaves exit_type:"Crashed" and
+	 * session files that cause the next launch to restore old tabs — producing
+	 * the "two tabs on start" bug. On macOS, Chrome also validates Preferences
+	 * against Secure Preferences (HMAC), so patching Preferences alone may be
+	 * silently ignored. Deleting the session files is the reliable fix.
 	 */
 	private clearCrashedState(profileDir: string): void {
 		const defaultDir = join(profileDir, "Default");
+
+		// Delete session restore files — these contain the actual tab data
+		// Chrome uses to reopen tabs from the previous session.
+		for (const file of ["Current Session", "Current Tabs", "Last Session", "Last Tabs"]) {
+			try {
+				const filePath = join(defaultDir, file);
+				if (existsSync(filePath)) unlinkSync(filePath);
+			} catch {
+				// Non-fatal
+			}
+		}
+
+		// Also patch Preferences as a belt-and-suspenders measure.
 		const prefsPath = join(defaultDir, "Preferences");
 		try {
 			if (!existsSync(prefsPath)) return;
