@@ -1,6 +1,6 @@
 {
 	"name": "krometrail",
-	"version": "0.2.15",
+	"version": "0.2.16",
 	"description": "Runtime debugging viewport for AI coding agents",
 	"type": "module",
 	"bin": {
