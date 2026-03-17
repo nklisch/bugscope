@@ -104,6 +104,7 @@ export type RpcMethods = {
 	"browser.mark": { params: BrowserMarkParams; result: Marker };
 	"browser.status": { params: Record<string, never>; result: BrowserSessionInfo | null };
 	"browser.stop": { params: BrowserStopParams; result: undefined };
+	"browser.refresh": { params: Record<string, never>; result: BrowserSessionInfo };
 
 	// Browser step execution
 	"browser.run-steps": { params: BrowserRunStepsParams; result: BrowserRunStepsResult };

@@ -62,6 +62,12 @@ export class RollingBuffer {
 		return [...this.markers];
 	}
 
+	/** Clear all events and markers from the buffer. */
+	clear(): void {
+		this.events = [];
+		this.markers = [];
+	}
+
 	/** Get buffer stats. */
 	getStats(): { eventCount: number; markerCount: number; oldestTimestamp: number; newestTimestamp: number } {
 		const oldest = this.events[0]?.timestamp ?? 0;

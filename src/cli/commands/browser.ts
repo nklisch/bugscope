@@ -184,6 +184,29 @@ export const browserStatusCommand = defineCommand({
 	},
 });
 
+export const browserRefreshCommand = defineCommand({
+	meta: {
+		name: "refresh",
+		description: "Reload the page and clear the event buffer for a clean slate",
+	},
+	args: {
+		json: { type: "boolean", default: false, description: "Output as JSON envelope" },
+		quiet: { type: "boolean", default: false, description: "Minimal output" },
+	},
+	async run({ args }) {
+		await runBrowserCommand(args, async (client) => {
+			const mode = resolveOutputMode(args);
+			const info = await client.call<BrowserSessionInfo>("browser.refresh", {});
+			if (mode === "json") {
+				process.stdout.write(`${successEnvelope({ refreshed: true, eventCount: info.eventCount, markerCount: info.markerCount })}\n`);
+			} else {
+				process.stdout.write("Page reloaded and buffer cleared.\n");
+				process.stdout.write(`${formatBrowserSession(info, mode)}\n`);
+			}
+		});
+	},
+});
+
 export const browserStopCommand = defineCommand({
 	meta: {
 		name: "stop",
@@ -537,6 +560,7 @@ export const browserCommand = defineCommand({
 	subCommands: {
 		start: browserStartCommand,
 		mark: browserMarkCommand,
+		refresh: browserRefreshCommand,
 		"run-steps": browserRunStepsCommand,
 		status: browserStatusCommand,
 		stop: browserStopCommand,

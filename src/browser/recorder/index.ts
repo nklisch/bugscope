@@ -300,6 +300,34 @@ export class BrowserRecorder {
 		return marker;
 	}
 
+	/** Reload the current page and clear the event buffer for a fresh start. */
+	async refresh(): Promise<BrowserSessionInfo> {
+		if (!this.recording || !this.cdpClient) {
+			throw new BrowserRecorderStateError("No active browser recording");
+		}
+		const tabSessionId = this.getPrimaryTabSessionId();
+		if (!tabSessionId) {
+			throw new BrowserRecorderStateError("No active tab session");
+		}
+
+		// Reload the page via CDP
+		await this.cdpClient.sendToTarget(tabSessionId, "Page.reload", {});
+
+		// Clear events and markers so the agent gets a clean slate
+		this.buffer.clear();
+		this.cachedSessionInfo = null;
+
+		// Wait for the page to finish loading
+		const deadline = Date.now() + 10_000;
+		while (Date.now() < deadline) {
+			const result = (await this.cdpClient.sendToTarget(tabSessionId, "Runtime.evaluate", { expression: "document.readyState", returnByValue: true })) as { result?: { value?: string } };
+			if (result?.result?.value === "complete") break;
+			await new Promise<void>((r) => setTimeout(r, 100));
+		}
+
+		return this.buildSessionInfo();
+	}
+
 	/** Get current session info, or null if not recording. */
 	getSessionInfo(): BrowserSessionInfo | null {
 		if (!this.recording) return null;

@@ -451,6 +451,13 @@ export class DaemonServer {
 				return null;
 			}
 
+			case "browser.refresh": {
+				if (!this.browserRecorder?.isRecording()) {
+					throw new BrowserRecorderStateError("No active browser recording. Call browser.start first.");
+				}
+				return this.browserRecorder.refresh();
+			}
+
 			case "browser.run-steps": {
 				const p = RunStepsParamsSchema.parse(params);
 

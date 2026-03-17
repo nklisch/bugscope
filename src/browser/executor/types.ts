@@ -10,6 +10,7 @@ export const STEP_ACTIONS = [
 	"select",
 	"submit",
 	"type",
+	"press_key",
 	"hover",
 	"scroll_to",
 	"scroll_by",
@@ -27,11 +28,19 @@ export type StepAction = z.infer<typeof StepActionSchema>;
 // Navigation
 const NavigateStepSchema = z.object({
 	action: z.literal("navigate"),
-	url: z.string().describe("URL to navigate to (absolute or relative to current origin)"),
+	url: z
+		.string()
+		.describe(
+			"URL to navigate to (absolute or relative to current origin). Note: navigating to the current URL may hit client-side routing cache in SPAs — use reload instead for a full page refresh",
+		),
 	screenshot: z.boolean().optional(),
 });
 const ReloadStepSchema = z.object({
-	action: z.literal("reload"),
+	action: z
+		.literal("reload")
+		.describe(
+			"Full page reload — clears all client-side state and re-fetches from server. Use after server restarts, code changes, or to reset SPA state. Prefer over navigate-to-same-URL which may hit client-side cache",
+		),
 	screenshot: z.boolean().optional(),
 });
 
@@ -63,6 +72,16 @@ const TypeStepSchema = z.object({
 	selector: z.string().describe("CSS selector of element to type into"),
 	text: z.string().describe("Text to type keystroke-by-keystroke"),
 	delay_ms: z.number().optional().describe("Delay between keystrokes in ms. Default: 50"),
+	screenshot: z.boolean().optional(),
+});
+const PressKeyStepSchema = z.object({
+	action: z.literal("press_key"),
+	key: z.string().describe("Key to press: Enter, Tab, Escape, Backspace, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, or any single character"),
+	selector: z.string().optional().describe("CSS selector of element to focus before pressing. If omitted, presses on the currently focused element"),
+	modifiers: z
+		.array(z.enum(["Ctrl", "Shift", "Alt", "Meta"]))
+		.optional()
+		.describe("Modifier keys to hold during the keypress"),
 	screenshot: z.boolean().optional(),
 });
 const HoverStepSchema = z.object({
@@ -137,6 +156,7 @@ export const StepSchema = z.discriminatedUnion("action", [
 	SelectStepSchema,
 	SubmitStepSchema,
 	TypeStepSchema,
+	PressKeyStepSchema,
 	HoverStepSchema,
 	ScrollToStepSchema,
 	ScrollByStepSchema,

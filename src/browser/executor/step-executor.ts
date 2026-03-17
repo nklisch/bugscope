@@ -18,6 +18,8 @@ export interface StepExecutorPort {
 	submit(selector: string): Promise<void>;
 	/** Type text keystroke-by-keystroke with delay between keys. */
 	type(selector: string, text: string, delayMs: number): Promise<void>;
+	/** Press a key (Enter, Tab, Escape, etc.) on the focused or specified element. */
+	pressKey(key: string, selector: string | undefined, modifiers: number): Promise<void>;
 	/** Dispatch a mouseover event on the element matching selector. */
 	hover(selector: string): Promise<void>;
 	/** Scroll element into view. */
@@ -137,6 +139,11 @@ export class StepExecutor {
 			case "type":
 				await this.port.type(step.selector, step.text, step.delay_ms ?? 50);
 				return undefined;
+			case "press_key": {
+				const mods = (step.modifiers ?? []).reduce((acc: number, m: string) => acc | ({ Ctrl: 2, Shift: 8, Alt: 1, Meta: 4 } as Record<string, number>)[m], 0);
+				await this.port.pressKey(step.key, step.selector, mods);
+				return undefined;
+			}
 			case "hover":
 				await this.port.hover(step.selector);
 				return undefined;
@@ -198,6 +205,8 @@ export class StepExecutor {
 				return `submit:${truncate(step.selector)}`;
 			case "type":
 				return `type:${truncate(step.selector)}`;
+			case "press_key":
+				return step.selector ? `press_key:${step.key}:${truncate(step.selector)}` : `press_key:${step.key}`;
 			case "hover":
 				return `hover:${truncate(step.selector)}`;
 			case "scroll_to":

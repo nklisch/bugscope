@@ -4,6 +4,24 @@ import type { BrowserRecorder } from "../recorder/index.js";
 import type { ScreenshotCapture } from "../storage/screenshot.js";
 import type { StepExecutorPort } from "./step-executor.js";
 
+/** CDP key definitions for special keys. Maps key name → { key, code, keyCode, text }. */
+const SPECIAL_KEYS: Record<string, { key: string; code: string; keyCode: number; text?: string }> = {
+	Enter: { key: "Enter", code: "Enter", keyCode: 13, text: "\r" },
+	Tab: { key: "Tab", code: "Tab", keyCode: 9 },
+	Escape: { key: "Escape", code: "Escape", keyCode: 27 },
+	Backspace: { key: "Backspace", code: "Backspace", keyCode: 8 },
+	Delete: { key: "Delete", code: "Delete", keyCode: 46 },
+	ArrowUp: { key: "ArrowUp", code: "ArrowUp", keyCode: 38 },
+	ArrowDown: { key: "ArrowDown", code: "ArrowDown", keyCode: 40 },
+	ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
+	ArrowRight: { key: "ArrowRight", code: "ArrowRight", keyCode: 39 },
+	Home: { key: "Home", code: "Home", keyCode: 36 },
+	End: { key: "End", code: "End", keyCode: 35 },
+	PageUp: { key: "PageUp", code: "PageUp", keyCode: 33 },
+	PageDown: { key: "PageDown", code: "PageDown", keyCode: 34 },
+	Space: { key: " ", code: "Space", keyCode: 32, text: " " },
+};
+
 export interface CDPAdapterConfig {
 	cdpClient: CDPClient;
 	tabSessionId: string;
@@ -131,6 +149,39 @@ export class CDPPortAdapter implements StepExecutorPort {
 				await new Promise((r) => setTimeout(r, delayMs));
 			}
 		}
+	}
+
+	async pressKey(key: string, selector: string | undefined, modifiers: number): Promise<void> {
+		if (selector) {
+			await this.evaluateThrow(
+				`(() => {
+					const el = document.querySelector(${JSON.stringify(selector)});
+					if (!el) throw new Error('Element not found: ' + ${JSON.stringify(selector)});
+					el.focus();
+				})()`,
+				selector,
+			);
+		}
+
+		// Map special key names to CDP key codes
+		const keyDef = SPECIAL_KEYS[key] ?? { key, code: `Key${key.toUpperCase()}`, keyCode: key.charCodeAt(0), text: key.length === 1 ? key : undefined };
+
+		await this.config.cdpClient.sendToTarget(this.config.tabSessionId, "Input.dispatchKeyEvent", {
+			type: "keyDown",
+			modifiers,
+			key: keyDef.key,
+			code: keyDef.code,
+			windowsVirtualKeyCode: keyDef.keyCode,
+			...(keyDef.text !== undefined && { text: keyDef.text }),
+		});
+		await this.config.cdpClient.sendToTarget(this.config.tabSessionId, "Input.dispatchKeyEvent", {
+			type: "keyUp",
+			modifiers,
+			key: keyDef.key,
+			code: keyDef.code,
+			windowsVirtualKeyCode: keyDef.keyCode,
+		});
+		await new Promise((r) => setTimeout(r, 50));
 	}
 
 	async hover(selector: string): Promise<void> {

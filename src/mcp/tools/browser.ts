@@ -179,12 +179,33 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			),
 	);
 
+	// Tool: chrome_refresh
+	server.tool(
+		"chrome_refresh",
+		"Reload the current page and clear all recorded events and markers — a quick reset to a clean slate without restarting the browser session. " +
+			"Use this when you want to start a fresh investigation on the same page, or after making code changes that require a page reload. " +
+			"The recording session stays active; only the buffer is wiped.",
+		{},
+		() =>
+			withDaemonClient(
+				(client) => client.call<BrowserSessionInfo>("browser.refresh", {}),
+				(info) => {
+					const lines = ["Page reloaded and buffer cleared."];
+					lines.push(formatSessionInfo(info));
+					return lines.join("\n");
+				},
+			),
+	);
+
 	// Tool: chrome_run_steps
 	server.tool(
 		"chrome_run_steps",
 		"Execute a sequence of browser actions (navigate, click, fill, wait, etc.) in one call. " +
 			"Requires an active recording session (chrome_start). " +
 			"Each step is auto-marked and auto-screenshotted by default for investigation. " +
+			"Tip: start with a screenshot step to understand the current page state before interacting. " +
+			"Use reload (not navigate to the same URL) to force a full page refresh — navigate may hit SPA client-side cache. " +
+			"Use press_key with key='Enter' to submit forms that lack a submit button. " +
 			"Use name + save to store a scenario for replay. Pass just name to replay a saved scenario.",
 		{
 			steps: z
@@ -192,7 +213,7 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 				.optional()
 				.describe(
 					"Ordered actions to execute. Each step has an 'action' field: " +
-						"navigate, reload, click, fill, select, submit, type, hover, " +
+						"navigate, reload, click, fill, select, submit, type, press_key, hover, " +
 						"scroll_to, scroll_by, wait, wait_for, wait_for_navigation, " +
 						"wait_for_network_idle, screenshot, mark, evaluate",
 				),

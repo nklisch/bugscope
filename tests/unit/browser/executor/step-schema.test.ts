@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { RunStepsParamsSchema, STEP_ACTIONS, StepSchema } from "../../../../src/browser/executor/types.js";
 
 describe("StepSchema", () => {
-	it("parses all 17 action types", () => {
+	it("parses all 18 action types", () => {
 		const validSteps = [
 			{ action: "navigate", url: "https://example.com" },
 			{ action: "reload" },
@@ -11,6 +11,7 @@ describe("StepSchema", () => {
 			{ action: "select", selector: "#sel", value: "option1" },
 			{ action: "submit", selector: "form" },
 			{ action: "type", selector: "#input", text: "hello" },
+			{ action: "press_key", key: "Enter" },
 			{ action: "hover", selector: ".menu" },
 			{ action: "scroll_to", selector: "#target" },
 			{ action: "scroll_by", x: 0, y: 100 },
@@ -23,7 +24,7 @@ describe("StepSchema", () => {
 			{ action: "evaluate", expression: "document.title" },
 		];
 
-		expect(STEP_ACTIONS).toHaveLength(17);
+		expect(STEP_ACTIONS).toHaveLength(18);
 
 		for (const step of validSteps) {
 			expect(() => StepSchema.parse(step)).not.toThrow();
