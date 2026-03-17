@@ -5,6 +5,13 @@ description: Release history for Krometrail.
 
 # Changelog
 
+## v0.2.14
+
+### Fixes
+
+- **GitHub Pages build fixed** — reverted Vue theme files that were broken by Biome's unsafe auto-fix (removed `<script setup>` imports used by templates); excluded `docs/.vitepress/theme` from Biome to prevent recurrence
+- **Removed vitepress cache from git** — build artifacts (`docs/.vitepress/cache/`, `docs/.vitepress/dist/`) are now gitignored
+
 ## v0.2.13
 
 ### Features
