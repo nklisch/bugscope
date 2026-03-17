@@ -35,7 +35,15 @@
 </template>
 
 <script setup lang="ts">
-const _setupTabs = [
+import { withBase } from "vitepress";
+import BrowserShowcase from "./components/BrowserShowcase.vue";
+import ComparisonTable from "./components/ComparisonTable.vue";
+import HeroSection from "./components/HeroSection.vue";
+import LanguageGrid from "./components/LanguageGrid.vue";
+import SetupTabs from "./components/SetupTabs.vue";
+import ViewportDemo from "./components/ViewportDemo.vue";
+
+const setupTabs = [
 	{
 		label: "MCP Config",
 		language: "json",

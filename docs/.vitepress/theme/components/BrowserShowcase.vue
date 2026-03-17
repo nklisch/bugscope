@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-const _capabilities = [
+const capabilities = [
 	{
 		title: "Network requests",
 		desc: "Every XHR/fetch with status, timing, headers, and response bodies — failed requests highlighted.",

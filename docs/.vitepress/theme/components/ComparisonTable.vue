@@ -51,7 +51,7 @@ interface Row {
 	mcpDap: Val;
 }
 
-const _rows: Row[] = [
+const rows: Row[] = [
 	{ feature: "Viewport abstraction", krometrail: "yes", aidb: "partial", mcpDebugger: "no", mcpDap: "no" },
 	{ feature: "Context compression", krometrail: "yes", aidb: "no", mcpDebugger: "no", mcpDap: "no" },
 	{ feature: "Browser observation", krometrail: "yes", aidb: "no", mcpDebugger: "no", mcpDap: "no" },
@@ -63,13 +63,13 @@ const _rows: Row[] = [
 	{ feature: "Token awareness", krometrail: "yes", aidb: "no", mcpDebugger: "no", mcpDap: "no" },
 ];
 
-function _getSymbol(val: Val): string {
+function getSymbol(val: Val): string {
 	if (val === "yes") return "✓";
 	if (val === "partial") return "◐";
 	return "✗";
 }
 
-function _getClass(val: Val): string {
+function getClass(val: Val): string {
 	if (val === "yes") return "val-yes";
 	if (val === "partial") return "val-partial";
 	return "val-no";

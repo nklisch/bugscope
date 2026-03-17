@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-const _languages = [
+const languages = [
 	{ name: "Python", debugger: "debugpy" },
 	{ name: "Node.js / TypeScript", debugger: "js-debug" },
 	{ name: "Go", debugger: "Delve" },

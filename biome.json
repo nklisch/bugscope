@@ -23,6 +23,6 @@
 		}
 	},
 	"files": {
-		"includes": ["**", "!**/node_modules", "!**/dist", "!**/*.md", "!docs/.vitepress/cache", "!tests/agent-harness/scenarios/_archive", "!tests/fixtures"]
+		"includes": ["**", "!**/node_modules", "!**/dist", "!**/*.md", "!docs/.vitepress/cache", "!docs/.vitepress/theme", "!tests/agent-harness/scenarios/_archive", "!tests/fixtures"]
 	}
 }

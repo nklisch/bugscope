@@ -37,7 +37,7 @@ const props = withDefaults(
 
 const copied = ref(false);
 
-async function _copyCommands() {
+async function copyCommands() {
 	const commands = props.pairs.map((p) => p.command).join("\n");
 	await navigator.clipboard.writeText(commands);
 	copied.value = true;
