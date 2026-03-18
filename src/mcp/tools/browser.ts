@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { renderStepResults } from "../../browser/executor/renderer.js";
@@ -10,7 +11,7 @@ import type { BrowserSessionInfo, Marker } from "../../browser/types.js";
 import { DiffIncludeSchema, FrameworkSchema, InspectIncludeSchema, OverviewIncludeSchema, ReplayFormatSchema, SearchableEventTypeSchema, TestFrameworkSchema } from "../../core/enums.js";
 import { DaemonClient, ensureDaemon } from "../../daemon/client.js";
 import { getDaemonSocketPath } from "../../daemon/protocol.js";
-import { errorResponse, type ToolResult, textResponse, toolHandler } from "./utils.js";
+import { type ContentBlock, errorResponse, imageContent, type ToolResult, textResponse, toolHandler } from "./utils.js";
 
 const TimeRangeSchema = z
 	.object({
@@ -222,11 +223,29 @@ export function registerBrowserTools(server: McpServer, queryEngine: QueryEngine
 			capture: CaptureConfigSchema.optional().describe("Capture config. screenshot: 'all' (default), 'none', 'on_error'. markers: true (default) or false."),
 		},
 		async ({ steps, name, save, capture }) => {
-			return withDaemonClient(
-				(client) => client.call<RunStepsResult>("browser.run-steps", { steps, name, save, capture }),
-				(result) => renderStepResults(result),
-				120_000, // 2 minute timeout for step sequences
-			);
+			const client = await getDaemonClient(120_000);
+			try {
+				const result = await client.call<RunStepsResult>("browser.run-steps", { steps, name, save, capture });
+				const content: ContentBlock[] = [{ type: "text" as const, text: renderStepResults(result) }];
+
+				// Include screenshots inline as images
+				for (const step of result.results) {
+					if (step.screenshotPath) {
+						try {
+							const data = readFileSync(step.screenshotPath).toString("base64");
+							content.push(imageContent(data));
+						} catch {
+							// Screenshot file may have been cleaned up — skip silently
+						}
+					}
+				}
+
+				return { content };
+			} catch (err) {
+				return errorResponse(err);
+			} finally {
+				client.dispose();
+			}
 		},
 	);
 

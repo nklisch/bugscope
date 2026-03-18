@@ -4,14 +4,22 @@ import { getErrorMessage } from "../../core/errors.js";
  * Shared MCP tool response helpers.
  */
 
-export type ToolResult = { content: Array<{ type: "text"; text: string }>; isError?: true };
+type TextContent = { type: "text"; text: string };
+type ImageContent = { type: "image"; data: string; mimeType: string };
+export type ContentBlock = TextContent | ImageContent;
 
-export function errorResponse(err: unknown): { content: Array<{ type: "text"; text: string }>; isError: true } {
+export type ToolResult = { content: ContentBlock[]; isError?: true };
+
+export function errorResponse(err: unknown): ToolResult {
 	return { content: [{ type: "text" as const, text: getErrorMessage(err) }], isError: true };
 }
 
-export function textResponse(text: string): { content: Array<{ type: "text"; text: string }> } {
+export function textResponse(text: string): ToolResult {
 	return { content: [{ type: "text" as const, text }] };
+}
+
+export function imageContent(base64Data: string, mimeType = "image/jpeg"): ImageContent {
+	return { type: "image" as const, data: base64Data, mimeType };
 }
 
 /**
