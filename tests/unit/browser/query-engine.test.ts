@@ -366,3 +366,84 @@ describe("search — aroundMarker accepts label", () => {
 		expect(() => engine.search(SESSION_ID, { filters: { aroundMarker: "no-such-marker" } })).toThrow("Marker not found");
 	});
 });
+
+describe("isTextContentType — suffix patterns", () => {
+	it.each([
+		["application/vnd.api+json", true],
+		["application/hal+json", true],
+		["application/atom+xml", true],
+		["application/svg+xml", true],
+		["application/vnd.custom+json; charset=utf-8", true],
+		["application/vnd.custom+yaml", false],
+	])("isTextContentType(%s) === %s", (input, expected) => {
+		expect(isTextContentType(input)).toBe(expected);
+	});
+});
+
+describe("readNetworkBody — binary-safe reading", () => {
+	it("returns text for JSON body via readNetworkBody helper", () => {
+		const bodyFile = "helper-test-json.bin";
+		writeFileSync(resolve(recordingDir, "network", bodyFile), '{"ok": true}');
+		const result = engine.readNetworkBody(SESSION_ID, bodyFile, "application/json");
+		expect(result).toBe('{"ok": true}');
+	});
+
+	it("returns binary placeholder for image via readNetworkBody helper", () => {
+		const bodyFile = "helper-test-png.bin";
+		writeFileSync(resolve(recordingDir, "network", bodyFile), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+		const result = engine.readNetworkBody(SESSION_ID, bodyFile, "image/png");
+		expect(result).toBe("<binary: image/png, unknown size>");
+	});
+
+	it("returns binary placeholder when contentType is null", () => {
+		const bodyFile = "helper-test-null-ct.bin";
+		writeFileSync(resolve(recordingDir, "network", bodyFile), Buffer.from([0x00]));
+		const result = engine.readNetworkBody(SESSION_ID, bodyFile, null);
+		expect(result).toBe("<binary: unknown type, unknown size>");
+	});
+
+	it("returns undefined for non-existent file", () => {
+		const result = engine.readNetworkBody(SESSION_ID, "nonexistent.bin", "text/plain");
+		expect(result).toBeUndefined();
+	});
+});
+
+describe("resolveMarker — ID takes precedence over label", () => {
+	it("resolves by ID when a marker ID matches another marker's label", () => {
+		// marker-1 (at BASE_TS+3500) has label "Validation error"
+		// Create a new marker whose ID literally equals "Validation error" at a different timestamp
+		db.insertMarker({ id: "Validation error", sessionId: SESSION_ID, timestamp: BASE_TS + 7000, label: "Different label", autoDetected: false });
+
+		// Looking up "Validation error" should match the ID (at BASE_TS+7000), NOT the label on marker-1 (at BASE_TS+3500)
+		// The ID-matched marker is at BASE_TS+7000 — evt-nav-2 is at BASE_TS+7000, so inspect finds it
+		const result = engine.inspect(SESSION_ID, { markerId: "Validation error" });
+		// The event should be near BASE_TS+7000 (the ID-matched marker), not BASE_TS+3500 (the label-matched one)
+		expect(result.event.timestamp).toBeGreaterThanOrEqual(BASE_TS + 6000);
+	});
+});
+
+describe("database — requestContentType round-trip", () => {
+	it("stores and retrieves request_content_type", () => {
+		db.insertNetworkBody({
+			eventId: "evt-nav-2",
+			sessionId: SESSION_ID,
+			requestBodyPath: "req_test.bin",
+			requestContentType: "multipart/form-data; boundary=----WebKitFormBoundary",
+		});
+		const row = db.getNetworkBody("evt-nav-2");
+		expect(row).toBeDefined();
+		expect(row!.request_content_type).toBe("multipart/form-data; boundary=----WebKitFormBoundary");
+		expect(row!.request_body_path).toBe("req_test.bin");
+	});
+
+	it("stores null when requestContentType not provided", () => {
+		db.insertNetworkBody({
+			eventId: "evt-console-err",
+			sessionId: SESSION_ID,
+			requestBodyPath: "req_noct.bin",
+		});
+		const row = db.getNetworkBody("evt-console-err");
+		expect(row).toBeDefined();
+		expect(row!.request_content_type).toBeNull();
+	});
+});
