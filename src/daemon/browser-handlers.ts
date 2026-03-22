@@ -29,6 +29,8 @@ export interface BrowserHandlerState {
 	getQueryEngine: () => QueryEngine;
 	setRecorder: (r: BrowserRecorder | null) => void;
 	resetIdleTimer: () => void;
+	/** Guard against concurrent browser.start calls (MCP SDK may dispatch duplicates). */
+	browserStarting?: boolean;
 }
 
 export function buildStepExecutorAdapter(recorder: BrowserRecorder): CDPPortAdapter {
@@ -51,7 +53,7 @@ export async function handleBrowserMethod(method: string, params: Record<string,
 		// --- Browser Recording ---
 		case "browser.start": {
 			const p = BrowserStartParamsSchema.parse(params);
-			if (state.recorder?.isRecording()) {
+			if (state.recorder?.isRecording() || state.browserStarting) {
 				throw new BrowserRecorderStateError("Browser recording is already active. Call browser.stop first.");
 			}
 			// Clean up stale recorder from a previous failed start
@@ -63,27 +65,34 @@ export async function handleBrowserMethod(method: string, params: Record<string,
 				}
 				state.setRecorder(null);
 			}
-			const { BrowserRecorder } = await import("../browser/recorder/index.js");
-			const recorder = new BrowserRecorder({
-				port: p.port,
-				attach: p.attach,
-				profile: p.profile,
-				allTabs: p.allTabs,
-				tabFilter: p.tabFilter,
-				url: p.url,
-				persistence: {},
-				...(p.screenshotIntervalMs !== undefined && { screenshots: { intervalMs: p.screenshotIntervalMs } }),
-				frameworkState: p.frameworkState,
-			});
-			recorder.onAutoStop = () => {
-				state.setRecorder(null);
-				state.resetIdleTimer();
-			};
-			// Start FIRST, then register. If start() throws, the daemon
-			// never holds a reference to a broken recorder.
-			const result = await recorder.start();
-			state.setRecorder(recorder);
-			return result;
+			// Guard against concurrent starts — the MCP SDK may dispatch duplicate
+			// tool calls, and without this flag both would launch Chrome simultaneously.
+			state.browserStarting = true;
+			try {
+				const { BrowserRecorder } = await import("../browser/recorder/index.js");
+				const recorder = new BrowserRecorder({
+					port: p.port,
+					attach: p.attach,
+					profile: p.profile,
+					allTabs: p.allTabs,
+					tabFilter: p.tabFilter,
+					url: p.url,
+					persistence: {},
+					...(p.screenshotIntervalMs !== undefined && { screenshots: { intervalMs: p.screenshotIntervalMs } }),
+					frameworkState: p.frameworkState,
+				});
+				recorder.onAutoStop = () => {
+					state.setRecorder(null);
+					state.resetIdleTimer();
+				};
+				// Start FIRST, then register. If start() throws, the daemon
+				// never holds a reference to a broken recorder.
+				const result = await recorder.start();
+				state.setRecorder(recorder);
+				return result;
+			} finally {
+				state.browserStarting = false;
+			}
 		}
 
 		case "browser.mark": {

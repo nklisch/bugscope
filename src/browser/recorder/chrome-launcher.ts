@@ -187,6 +187,9 @@ export class ChromeLauncher {
 
 		// Track early exit — on macOS, Chrome exits immediately when an
 		// existing instance with the same user-data-dir absorbs the launch.
+		// On Linux, Chrome may also fork and the original process exits while
+		// Chrome continues running under a different PID. We only treat this
+		// as an error if CDP also never becomes available.
 		let earlyExit: { code: number | null; signal: string | null } | null = null;
 		const exitHandler = (code: number | null, signal: string | null) => {
 			earlyExit = { code, signal };
@@ -195,15 +198,18 @@ export class ChromeLauncher {
 
 		try {
 			while (Date.now() < deadline) {
-				if (earlyExit) {
-					throw new ChromeEarlyExitError(earlyExit.code, earlyExit.signal);
-				}
+				// Try CDP first — Chrome may have forked and the spawned PID exited
+				// while Chrome is fully operational under a different PID.
 				try {
 					return await fetchBrowserWsUrl(port);
 				} catch (err) {
 					lastError = err as Error;
-					await new Promise<void>((r) => setTimeout(r, 500));
 				}
+				// Only throw early-exit if CDP is also unavailable
+				if (earlyExit) {
+					throw new ChromeEarlyExitError(earlyExit.code, earlyExit.signal);
+				}
+				await new Promise<void>((r) => setTimeout(r, 500));
 			}
 
 			throw new CDPConnectionError(`Chrome CDP not available after ${timeoutMs}ms: ${lastError?.message}`, lastError);
