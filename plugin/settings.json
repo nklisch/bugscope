@@ -1,7 +1,5 @@
 {
 	"permissions": {
-		"allow": [
-			"mcp__krometrail__*"
-		]
+		"allow": ["mcp__krometrail__*"]
 	}
 }

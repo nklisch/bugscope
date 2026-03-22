@@ -47,8 +47,20 @@ console.log(`Bumping ${current} → ${nextVersion}`);
 pkg.version = nextVersion;
 await Bun.write("package.json", `${JSON.stringify(pkg, null, "\t")}\n`);
 
+// Sync plugin version
+const pluginJsonPath = "plugin/.claude-plugin/plugin.json";
+const pluginFile = Bun.file(pluginJsonPath);
+if (await pluginFile.exists()) {
+	const pluginPkg = await pluginFile.json();
+	pluginPkg.version = nextVersion;
+	await Bun.write(pluginJsonPath, `${JSON.stringify(pluginPkg, null, "\t")}\n`);
+	console.log(`Synced plugin version → ${nextVersion}`);
+}
+
 // Commit, tag, push
-await Bun.$`git add package.json`;
+const filesToAdd = ["package.json"];
+if (await Bun.file(pluginJsonPath).exists()) filesToAdd.push(pluginJsonPath);
+await Bun.$`git add ${filesToAdd}`;
 await Bun.$`git commit -m ${`Release v${nextVersion}`}`;
 await Bun.$`git tag ${`v${nextVersion}`}`;
 await Bun.$`git push`;
