@@ -32,6 +32,10 @@ Files in `docs/legacy/` contain early-phase planning that no longer reflects the
 
 These files are kept for historical reference. Do not rely on them for understanding current behavior.
 
+## Active design docs (planned or in-progress work)
+
+Files directly in `docs/designs/` (not in the `completed/` subdirectory) are designs for planned or in-progress features. Read these to understand upcoming work, but do not assume the features are implemented — check the code first.
+
 ## Completed design docs (historical, do not use for current state)
 
 Files in `docs/designs/completed/` are detailed phase design documents that guided implementation. All 35 designs are fully implemented. These are valuable for understanding *why* something was built a certain way, but should not be used to understand *what* currently exists — the code and foundation docs are the source of truth.
