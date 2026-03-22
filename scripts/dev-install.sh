@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the krometrail CLI binary to ~/.local/bin
-# Run after every release: bash scripts/install.sh
+# Run after every release: bash scripts/dev-install.sh
 
 set -euo pipefail
 
