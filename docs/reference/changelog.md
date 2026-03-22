@@ -5,6 +5,23 @@ description: Release history for Krometrail.
 
 # Changelog
 
+## v0.2.20
+
+### Fixes
+
+- **Chrome no longer opens two tabs on launch** — `startMcpServer()` was called unconditionally on module import, creating two MCP servers on the same stdio transport; every tool call was dispatched twice, causing Chrome to spawn twice. Fixed with `import.meta.main` guard.
+- **Chrome launch no longer fails with false "exited immediately" error** — on Linux, Chrome forks and the original PID exits while Chrome continues under a new PID; `waitForChrome` now checks CDP availability before throwing `ChromeEarlyExitError`
+- **`browser.start` is now idempotent** — concurrent or duplicate calls return the existing session info instead of erroring; in-flight starts are coalesced onto the same promise
+- **Binary fallback chain prefers direct Chrome binary** — `/opt/google/chrome/chrome` is now tried before wrapper scripts that may delegate to an existing instance and exit immediately
+- **Error-specific recovery guidance for Chrome launch failures** — `ChromeEarlyExitError`, `CDPConnectionError`, and `ChromeNotFoundError` now produce targeted messages instead of a generic 3-option hint; removed dangerous `pkill -f chrome` suggestion
+- **`consoleLevels` filter no longer excludes `page_error` events** — the filter now applies only to `console`-type events; `page_error` events pass through when included in `event_types`
+- **Stale recorder cleaned up on retry** — a failed `browser.start` no longer leaves a broken recorder in daemon state; subsequent starts clean up before creating a new session
+
+### Internal
+
+- Added 10 unit tests covering Chrome launch resilience behavioral contracts
+- Design doc: `docs/designs/chrome-launch-resilience.md`
+
 ## v0.2.19
 
 ### Fixes
