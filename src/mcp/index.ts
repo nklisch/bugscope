@@ -61,4 +61,6 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<vo
 }
 
 // When run directly (bun run src/mcp/index.ts), start with env-based config
-startMcpServer();
+if (import.meta.main) {
+	startMcpServer();
+}
