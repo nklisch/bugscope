@@ -131,6 +131,15 @@ describe("QueryEngine search filters — consoleLevels", () => {
 		expect(ids).toContain("evt-page-err");
 		expect(results).toHaveLength(2);
 	});
+
+	it("returns page_error events with event_types filter regardless of consoleLevels value", () => {
+		const results = engine.search(SESSION_ID, {
+			filters: { eventTypes: ["page_error"], consoleLevels: ["warn"] },
+			maxResults: 100,
+		});
+		expect(results).toHaveLength(1);
+		expect(results[0].event_id).toBe("evt-page-err");
+	});
 });
 
 describe("QueryEngine search filters — containsText", () => {

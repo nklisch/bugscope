@@ -4,6 +4,7 @@ import {
 	AdapterPrerequisiteError,
 	BrowserRecorderStateError,
 	CDPConnectionError,
+	ChromeEarlyExitError,
 	ChromeNotFoundError,
 	DAPClientDisposedError,
 	DAPConnectionError,
@@ -189,6 +190,28 @@ describe("ChromeNotFoundError", () => {
 		expect(err.message).toContain("Chrome");
 		expect(err.message).toContain("--attach");
 	});
+
+	it("ChromeNotFoundError includes install guidance", () => {
+		const err = new ChromeNotFoundError();
+		expect(err.message).toContain("Chrome not found");
+		expect(err.code).toBe("CHROME_NOT_FOUND");
+	});
+});
+
+describe("ChromeEarlyExitError", () => {
+	it("ChromeEarlyExitError message does not suggest pkill", () => {
+		const err = new ChromeEarlyExitError(0, null);
+		expect(err.message).not.toContain("pkill");
+		expect(err.message).toContain("Chrome exited immediately");
+		expect(err.code).toBe("CHROME_EARLY_EXIT");
+	});
+
+	it("stores exitCode and signal", () => {
+		const err = new ChromeEarlyExitError(1, "SIGTERM");
+		expect(err.exitCode).toBe(1);
+		expect(err.signal).toBe("SIGTERM");
+		expect(err.code).toBe("CHROME_EARLY_EXIT");
+	});
 });
 
 describe("CDPConnectionError", () => {
@@ -229,6 +252,7 @@ describe("error hierarchy — all errors extend KrometrailError", () => {
 		new AdapterNotFoundError("x"),
 		new LaunchError("m"),
 		new ChromeNotFoundError(),
+		new ChromeEarlyExitError(0, null),
 		new CDPConnectionError("m"),
 		new TabNotFoundError("t"),
 		new BrowserRecorderStateError("m"),
