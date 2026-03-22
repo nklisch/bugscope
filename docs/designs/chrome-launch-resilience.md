@@ -6,7 +6,7 @@ Fixes for Chrome launch failures, misleading error messages, and agent-facing re
 
 1. **Chrome wrapper binary absorption** — `google-chrome` on Linux is a shell wrapper that delegates to an existing Chrome instance and exits 0 before CDP is available. `findChromeBinary()` selects it because `--version` succeeds, but it fails at launch.
 2. **Dangerous `pkill -f chrome` suggestion** — The MCP error hint suggests `pkill -f chrome` which matches Electron app crashpad handlers (Discord, Unity Hub, etc.), killing unrelated apps.
-3. **`isCdpError` heuristic too broad** — `ChromeEarlyExitError`, `CDPConnectionError`, and `BrowserRecorderStateError` all match `/cdp|chrome|connect/i` and produce the same 3-option remediation, even though each has a different root cause and fix.
+3. **`isCdpError` heuristic too broad** — `ChromeEarlyExitError` and `CDPConnectionError` both match `/cdp|chrome|connect/i` and produce the same 3-option remediation, even though each has a different root cause and fix. (Note: `BrowserRecorderStateError` does NOT match the regex — its message "Browser recording is already active" contains none of the trigger words. The original issue description was incorrect on this point.)
 4. **`browser.status` / `browser.start` state inconsistency** — After a failed start, `state.recorder` can be non-null with `isRecording() === false`, causing `browser.status` to report "no active recording" while `browser.start` silently overwrites the stale recorder without cleanup.
 5. **`startedAt = 0` epoch timestamp** — `BrowserRecorder.startedAt` defaults to `0`; if `start()` fails after `state.setRecorder(recorder)` but before `this.startedAt = Date.now()`, session info shows `1970-01-01T00:00:00.000Z`.
 6. **`session_search` console_levels filter excludes `page_error`** — Searching with `event_types: ["console", "page_error"]` and `console_levels: ["error"]` returns nothing because `console_levels` is applied as a filter to ALL matching event types, not just `console` events. The `page_error` events don't have a `level` field, so they're excluded.
@@ -54,6 +54,8 @@ export async function findChromeBinary(): Promise<string | null> {
 - `/opt/google/chrome/chrome` is the real binary on Fedora/RHEL/Nobara. The wrapper at `/usr/bin/google-chrome` delegates to it but exits immediately if another Chrome is running.
 - `google-chrome-stable` before `google-chrome` because on Debian/Ubuntu `google-chrome-stable` is typically the actual binary installed by the deb package, while `google-chrome` may be an alternative managed by `update-alternatives`.
 - The `--version` probe is unchanged — it verifies the binary exists and is executable. Wrapper scripts also pass this check, but since direct paths are tried first, the wrapper is only used as fallback when no direct binary is found.
+
+**Known limitation**: On distros where Chrome is installed to a non-standard path (e.g., Arch AUR packages) and only the wrapper script `google-chrome` is in PATH, the wrapper will still be selected and may fail if another Chrome is running. A more robust fix would be to detect the early-exit-code-0 pattern in `waitForChrome` and retry with the next binary candidate, but that's significantly more complex and out of scope here. The stale-recorder cleanup in Unit 3 and the improved error messages in Unit 2 provide adequate recovery for this case.
 
 **Acceptance Criteria**:
 - [ ] On a system where `/opt/google/chrome/chrome` exists, it is selected over `/usr/bin/google-chrome`
@@ -119,9 +121,13 @@ Replace the single `isCdpError` heuristic with error-type-specific messages:
 
 ---
 
-### Unit 3: Clean up stale recorder on `browser.start`
+### Unit 3: Fix `browser.start` recorder lifecycle (stale cleanup + ordering)
 
 **File**: `src/daemon/browser-handlers.ts`
+
+Two problems in the current `browser.start` handler:
+1. A stale recorder (non-null but `isRecording() === false`) from a failed previous start is never cleaned up.
+2. `state.setRecorder(recorder)` is called BEFORE `recorder.start()` — if `start()` throws, the daemon holds a broken recorder reference, creating the "stuck" state.
 
 ```typescript
 case "browser.start": {
@@ -129,48 +135,15 @@ case "browser.start": {
 	if (state.recorder?.isRecording()) {
 		throw new BrowserRecorderStateError("Browser recording is already active. Call browser.stop first.");
 	}
-	// Clean up stale recorder from a previous failed start
+	// Clean up stale recorder from a previous failed start.
+	// This handles the case where state.recorder is non-null but
+	// isRecording() is false — e.g., a previous start() threw after
+	// the recorder was constructed but before it finished starting.
 	if (state.recorder) {
 		try {
 			await state.recorder.stop();
 		} catch {
 			// Ignore cleanup errors — the recorder is in a bad state
-		}
-		state.setRecorder(null);
-	}
-	const { BrowserRecorder } = await import("../browser/recorder/index.js");
-	// ... rest unchanged
-```
-
-**Implementation Notes**:
-- This handles the case where `state.recorder` is non-null but `isRecording()` is false — a "stuck" recorder from a failed previous start.
-- `stop()` is called in a try/catch to swallow errors since the recorder is already in a bad state.
-- `state.setRecorder(null)` ensures the stale recorder is fully cleared before creating a new one.
-- This fixes the state inconsistency where `browser.status` reports no recording but `browser.start` behavior depends on the stale recorder.
-
-**Acceptance Criteria**:
-- [ ] After a failed `browser.start`, calling `browser.start` again succeeds without requiring `browser.stop`
-- [ ] `browser.status` and `browser.start` agree on recording state
-- [ ] The stale recorder's Chrome process (if any) is cleaned up
-
----
-
-### Unit 4: Move `setRecorder` after successful `start()`
-
-**File**: `src/daemon/browser-handlers.ts`
-
-```typescript
-case "browser.start": {
-	const p = BrowserStartParamsSchema.parse(params);
-	if (state.recorder?.isRecording()) {
-		throw new BrowserRecorderStateError("Browser recording is already active. Call browser.stop first.");
-	}
-	// Clean up stale recorder from a previous failed start
-	if (state.recorder) {
-		try {
-			await state.recorder.stop();
-		} catch {
-			// Ignore cleanup errors
 		}
 		state.setRecorder(null);
 	}
@@ -199,19 +172,21 @@ case "browser.start": {
 ```
 
 **Implementation Notes**:
-- Currently `state.setRecorder(recorder)` is called on line 73 BEFORE `recorder.start()` on line 74. If `start()` throws, the daemon holds a non-null recorder that isn't recording — the "stuck" state.
-- Moving `setRecorder` after `start()` means a failed start never pollutes daemon state.
-- The `onAutoStop` callback is set before `start()` because it could be needed during the start process if Chrome disconnects during initialization.
-- Combined with Unit 3's stale cleanup, this eliminates the stuck state entirely.
+- The stale cleanup (lines with `state.recorder.stop()`) handles the stuck state defensively: `stop()` is called in try/catch because the recorder may be in an arbitrary bad state.
+- `state.setRecorder(recorder)` is moved AFTER `recorder.start()` succeeds. Previously it was before `start()`, meaning a failed start left a broken recorder in daemon state.
+- `onAutoStop` is safe to set before `start()` — it closes over `state.setRecorder` (a function reference), not `state.recorder` (a value). And `onAutoStop` cannot fire during `start()` because the `disconnected` handler (line 169-173 in `index.ts`) checks `if (this.recording)`, which is `false` until `start()` completes successfully (line 225).
+- Together, these two changes eliminate the stuck state entirely: failed starts don't pollute daemon state, and stale recorders from edge cases are cleaned up on the next start attempt.
 
 **Acceptance Criteria**:
-- [ ] If `recorder.start()` throws, `state.recorder` remains null
-- [ ] Successful starts still register the recorder and `onAutoStop` works
-- [ ] The `browser.status` / `browser.start` state inconsistency cannot occur
+- [ ] If `recorder.start()` throws, `state.recorder` remains null (not a broken recorder)
+- [ ] After a failed `browser.start`, calling `browser.start` again succeeds without requiring `browser.stop`
+- [ ] `browser.status` and `browser.start` agree on recording state — no inconsistency possible
+- [ ] The stale recorder's Chrome process (if any) is cleaned up via `stop()`
+- [ ] Successful starts still register the recorder and `onAutoStop` works correctly
 
 ---
 
-### Unit 5: Fix `console_levels` filter excluding `page_error` events
+### Unit 4: Fix `console_levels` filter excluding `page_error` events
 
 **File**: `src/browser/investigation/query-engine.ts`
 
@@ -245,7 +220,7 @@ results = results.filter((e) => {
 
 ---
 
-### Unit 6: Validate `startedAt` in session info rendering
+### Unit 5: Validate `startedAt` in session info rendering
 
 **File**: `src/mcp/tools/browser.ts`
 
@@ -278,9 +253,9 @@ function formatSessionInfo(info: BrowserSessionInfo): string {
 
 ---
 
-### Unit 7: Update skill docs with launch failure guidance
+### Unit 6: Update skill docs with launch failure guidance
 
-**Files**: `.agents/skills/krometrail-mcp/SKILL.md` and `plugin/skills/krometrail-mcp/SKILL.md` (the MCP navigation guide — both copies)
+**File**: `plugin/skills/krometrail-mcp/SKILL.md` (the MCP navigation guide — `.agents/skills/` is symlinked here)
 
 Add to the "Common pitfalls" section:
 
@@ -288,7 +263,7 @@ Add to the "Common pitfalls" section:
 - **Chrome launch absorbed.** On Linux, Chrome wrapper scripts (e.g., `/usr/bin/google-chrome`) may delegate to an existing Chrome and exit immediately, causing `chrome_start` to fail. If this happens, ask the user to close their Chrome browser and retry. Do NOT suggest `pkill` — it can kill Electron apps (Discord, VS Code, etc.) that have `chrome` in their process names.
 ```
 
-**Files**: `.agents/skills/krometrail-chrome/SKILL.md` and `plugin/skills/krometrail-chrome/SKILL.md` (the Chrome skill — both copies)
+**File**: `plugin/skills/krometrail-chrome/SKILL.md` (the Chrome skill — `.agents/skills/` is symlinked here)
 
 Add a troubleshooting section:
 
@@ -313,21 +288,35 @@ If `chrome_start` fails with "Chrome exited immediately":
 ## Implementation Order
 
 1. **Unit 1** — Binary fallback chain. No dependencies, pure function change.
-2. **Unit 3 + Unit 4** — Stale recorder cleanup + move setRecorder. These are the same code block in `browser-handlers.ts` and should be implemented together.
-3. **Unit 2** — Error-specific MCP messages. Depends on understanding the error types but no code dependencies on Units 1/3/4.
-4. **Unit 6** — `startedAt` validation. Independent formatting fix.
-5. **Unit 5** — `console_levels` filter fix. Requires locating the exact filter code in the query engine; independent of other units.
-6. **Unit 7** — Skill doc updates. Do last after code changes are finalized.
+2. **Unit 3** — Recorder lifecycle fix. Eliminates the stuck state that causes cascading issues.
+3. **Unit 2** — Error-specific MCP messages. Independent of other units.
+4. **Unit 5** — `startedAt` validation. Independent defensive fix.
+5. **Unit 4** — `console_levels` filter fix. Independent, one-line change.
+6. **Unit 6** — Skill doc updates. Do last after code changes are finalized.
 
 ## Testing
 
 ### Unit Tests: `tests/unit/browser/chrome-launcher.test.ts`
 
-Add tests:
+Add tests for `findChromeBinary`:
 ```typescript
+import { vi } from "vitest";
+import { spawn } from "node:child_process";
+
+vi.mock("node:child_process", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:child_process")>();
+	return { ...actual, spawn: vi.fn() };
+});
+
 describe("findChromeBinary", () => {
-	it("prefers direct binary paths over wrapper scripts");
-	// Mock spawn to simulate /opt/google/chrome/chrome existing
+	it("prefers /opt/google/chrome/chrome over google-chrome when both exist", async () => {
+		// Mock spawn to succeed for /opt/google/chrome/chrome
+		// and also succeed for google-chrome — verify the direct path wins
+	});
+
+	it("falls back to google-chrome when direct paths don't exist", async () => {
+		// Mock spawn to fail for direct paths, succeed for google-chrome
+	});
 });
 ```
 
@@ -336,21 +325,49 @@ Existing `waitForChrome` tests are unaffected.
 ### Unit Tests: `tests/unit/daemon/browser-handlers.test.ts` (new file)
 
 ```typescript
-describe("browser.start stale recorder cleanup", () => {
-	it("cleans up a stale non-recording recorder before creating a new one");
-	it("does not call setRecorder if start() throws");
-	it("overwrites a stopped recorder without error");
+describe("browser.start recorder lifecycle", () => {
+	it("cleans up a stale non-recording recorder before creating a new one", async () => {
+		// Create a mock recorder with isRecording() === false
+		// Call handleBrowserMethod("browser.start", ...) with it in state
+		// Verify stop() was called on the stale recorder
+		// Verify the new recorder starts successfully
+	});
+
+	it("does not set state.recorder if start() throws", async () => {
+		// Create a recorder whose start() throws
+		// Verify state.recorder remains null after the error
+	});
+
+	it("sets state.recorder only after successful start()", async () => {
+		// Verify setRecorder is called with the recorder after start() resolves
+		// Not before
+	});
 });
 ```
 
 ### Unit Tests: `tests/unit/mcp/browser-error-messages.test.ts` (new file)
 
 ```typescript
+import { ChromeEarlyExitError, CDPConnectionError, ChromeNotFoundError } from "../../../src/core/errors.js";
+
 describe("chrome_start error messages", () => {
-	it("surfaces ChromeEarlyExitError without pkill suggestion");
-	it("surfaces CDPConnectionError with port alternative");
-	it("surfaces ChromeNotFoundError with install instructions");
-	it("falls through to errorResponse for unknown errors");
+	it("surfaces ChromeEarlyExitError without pkill suggestion", () => {
+		// Throw ChromeEarlyExitError, verify response text does NOT contain "pkill"
+		// Verify it suggests closing Chrome or attach mode
+	});
+
+	it("surfaces CDPConnectionError with port alternative", () => {
+		// Throw CDPConnectionError, verify response suggests a different port
+	});
+
+	it("surfaces ChromeNotFoundError with install instructions", () => {
+		// Throw ChromeNotFoundError, verify platform-specific install hint is surfaced
+		// Verify no generic "Fix option 1/2/3" remediation
+	});
+
+	it("falls through to errorResponse for unknown errors", () => {
+		// Throw a generic Error, verify errorResponse is called
+	});
 });
 ```
 
@@ -358,8 +375,23 @@ describe("chrome_start error messages", () => {
 
 ```typescript
 describe("console_levels filter scoping", () => {
-	it("applies console_levels only to console events, not page_error events");
-	it("returns page_error events when included in event_types regardless of console_levels");
+	it("applies console_levels only to console events, not page_error events", () => {
+		// Create events: [{type: "console", summary: "[error] bad"}, {type: "page_error", summary: "TypeError"}]
+		// Search with event_types: ["console", "page_error"], console_levels: ["error"]
+		// Verify BOTH events are returned
+	});
+
+	it("still filters console events by level when console_levels is set", () => {
+		// Regression test: existing behavior unchanged
+		// Create events: [{type: "console", summary: "[warn] ..."}, {type: "console", summary: "[error] ..."}]
+		// Search with console_levels: ["error"]
+		// Verify only the error-level console event is returned
+	});
+
+	it("returns page_error events when included in event_types regardless of console_levels", () => {
+		// Search with event_types: ["page_error"], console_levels: ["warn"]
+		// Verify page_error events are returned (not filtered by the "warn" level)
+	});
 });
 ```
 
