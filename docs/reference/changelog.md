@@ -5,6 +5,20 @@ description: Release history for Krometrail.
 
 # Changelog
 
+## v0.2.19
+
+### Fixes
+
+- **`session_overview(around_marker:)` marker lookup fixed** — `extractMarkerId` was matching the session UUID instead of the label-based marker ID (e.g., `"form-validation-failed-a1b2c3d4"`); now extracts from the rendered `(id: ...)` pattern
+- **`chrome status --json` CLI fix** — test was calling `browser status` instead of `chrome status`; the command is registered as `chrome`, not `browser`
+
+### Internal
+
+- Stylistic refactors: renamed abbreviated variables (`proc→child`, `res→response`, `buf→buffer`, `msg→errorMessage`, `desc→description`, `val→envValue`) across 9 files; refactored launch command to use guard clause
+- Structural refactors: split `session-manager.ts` (1365→1061 lines) into `breakpoint-manager.ts`, `execution-controller.ts`, `state-inspector.ts`, `session-output.ts`; split `daemon/server.ts` (710→409 lines) into `session-handlers.ts`, `browser-handlers.ts`
+- Consolidated `docs/guides/` into `docs/guide/` with VitePress sidebar update
+- Added `stylistic-refactor` and `structural-refactor` agent skills
+
 ## v0.2.18
 
 ### Fixes
